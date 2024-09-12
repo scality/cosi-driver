@@ -7,3 +7,4 @@ release-tools
 bin
 .idea
 vendor
+coverage.txt
