@@ -5,18 +5,18 @@ metadata:
   name: objectstorage-provisioner-role
   labels:
     app.kubernetes.io/part-of: container-object-storage-interface
-    app.kubernetes.io/component: driver-sample
+    app.kubernetes.io/component: driver-scality
     app.kubernetes.io/version: main
-    app.kubernetes.io/name: cosi-driver-sample
+    app.kubernetes.io/name: cosi-driver-scality
 rules:
 - apiGroups: ["objectstorage.k8s.io"]
-  resources: ["buckets", "bucketaccesses","buckets/status", "bucketaccesses/status"]
+  resources: ["buckets", "bucketaccesses", "bucketclaims", "bucketaccessclasses", "buckets/status", "bucketaccesses/status", "bucketclaims/status", "bucketaccessclasses/status"]
   verbs: ["get", "list", "watch", "update", "create", "delete"]
 - apiGroups: ["coordination.k8s.io"]
   resources: ["leases"]
   verbs: ["get", "watch", "list", "delete", "update", "create"]
 - apiGroups: [""]
-  resources: ["events"]
+  resources: ["secrets", "events"]
   verbs: ["get", "delete", "update", "create"]
 ---
 kind: ClusterRoleBinding
@@ -25,9 +25,9 @@ metadata:
   name: objectstorage-provisioner-role-binding
   labels:
     app.kubernetes.io/part-of: container-object-storage-interface
-    app.kubernetes.io/component: driver-sample
+    app.kubernetes.io/component: driver-scality
     app.kubernetes.io/version: main
-    app.kubernetes.io/name: cosi-driver-sample
+    app.kubernetes.io/name: cosi-driver-scality
 subjects:
   - kind: ServiceAccount
     name: objectstorage-provisioner-sa
