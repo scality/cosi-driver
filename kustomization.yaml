@@ -1,7 +1,7 @@
 ---
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
-namespace: sample-cosi-driver
+namespace: scality-cosi-driver
 
 commonAnnotations:
   cosi.storage.k8s.io/authors: "Kubernetes Authors"
@@ -10,13 +10,13 @@ commonAnnotations:
 
 commonLabels:
   app.kubernetes.io/part-of: container-object-storage-interface
-  app.kubernetes.io/component: driver-sample
+  app.kubernetes.io/component: driver-scality
   app.kubernetes.io/version: main
-  app.kubernetes.io/name: cosi-driver-sample
+  app.kubernetes.io/name: cosi-driver-scality
 
 configMapGenerator: 
-- name: cosi-driver-sample-config
-  env: resources/cosi-driver-sample.properties
+- name: cosi-driver-scality-config
+  env: resources/cosi-driver-scality.properties
 generatorOptions:         
   disableNameSuffixHash: true
   labels:                    
@@ -32,31 +32,31 @@ configurations:
  - resources/kustomizeconfig.yaml
 
 vars:
-  - name: PROVISIONER_IMAGE_ORG
+  - name: IMAGE_ORG
     objref:
-      name: cosi-driver-config
+      name: cosi-driver-scality-config
       kind: ConfigMap
       apiVersion: v1
     fieldref:
       fieldpath: data.OBJECTSTORAGE_PROVISIONER_IMAGE_ORG
-  - name: PROVISIONER_IMAGE_VERSION
+  - name: IMAGE_VERSION
     objref:
-      name: cosi-driver-config
+      name: cosi-driver-scality-config
       kind: ConfigMap
       apiVersion: v1
     fieldref:
       fieldpath: data.OBJECTSTORAGE_PROVISIONER_IMAGE_VERSION
-  - name: DRIVER_IMAGE_ORG
+  - name: SCALITY_IMAGE_ORG
     objref:
-      name: cosi-driver-config
+      name: cosi-driver-scality-config
       kind: ConfigMap
       apiVersion: v1
     fieldref:
-      fieldpath: data.DRIVER_IMAGE_ORG
-  - name: DRIVER_IMAGE_VERSION
+      fieldpath: data.SCALITY_DRIVER_IMAGE_ORG
+  - name: SCALITY_IMAGE_VERSION
     objref:
-      name: cosi-driver-config
+      name: cosi-driver-scality-config
       kind: ConfigMap
       apiVersion: v1
     fieldref:
-      fieldpath: data.DRIVER_IMAGE_VERSION
+      fieldpath: data.SCALITY_DRIVER_IMAGE_VERSION
