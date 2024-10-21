@@ -124,10 +124,6 @@ func (client *S3Client) CreateBucket(ctx context.Context, bucketName string, par
 
 	_, err := client.S3Service.CreateBucket(ctx, input)
 	if err != nil {
-		if strings.Contains(err.Error(), "BucketAlreadyExists") || strings.Contains(err.Error(), "BucketAlreadyOwnedByYou") {
-			klog.InfoS("Bucket already exists or owned by you", "bucketName", bucketName)
-			return nil
-		}
 		return err
 	}
 

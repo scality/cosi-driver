@@ -128,18 +128,6 @@ var _ = Describe("S3Client", func() {
 			Expect(err).To(BeNil())
 		})
 
-		It("should handle BucketAlreadyExists error correctly", func(ctx SpecContext) {
-			mockS3.CreateBucketFunc = func(ctx context.Context, input *s3.CreateBucketInput, opts ...func(*s3.Options)) (*s3.CreateBucketOutput, error) {
-				return nil, fmt.Errorf("BucketAlreadyExists: The requested bucket name is not available")
-			}
-
-			client, _ := s3client.InitS3Client(params)
-			client.S3Service = mockS3
-
-			err := client.CreateBucket(ctx, "existing-bucket", params)
-			Expect(err).To(BeNil())
-		})
-
 		It("should handle other errors correctly", func(ctx SpecContext) {
 			mockS3.CreateBucketFunc = func(ctx context.Context, input *s3.CreateBucketInput, opts ...func(*s3.Options)) (*s3.CreateBucketOutput, error) {
 				return nil, fmt.Errorf("SomeOtherError: Something went wrong")
