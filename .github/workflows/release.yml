@@ -1,0 +1,32 @@
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Tag to be released (e.g., v1.0.0)"
+        required: true
+jobs:
+  prod-container-build:
+    permissions:
+      contents: read
+      packages: write
+    uses: scality/workflows/.github/workflows/docker-build.yaml@v2
+    with:
+      name: cosi
+      namespace: ${{ github.repository_owner }}
+      tag: ${{ inputs.tag }}
+
+  create-github-release:
+    runs-on: ubuntu-latest
+    needs: prod-container-build
+    steps:
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          target_commitish: ${{ github.sha }}
+          tag_name: ${{ inputs.tag }}
+          name: Release ${{ inputs.tag }}
+          generate_release_notes: true
