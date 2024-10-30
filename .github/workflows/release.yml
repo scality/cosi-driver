@@ -13,9 +13,11 @@ jobs:
       packages: write
     uses: scality/workflows/.github/workflows/docker-build.yaml@v2
     with:
+      context: .
       name: cosi
       namespace: ${{ github.repository_owner }}
       tag: ${{ inputs.tag }}
+      platforms: linux/amd64,linux/arm64
 
   create-github-release:
     runs-on: ubuntu-latest
