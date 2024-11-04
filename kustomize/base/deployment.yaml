@@ -1,0 +1,45 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: scality-cosi-driver
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: scality-cosi-driver
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: scality-cosi-driver
+        app.kubernetes.io/part-of: container-object-storage-interface
+        app.kubernetes.io/component: driver
+        app.kubernetes.io/version: main
+        app.kubernetes.io/managed-by: kustomize
+    spec:
+      serviceAccountName: scality-object-storage-provisioner
+      containers:
+        - name: scality-cosi-driver
+          image: ghcr.io/scality/cosi:latest
+          imagePullPolicy: IfNotPresent
+          args:
+            - "--driver-prefix=cosi"
+            - "--v=$(COSI_DRIVER_LOG_LEVEL)"
+          volumeMounts:
+            - mountPath: /var/lib/cosi
+              name: socket
+          env:
+            - name: POD_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+        - name: objectstorage-provisioner-sidecar
+          image: gcr.io/k8s-staging-sig-storage/objectstorage-sidecar:latest
+          imagePullPolicy: IfNotPresent
+          args:
+            - "--v=$(OBJECTSTORAGE_PROVISIONER_SIDECAR_LOG_LEVEL)"
+          volumeMounts:
+            - mountPath: /var/lib/cosi
+              name: socket
+      volumes:
+        - name: socket
+          emptyDir: {}
