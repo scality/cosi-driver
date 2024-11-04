@@ -37,6 +37,13 @@ jobs:
       with:
         detached: true
 
+
+    - name: Setup COSI Controller, CRDs and Driver
+      run: |
+        pwd
+        chmod +x .github/scripts/setup_cosi_resources.sh
+        .github/scripts/setup_cosi_resources.sh
+
     - name: Capture Kubernetes Logs in artifacts directory
       run: |
         chmod +x .github/scripts/capture_k8s_logs.sh
