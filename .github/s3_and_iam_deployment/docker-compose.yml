@@ -1,0 +1,25 @@
+services:
+  s3:
+    profiles: ['iam_s3']
+    image: ${CLOUDSERVER_IMAGE}
+    network_mode: host
+    environment:
+      S3VAULT: scality
+      S3_CONFIG_FILE: /conf/config.json
+    command: /bin/sh -c "yarn run mem_backend > /logs/s3/s3.log 2>&1"
+    volumes:
+      - ./cloudserver-config.json:/conf/config.json:ro
+      - ./logs/s3:/logs/s3
+
+  iam:
+    profiles: ['iam_s3']
+    image: ${VAULT_IMAGE}
+    network_mode: host
+    command: /bin/sh -c "chmod 400 tests/utils/keyfile && yarn start > /logs/iam/iam.log 2>&1"
+    environment:
+      VAULT_CONFIG_FILE: /conf/config.json
+      VAULT_DB_BACKEND: LEVELDB
+    volumes:
+      - ./vault-config.json:/conf/config.json:ro
+      - ./data/vaultdb:/data
+      - ./logs/iam:/logs/iam
