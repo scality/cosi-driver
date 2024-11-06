@@ -1,5 +1,5 @@
 #!/bin/bash
-set -e
+set -e  # Exit on any command failure
 
 # Define log file for debugging
 LOG_FILE=".github/e2e_tests/artifacts/logs/kind_cluster_logs/cosi_deployment/setup_debug.log"
@@ -18,7 +18,10 @@ trap 'error_handler' ERR
 # Log command execution to the log file for debugging
 log_and_run() {
   echo "Running: $*" | tee -a "$LOG_FILE"
-  "$@" | tee -a "$LOG_FILE"
+  if ! "$@" | tee -a "$LOG_FILE"; then
+    echo "Error: Command failed - $*" | tee -a "$LOG_FILE"
+    exit 1
+  fi
 }
 
 # Step 1: Install COSI CRDs
@@ -28,7 +31,10 @@ log_and_run kubectl create -k github.com/kubernetes-sigs/container-object-storag
 
 # Step 2: Verify COSI Controller Pod Status
 log_and_run echo "Verifying COSI Controller Pod status..."
-log_and_run kubectl wait --namespace default --for=condition=ready pod -l app.kubernetes.io/name=container-object-storage-interface-controller --timeout=10s
+if ! kubectl wait --namespace default --for=condition=ready pod -l app.kubernetes.io/name=container-object-storage-interface-controller --timeout=10s; then
+  echo "Error: COSI Controller pod did not reach ready state." | tee -a "$LOG_FILE"
+  exit 1
+fi
 log_and_run kubectl get pods --namespace default
 
 # Step 3: Build COSI driver Docker image
@@ -41,11 +47,17 @@ log_and_run kind load docker-image ghcr.io/scality/cosi:latest --name object-sto
 
 # Step 5: Run COSI driver
 log_and_run echo "Applying COSI driver manifests..."
-log_and_run kubectl apply -k .
+if ! kubectl apply -k .; then
+  echo "Error: Failed to apply COSI driver manifests." | tee -a "$LOG_FILE"
+  exit 1
+fi
 
 # Step 6: Verify COSI driver Pod Status
 log_and_run echo "Verifying COSI driver Pod status..."
-log_and_run kubectl wait --namespace scality-object-storage --for=condition=ready pod --selector=app.kubernetes.io/name=scality-cosi-driver --timeout=20s
+if ! kubectl wait --namespace scality-object-storage --for=condition=ready pod --selector=app.kubernetes.io/name=scality-cosi-driver --timeout=20s; then
+  echo "Error: COSI driver Pod did not reach ready state." | tee -a "$LOG_FILE"
+  exit 1
+fi
 log_and_run kubectl get pods -n scality-object-storage
 
 log_and_run echo "COSI setup completed successfully."
