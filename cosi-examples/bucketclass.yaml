@@ -1,9 +1,9 @@
 kind: BucketClass
 apiVersion: objectstorage.k8s.io/v1alpha1
 metadata:
-  name: bucket-1-name-prefix # name of the bucket
+  name: my-bucket-class # bucket prefix, followed by UUID for every bucket claim
 driverName: cosi.scality.com
-deletionPolicy: Delete
+deletionPolicy: Retain
 parameters:
   COSI_OBJECT_STORAGE_PROVIDER_SECRET_NAME: s3-secret-for-cosi
   COSI_OBJECT_STORAGE_PROVIDER_SECRET_NAMESPACE: default
