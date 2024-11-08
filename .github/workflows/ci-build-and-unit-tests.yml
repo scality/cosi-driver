@@ -1,4 +1,4 @@
-name: CI
+name: CI Build and Unit Tests
 
 on:
   push:
@@ -7,7 +7,7 @@ on:
 
 jobs:
   test:
-    name: Run Tests
+    name: unit-tests-with-ginkgo
     runs-on: ubuntu-latest
 
     steps:

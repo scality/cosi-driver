@@ -1,0 +1,54 @@
+name: CI End-to-End Tests
+
+on:
+  push:
+    branches:
+      - '**'
+  workflow_dispatch:
+    inputs:
+      debug_enabled:
+        type: boolean
+        description: 'Run the build with tmate debugging enabled'
+        required: false
+        default: false
+
+jobs:
+  e2e-tests-with-kind:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Check out repository
+      uses: actions/checkout@v4
+
+    - name: Create k8s KIND Cluster
+      uses: helm/kind-action@v1.10.0
+      with:
+        version: v0.21.0
+        wait: 90s
+        cluster_name: object-storage-cluster
+
+    - name: Verify KIND cluster is running
+      run: |
+        kubectl cluster-info
+        kubectl get nodes
+
+    - name: Setup tmate session
+      uses: mxschmitt/action-tmate@v3
+      if: ${{ github.event_name == 'workflow_dispatch' && inputs.debug_enabled }}
+      with:
+        detached: true
+
+    - name: Capture Kubernetes Logs in artifacts directory
+      run: |
+        chmod +x .github/scripts/capture_k8s_logs.sh
+        .github/scripts/capture_k8s_logs.sh
+      if: always()
+
+    - name: Upload logs and data to Scality artifacts
+      uses: scality/action-artifacts@v4
+      with:
+        method: upload
+        url: https://artifacts.scality.net
+        user: ${{ secrets.ARTIFACTS_USER }}
+        password: ${{ secrets.ARTIFACTS_PASSWORD }}
+        source: .github/e2e_tests/artifacts
+      if: always()
