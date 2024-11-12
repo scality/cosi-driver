@@ -86,6 +86,12 @@ jobs:
         docker save "$CLOUDSERVER_IMAGE" -o /tmp/.docker_cache/cloudserver_image.tar
       shell: bash
 
+    - name: E2E tests for bucket creation via COSI driver
+      run: |
+        pwd
+        chmod +x .github/scripts/e2e_test_bucket_creation.sh
+        .github/scripts/e2e_test_bucket_creation.sh
+
     - name: Cleaup IAM and S3 Services
       run: docker compose --profile iam_s3 down
       working-directory: .github/s3_and_iam_deployment
@@ -102,6 +108,12 @@ jobs:
       run: |
         chmod +x .github/scripts/capture_k8s_logs.sh
         .github/scripts/capture_k8s_logs.sh
+      if: always()
+
+    - name: Cleanup COSI CRDs, Controller, and Driver
+      run: |
+        chmod +x .github/scripts/cleanup_cosi_resources.sh
+        .github/scripts/cleanup_cosi_resources.sh
       if: always()
 
     - name: Upload logs and data to Scality artifacts

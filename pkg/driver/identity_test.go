@@ -6,7 +6,7 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"github.com/scality/cosi/pkg/driver"
+	"github.com/scality/cosi-driver/pkg/driver"
 
 	cosiapi "sigs.k8s.io/container-object-storage-interface-spec"
 )

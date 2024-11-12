@@ -10,7 +10,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/s3/types"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"github.com/scality/cosi/pkg/util/s3client"
+	"github.com/scality/cosi-driver/pkg/util/s3client"
 )
 
 // MockS3Client implements the S3API interface for testing

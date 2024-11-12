@@ -1,4 +1,4 @@
-module github.com/scality/cosi
+module github.com/scality/cosi-driver
 
 go 1.22.6
 

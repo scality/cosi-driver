@@ -3,7 +3,7 @@ BIN_DIR = ./bin
 
 # 'go env' vars aren't always available in make environments, so get defaults for needed ones
 GOARCH ?= $(shell go env GOARCH)
-IMAGE_NAME ?= ghcr.io/scality/cosi:latest
+IMAGE_NAME ?= ghcr.io/scality/cosi-driver:latest
 
 .PHONY: all build test clean
 

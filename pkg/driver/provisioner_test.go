@@ -12,8 +12,8 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
-	"github.com/scality/cosi/pkg/driver"
-	s3client "github.com/scality/cosi/pkg/util/s3client"
+	"github.com/scality/cosi-driver/pkg/driver"
+	s3client "github.com/scality/cosi-driver/pkg/util/s3client"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"

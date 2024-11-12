@@ -19,7 +19,7 @@ spec:
       serviceAccountName: scality-object-storage-provisioner
       containers:
         - name: scality-cosi-driver
-          image: ghcr.io/scality/cosi:latest
+          image: ghcr.io/scality/cosi-driver:latest
           imagePullPolicy: IfNotPresent
           args:
             - "--driver-prefix=cosi"
