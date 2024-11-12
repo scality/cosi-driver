@@ -36,6 +36,6 @@ jobs:
     uses: scality/workflows/.github/workflows/docker-build.yaml@v2
     with:
       context: .
-      name: cosi
+      name: cosi-driver
       namespace: ${{ github.repository_owner }}
       tag: ${{ github.sha }}

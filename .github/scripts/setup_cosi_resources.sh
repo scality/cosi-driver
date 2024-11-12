@@ -39,11 +39,11 @@ log_and_run kubectl get pods --namespace default
 
 # Step 3: Build COSI driver Docker image
 log_and_run echo "Building COSI driver image..."
-log_and_run docker build -t ghcr.io/scality/cosi:latest .
+log_and_run docker build -t ghcr.io/scality/cosi-driver:latest .
 
 # Step 4: Load COSI driver image into KIND cluster
 log_and_run echo "Loading COSI driver image into KIND cluster..."
-log_and_run kind load docker-image ghcr.io/scality/cosi:latest --name object-storage-cluster
+log_and_run kind load docker-image ghcr.io/scality/cosi-driver:latest --name object-storage-cluster
 
 # Step 5: Run COSI driver
 log_and_run echo "Applying COSI driver manifests..."

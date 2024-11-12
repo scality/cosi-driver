@@ -21,7 +21,7 @@ import (
 	"flag"
 	"fmt"
 
-	"github.com/scality/cosi/pkg/driver"
+	"github.com/scality/cosi-driver/pkg/driver"
 	"k8s.io/klog/v2"
 
 	"sigs.k8s.io/container-object-storage-interface-provisioner-sidecar/pkg/provisioner"
