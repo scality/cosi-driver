@@ -11,6 +11,11 @@ on:
         description: 'Run the build with tmate debugging enabled'
         required: false
         default: false
+      debug_delay_duration_minutes:
+        type: number
+        description: 'Duration to delay job completion in minutes'
+        required: false
+        default: 5
 
 jobs:
   e2e-tests-with-kind:
@@ -30,12 +35,17 @@ jobs:
       run: |
         kubectl cluster-info
         kubectl get nodes
-
-    - name: Setup tmate session
-      uses: mxschmitt/action-tmate@v3
-      if: ${{ github.event_name == 'workflow_dispatch' && inputs.debug_enabled }}
+    - name: "Debug: SSH to runner"
+      uses: scality/actions/action-ssh-to-runner@v1
       with:
+        tmate-server-host: ${{ secrets.TMATE_SERVER_HOST }}
+        tmate-server-port: ${{ secrets.TMATE_SERVER_PORT }}
+        tmate-server-rsa-fingerprint: ${{ secrets.TMATE_SERVER_RSA_FINGERPRINT }}
+        tmate-server-ed25519-fingerprint: ${{ secrets.TMATE_SERVER_ED25519_FINGERPRINT }}
         detached: true
+      if: ${{ github.event_name == 'workflow_dispatch' && inputs.debug_enabled }}
+      timeout-minutes: 10
+      continue-on-error: true
 
     - name: Setup COSI Controller, CRDs and Driver
       run: |
@@ -91,6 +101,13 @@ jobs:
         pwd
         chmod +x .github/scripts/e2e_test_bucket_creation.sh
         .github/scripts/e2e_test_bucket_creation.sh
+
+    - name: "Delay completion"
+      if: ${{ github.event_name == 'workflow_dispatch' && inputs.debug_enabled }}
+      uses: scality/actions/action-delay-job-completion@1.11.0
+      with:
+        completion_delay_m: ${{ inputs.debug_delay_duration_minutes }}
+      continue-on-error: true
 
     - name: Cleaup IAM and S3 Services
       run: docker compose --profile iam_s3 down
