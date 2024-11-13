@@ -1,0 +1,42 @@
+// For format details, see https://aka.ms/devcontainer.json. For config options, see the
+// README at: https://github.com/devcontainers/templates/tree/main/src/go
+{
+    "name": "Go Dev Container",
+    "image": "mcr.microsoft.com/devcontainers/go:1-1.23-bookworm",
+    // Features to add to the dev container. More info: https://containers.dev/features.
+    "features": {
+        "ghcr.io/devcontainers/features/go:1": {
+            "version": "latest"
+        },
+            "ghcr.io/devcontainers/features/docker-in-docker:2": {
+            "version": "latest",
+            "moby": true
+        },
+            "ghcr.io/devcontainers/features/aws-cli:1": {},
+            "ghcr.io/devcontainers/features/kubectl-helm-minikube:1": {
+        "version": "1.31",
+        "helm": "latest",
+        "minikube": "latest"
+        }
+    },
+    "forwardPorts": [8000, 8600],
+    "customizations": {
+        "codespaces": {
+            "repositories": {
+                "scality/cloudserver": {
+                    "permissions": {
+                        "packages": "read"
+                    }
+                },
+                "scality/vault": {
+                    "permissions": {
+                        "packages": "read"
+                    }
+                }
+            }
+        }
+    },
+    "postCreateCommand": "bash .devcontainer/setup-dev-container.sh"
+    // Uncomment to connect as root instead. More info: https://aka.ms/dev-containers-non-root.
+    // "remoteUser": "root"
+  }
