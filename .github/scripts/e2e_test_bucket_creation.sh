@@ -23,9 +23,9 @@ log_and_run() {
 
 # Step 1: Create Account in Vault
 log_and_run echo "Creating account in Vault container..."
-CONTAINER_ID=$(docker ps -qf "name=s3_and_iam_deployment-iam-1")
-log_and_run docker exec "$CONTAINER_ID" sh -c "ADMIN_ACCESS_KEY_ID=D4IT2AWSB588GO5J9T00 ADMIN_SECRET_ACCESS_KEY=UEEu8tYlsOGGrgf4DAiSZD6apVNPUWqRiPG0nTB6 ./node_modules/vaultclient/bin/vaultclient create-account --name cosi-account --email cosi-account@scality.local"
-log_and_run docker exec "$CONTAINER_ID" sh -c "ADMIN_ACCESS_KEY_ID=D4IT2AWSB588GO5J9T00 ADMIN_SECRET_ACCESS_KEY=UEEu8tYlsOGGrgf4DAiSZD6apVNPUWqRiPG0nTB6 ./node_modules/vaultclient/bin/vaultclient generate-account-access-key --name=cosi-account --accesskey=PBUOB68AVF39EVVAFNFL --secretkey=P+PK+uMB9spUc21huaQoOexqdJoV00tSnl+pc7t7"
+CONTAINER_NAME=s3_and_iam_deployment-iam-1
+log_and_run docker exec "$CONTAINER_NAME" sh -c "ADMIN_ACCESS_KEY_ID=D4IT2AWSB588GO5J9T00 ADMIN_SECRET_ACCESS_KEY=UEEu8tYlsOGGrgf4DAiSZD6apVNPUWqRiPG0nTB6 ./node_modules/vaultclient/bin/vaultclient create-account --name cosi-account --email cosi-account@scality.local"
+log_and_run docker exec "$CONTAINER_NAME" sh -c "ADMIN_ACCESS_KEY_ID=D4IT2AWSB588GO5J9T00 ADMIN_SECRET_ACCESS_KEY=UEEu8tYlsOGGrgf4DAiSZD6apVNPUWqRiPG0nTB6 ./node_modules/vaultclient/bin/vaultclient generate-account-access-key --name=cosi-account --accesskey=PBUOB68AVF39EVVAFNFL --secretkey=P+PK+uMB9spUc21huaQoOexqdJoV00tSnl+pc7t7"
 
 # Retrieve the Host IP Address
 HOST_IP=$(hostname -I | awk '{print $1}')
