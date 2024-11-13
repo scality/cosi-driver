@@ -37,3 +37,31 @@ jobs:
           tag_name: ${{ inputs.tag }}
           name: Release ${{ inputs.tag }}
           generate_release_notes: true
+
+  package-helm-chart:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Helm
+        uses: azure/setup-helm@v4.2.0
+        with:
+          version: v3.16.2
+
+      - name: Package Helm Chart
+        run: |
+          helm package ./helm/scality-cosi-driver --version ${{ inputs.tag }} --app-version ${{ inputs.tag }}
+      - name: Upload Helm Chart as Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: helm-chart
+          path: scality-cosi-driver-${{ inputs.tag }}.tgz
+      - name: Push helm chart to ghcr.io
+        run: helm push scality-cosi-driver-${{ inputs.tag }}.tgz oci://ghcr.io/${{ github.repository }}/helm-charts
+      - name: Pull the helm chart
+        run: helm pull oci://ghcr.io/${{ github.repository }}/helm-charts/scality-cosi-driver --version ${{ inputs.tag }}
+      - name: Show the helm chart
+        run: helm show all oci://ghcr.io/${{ github.repository }}/helm-charts/scality-cosi-driver --version ${{ inputs.tag }}
+      - name: Template the helm chart
+        run: helm template oci://ghcr.io/${{ github.repository }}/helm-charts/scality-cosi-driver --version ${{ inputs.tag }}
