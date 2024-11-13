@@ -49,19 +49,27 @@ jobs:
         with:
           version: v3.16.2
 
+      - name: login to ghcr.io with helm
+        run: helm registry login -u actions -p ${{ github.token }} ghcr.io
+
       - name: Package Helm Chart
         run: |
           helm package ./helm/scality-cosi-driver --version ${{ inputs.tag }} --app-version ${{ inputs.tag }}
+
       - name: Upload Helm Chart as Artifact
         uses: actions/upload-artifact@v4
         with:
           name: helm-chart
           path: scality-cosi-driver-${{ inputs.tag }}.tgz
+
       - name: Push helm chart to ghcr.io
         run: helm push scality-cosi-driver-${{ inputs.tag }}.tgz oci://ghcr.io/${{ github.repository }}/helm-charts
+
       - name: Pull the helm chart
         run: helm pull oci://ghcr.io/${{ github.repository }}/helm-charts/scality-cosi-driver --version ${{ inputs.tag }}
+
       - name: Show the helm chart
         run: helm show all oci://ghcr.io/${{ github.repository }}/helm-charts/scality-cosi-driver --version ${{ inputs.tag }}
+  
       - name: Template the helm chart
         run: helm template oci://ghcr.io/${{ github.repository }}/helm-charts/scality-cosi-driver --version ${{ inputs.tag }}
