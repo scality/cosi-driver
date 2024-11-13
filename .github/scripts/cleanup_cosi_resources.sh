@@ -41,6 +41,9 @@ log_and_run echo "Deleting Bucket Class and Bucket Claim..."
 log_and_run kubectl delete -f cosi-examples/bucketclass.yaml || { echo "Bucket Class not found." | tee -a "$LOG_FILE"; }
 log_and_run kubectl delete -f cosi-examples/bucketclaim.yaml || { echo "Bucket Claim not found." | tee -a "$LOG_FILE"; }
 
+log_and_run echo "Deleting s3-secret-for-cosi secret..."
+log_and_run kubectl delete secret s3-secret-for-cosi --namespace=default || { echo "Secret s3-secret-for-cosi not found." | tee -a "$LOG_FILE"; }
+
 log_and_run echo "Deleting COSI CRDs..."
 log_and_run kubectl delete -k github.com/kubernetes-sigs/container-object-storage-interface-api || { echo "COSI API CRDs not found." | tee -a "$LOG_FILE"; }
 log_and_run kubectl delete -k github.com/kubernetes-sigs/container-object-storage-interface-controller || { echo "COSI Controller CRDs not found." | tee -a "$LOG_FILE"; }
