@@ -49,11 +49,45 @@ VS Code will automatically detect the `.devcontainer/devcontainer.json` configur
 
 Once the Dev Container is up and running, you will have access to the pre-configured development environment.
 
+There are 3 main scripts run in the CI:
+
+- **.github/scripts/setup_cosi_resources.sh**: setups up COSI CRDs, COSI controller, COSI sidecar, and Scality COSI driver.
+- **.github/scripts/e2e_test_bucket_creation.sh**: Sets up BucketClass, Bucket Claim, s3 secret(changed needed below), in kubernetes and tests create bucket using AWS CLI.
+- **.github/scripts/cleanup_cosi_resources.sh**: Deletes all researources created in above two steps.
+
 ### Running Setup and Test Scripts
 
 In the integrated terminal inside VS Code, run the following commands to set up resources, run end-to-end tests, and capture logs:
 
-1. **Set Up COSI Resources**
+1. **Update endpoint in [secrets file](../../cosi-examples/s3-secret-for-cosi.yaml)**
+
+Change `COSI_S3_ENDPOINT` to the IP (`hostname -I | awk '{print $1}'`) of codespace instance.
+
+#### Example
+
+```bash
+$ hostname -I | awk '{print $1}'
+10.0.1.236
+```
+
+New secret file with updated `COSI_S3_ENDPOINT`
+
+```
+apiVersion: v1
+kind: Secret
+metadata:
+  name: s3-secret-for-cosi
+  namespace: default
+type: Opaque
+stringData:
+  COSI_S3_ACCESS_KEY_ID: PBUOB68AVF39EVVAFNFL  # Plain text access key, generated in the CI
+  COSI_S3_SECRET_ACCESS_KEY: P+PK+uMB9spUc21huaQoOexqdJoV00tSnl+pc7t7  # Plain text secret key
+  COSI_S3_ENDPOINT: http://10.0.1.236:8000  # Plain text endpoint
+  COSI_S3_REGION: us-west-1  # Plain text region
+```
+
+
+2. **Set Up COSI Resources**
 
     ```bash
     eval $(minikube docker-env)
@@ -68,10 +102,10 @@ In the integrated terminal inside VS Code, run the following commands to set up 
     - Builds and deploys the Scality COSI Driver.
     - Verifies that the driver pod is running.
 
-2. **Run End-to-End Tests**
+3. **Run End-to-End Tests**
 
     ```bash
-     eval $(minikube docker-env -u)
+    eval $(minikube docker-env -u)
 
     chmod +x .github/scripts/e2e_test_bucket_creation.sh
     .github/scripts/e2e_test_bucket_creation.sh
@@ -90,7 +124,7 @@ In the integrated terminal inside VS Code, run the following commands to set up 
 
 To run unit tests within the container, you can use Make to execute the Go unit tests.
 
-    1. Run Unit Tests: `make test` or directly `ginkgo -r -v`
+- **Run Unit Tests**: In the VS code terminal execute `make test` or directly `ginkgo -r -v` from `/workspaces/cosi-driver` directory.
 
 This command will run all the unit tests defined in your Go project, providing feedback directly in the terminal. The make test command is typically defined in a Makefile, and it runs tests using the Ginkgo GO testing testing framework.
 
@@ -123,7 +157,7 @@ To clean up resources after development or testing:
     ```bash
         eval $(minikube docker-env -u)
 
-        docker compose --profile iam_s3 down
+        docker compose -f .github/s3_and_iam_deployment/docker-compose.yml --profile iam_s3 down
     ```
 
 2. **Delete Kubernetes Resources**
