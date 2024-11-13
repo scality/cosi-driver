@@ -34,9 +34,27 @@
                     }
                 }
             }
+        },
+        "vscode": {
+            "extensions": [
+                "github.codespaces",
+                "github.copilot",
+                "github.copilot-chat",
+                "github.vscode-github-actions",
+                "bat67.markdown-extension-pack",
+                "bracketpaircolordlw.bracket-pair-color-dlw",
+                "eamodio.gitlens",
+                "golang.go",
+                "ms-vscode.makefile-tools",
+                "onsi.vscode-ginkgo",
+                "redhat.vscode-yaml",
+                "streetsidesoftware.code-spell-checker",
+                "visualstudioexptteam.vscodeintellicode",
+                "wayou.vscode-todo-highlight",
+            ]
         }
     },
     "postCreateCommand": "bash .devcontainer/setup-dev-container.sh"
     // Uncomment to connect as root instead. More info: https://aka.ms/dev-containers-non-root.
     // "remoteUser": "root"
-  }
+}
