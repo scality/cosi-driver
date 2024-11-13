@@ -6,6 +6,11 @@ on:
       tag:
         description: "Tag to be released (e.g., v1.0.0)"
         required: true
+      all_platforms:
+        description: "Build for all platforms (linux/amd64,linux/arm64) or just linux/amd64"
+        required: false
+        type: boolean
+        default: false
 jobs:
   prod-container-build:
     permissions:
@@ -17,7 +22,7 @@ jobs:
       name: cosi-driver
       namespace: ${{ github.repository_owner }}
       tag: ${{ inputs.tag }}
-      platforms: linux/amd64,linux/arm64
+      platforms: ${{ inputs.all_platforms && 'linux/amd64,linux/arm64' || 'linux/amd64' }}
 
   create-github-release:
     runs-on: ubuntu-latest
