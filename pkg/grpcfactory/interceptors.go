@@ -25,7 +25,7 @@ import (
 	"k8s.io/klog/v2"
 )
 
-func apiLogger(
+func ApiLogger(
 	ctx context.Context,
 	method string,
 	req, reply interface{},

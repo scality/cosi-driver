@@ -47,7 +47,7 @@ func NewDefaultCOSIProvisionerClient(ctx context.Context, address string, debug 
 	}
 	interceptors := []grpc.UnaryClientInterceptor{}
 	if debug {
-		interceptors = append(interceptors, apiLogger)
+		interceptors = append(interceptors, ApiLogger)
 	}
 	return NewCOSIProvisionerClient(ctx, address, dialOpts, interceptors)
 }
