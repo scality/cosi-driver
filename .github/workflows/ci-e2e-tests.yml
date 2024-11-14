@@ -35,6 +35,7 @@ jobs:
       run: |
         kubectl cluster-info
         kubectl get nodes
+
     - name: "Debug: SSH to runner"
       uses: scality/actions/action-ssh-to-runner@v1
       with:
