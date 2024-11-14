@@ -3,19 +3,23 @@ Copyright 2024 Scality, Inc.
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
-    http://www.apache.org/licenses/LICENSE-2.0
+
+	http://www.apache.org/licenses/LICENSE-2.0
+
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-package provisioner
+package grpcfactory
+
 import (
 	"context"
 	"fmt"
 	"net/url"
 	"time"
+
 	"github.com/pkg/errors"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/backoff"
@@ -23,10 +27,12 @@ import (
 	"k8s.io/klog/v2"
 	cosi "sigs.k8s.io/container-object-storage-interface-spec"
 )
+
 const (
 	maxGrpcBackoff  = 5 * 30 * time.Second
 	grpcDialTimeout = 30 * time.Second
 )
+
 func NewDefaultCOSIProvisionerClient(ctx context.Context, address string, debug bool) (*COSIProvisionerClient, error) {
 	backoffConfiguration := backoff.DefaultConfig
 	backoffConfiguration.MaxDelay = maxGrpcBackoff
@@ -44,6 +50,7 @@ func NewDefaultCOSIProvisionerClient(ctx context.Context, address string, debug 
 	}
 	return NewCOSIProvisionerClient(ctx, address, dialOpts, interceptors)
 }
+
 // NewCOSIProvisionerClient creates a new GRPCClient that only supports unix domain sockets
 func NewCOSIProvisionerClient(ctx context.Context, address string, dialOpts []grpc.DialOption, interceptors []grpc.UnaryClientInterceptor) (*COSIProvisionerClient, error) {
 	addr, err := url.Parse(address)

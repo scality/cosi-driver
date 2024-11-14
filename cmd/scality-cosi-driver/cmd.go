@@ -24,7 +24,7 @@ import (
 	"github.com/scality/cosi-driver/pkg/driver"
 	"k8s.io/klog/v2"
 
-	"github.com/scality/cosi-driver/pkg/provisioner"
+	"github.com/scality/cosi-driver/pkg/grpcfactory"
 )
 
 const (
@@ -60,7 +60,7 @@ func run(ctx context.Context) error {
 		return fmt.Errorf("failed to initialize Scality driver: %w", err)
 	}
 
-	server, err := provisioner.NewDefaultCOSIProvisionerServer(*driverAddress, identityServer, bucketProvisioner)
+	server, err := grpcfactory.NewDefaultCOSIProvisionerServer(*driverAddress, identityServer, bucketProvisioner)
 	if err != nil {
 		return fmt.Errorf("failed to start the provisioner server: %w", err)
 	}
