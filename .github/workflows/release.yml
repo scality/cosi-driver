@@ -31,6 +31,10 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
+      - name: Download all workflow run artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: ./actions-artifacts
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
@@ -41,6 +45,7 @@ jobs:
           tag_name: ${{ inputs.tag }}
           name: Release ${{ inputs.tag }}
           generate_release_notes: true
+          files: ./actions-artifacts/*
 
   package-helm-chart:
     runs-on: ubuntu-latest
