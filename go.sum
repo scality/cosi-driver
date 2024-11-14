@@ -198,8 +198,6 @@ k8s.io/utils v0.0.0-20240711033017-18e509b52bc8 h1:pUdcCO1Lk/tbT5ztQWOBi5HBgbBP1
 k8s.io/utils v0.0.0-20240711033017-18e509b52bc8/go.mod h1:OLgZIPagt7ERELqWJFomSt595RzquPNLL48iOWgYOg0=
 sigs.k8s.io/container-object-storage-interface-api v0.1.0 h1:8tB6JFQhbQIC1hwGQ+q4+tmSSNfjKemb7bFI6C0CK/4=
 sigs.k8s.io/container-object-storage-interface-api v0.1.0/go.mod h1:YiB+i/UGkzqgODDhRG3u7jkbWkQcoUeLEJ7hwOT/2Qk=
-sigs.k8s.io/container-object-storage-interface-provisioner-sidecar v0.1.0 h1:S5Qh/VAd745a2vMyZfK6qLiWJxvGpbUOddBtEVX1nU4=
-sigs.k8s.io/container-object-storage-interface-provisioner-sidecar v0.1.0/go.mod h1:JhfV605PePyAvL4F8wTjJ9ZiSAaGkrMmpn0liMPftJ4=
 sigs.k8s.io/container-object-storage-interface-spec v0.1.0 h1:WHeei3OywFyebPwBkVUuuV1SuGjG6Qm4BBmnfFTVa1Y=
 sigs.k8s.io/container-object-storage-interface-spec v0.1.0/go.mod h1:SzF/yVSh88TgYdBOAXqhT96XjU8pCQtoeQKxzIOOmWQ=
 sigs.k8s.io/controller-runtime v0.12.3 h1:FCM8xeY/FI8hoAfh/V4XbbYMY20gElh9yh+A98usMio=
