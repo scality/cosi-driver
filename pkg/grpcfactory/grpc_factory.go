@@ -12,6 +12,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+
 package grpcfactory
 
 import (
@@ -42,7 +43,7 @@ func NewDefaultCOSIProvisionerClient(ctx context.Context, address string, debug 
 			Backoff:           backoffConfiguration,
 			MinConnectTimeout: grpcDialTimeout,
 		}),
-		grpc.WithBlock(), // block until connection succeeds
+		// Note: grpc.WithBlock() is deprecated; we proceed without it
 	}
 	interceptors := []grpc.UnaryClientInterceptor{}
 	if debug {
@@ -58,16 +59,15 @@ func NewCOSIProvisionerClient(ctx context.Context, address string, dialOpts []gr
 		return nil, err
 	}
 	if addr.Scheme != "unix" {
-		err := errors.New("Address must be a unix domain socket")
-		klog.ErrorS(err, "Unsupported scheme", "expected", "unix", "found", addr.Scheme)
-		return nil, fmt.Errorf("unsupported scheme: %w", err)
+		err := fmt.Errorf("unsupported scheme: expected 'unix', found '%s'", addr.Scheme)
+		klog.ErrorS(err, "Invalid address scheme")
+		return nil, err
 	}
-	for _, interceptor := range interceptors {
-		dialOpts = append(dialOpts, grpc.WithChainUnaryInterceptor(interceptor))
+	if len(interceptors) > 0 {
+		dialOpts = append(dialOpts, grpc.WithChainUnaryInterceptor(interceptors...))
 	}
-	ctx, cancel := context.WithTimeout(ctx, maxGrpcBackoff)
-	defer cancel()
-	conn, err := grpc.DialContext(ctx, address, dialOpts...)
+	// Proceed without grpc.WithBlock(), allowing connection to establish asynchronously
+	conn, err := grpc.Dial(address, dialOpts...)
 	if err != nil {
 		klog.ErrorS(err, "Connection failed", "address", address)
 		return nil, err
@@ -75,8 +75,8 @@ func NewCOSIProvisionerClient(ctx context.Context, address string, dialOpts []gr
 	return &COSIProvisionerClient{
 		address:           address,
 		conn:              conn,
-		identityClient:    cosi.NewIdentityClient(conn),
-		provisionerClient: cosi.NewProvisionerClient(conn),
+		IdentityClient:    cosi.NewIdentityClient(conn),
+		ProvisionerClient: cosi.NewProvisionerClient(conn),
 	}, nil
 }
 func NewDefaultCOSIProvisionerServer(address string,
