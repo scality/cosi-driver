@@ -64,7 +64,6 @@ In the integrated terminal inside VS Code, run the following commands to set up 
     ```bash
     eval $(minikube docker-env)
 
-    chmod +x .github/scripts/setup_cosi_resources.sh
     .github/scripts/setup_cosi_resources.sh
     ```
 
@@ -79,7 +78,6 @@ In the integrated terminal inside VS Code, run the following commands to set up 
     ```bash
     eval $(minikube docker-env -u)
 
-    chmod +x .github/scripts/e2e_test_bucket_creation.sh
     .github/scripts/e2e_test_bucket_creation.sh
     ```
 
@@ -137,6 +135,5 @@ To clean up resources after development or testing:
     ```bash
         eval $(minikube docker-env)
 
-        chmod +x .github/scripts/cleanup_cosi_resources.sh
         .github/scripts/cleanup_cosi_resources.sh
     ```

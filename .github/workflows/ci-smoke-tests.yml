@@ -70,7 +70,6 @@ jobs:
 
     - name: Verify Helm Installation
       run: |
-        chmod +x .github/scripts/verify_helm_install.sh
         .github/scripts/verify_helm_install.sh
 
     - name: "Delay completion"
