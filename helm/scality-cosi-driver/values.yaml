@@ -37,4 +37,4 @@ env:
         fieldPath: metadata.namespace
 
 
-version: 0.1.0-beta-PW.11
+version: 0.1.0
