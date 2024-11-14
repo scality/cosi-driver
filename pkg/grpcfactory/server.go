@@ -20,7 +20,6 @@ import (
 	"net"
 	"net/url"
 
-	"github.com/pkg/errors"
 	"google.golang.org/grpc"
 	"k8s.io/klog/v2"
 	cosi "sigs.k8s.io/container-object-storage-interface-spec"
@@ -39,9 +38,9 @@ func (s *COSIProvisionerServer) Run(ctx context.Context) error {
 		return err
 	}
 	if addr.Scheme != "unix" {
-		err := errors.New("Address must be a unix domain socket")
-		klog.ErrorS(err, "Unsupported scheme", "expected", "unix", "found", addr.Scheme)
-		return fmt.Errorf("invalid argument: %w", err)
+		err := fmt.Errorf("unsupported scheme: expected 'unix', found '%s'", addr.Scheme)
+		klog.ErrorS(err, "Invalid address scheme")
+		return err
 	}
 	listenConfig := net.ListenConfig{}
 	listener, err := listenConfig.Listen(ctx, "unix", addr.Path)
@@ -49,15 +48,11 @@ func (s *COSIProvisionerServer) Run(ctx context.Context) error {
 		klog.ErrorS(err, "Failed to start server")
 		return fmt.Errorf("failed to start server: %w", err)
 	}
+	defer listener.Close()
 	server := grpc.NewServer(s.listenOpts...)
-	if s.provisionerServer == nil || s.identityServer == nil {
-		err := errors.New("ProvisionerServer and IdentityServer cannot be nil")
-		klog.ErrorS(err, "Invalid args")
-		return fmt.Errorf("invalid args: %w", err)
-	}
 	cosi.RegisterIdentityServer(server, s.identityServer)
 	cosi.RegisterProvisionerServer(server, s.provisionerServer)
-	errChan := make(chan error)
+	errChan := make(chan error, 1)
 	go func() {
 		errChan <- server.Serve(listener)
 	}()
