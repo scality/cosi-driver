@@ -1,0 +1,45 @@
+comment:
+  layout: newheader, reach, files, components, diff, flags # show component info in the PR comment
+  hide_comment_details: true  # hide the comment details (e.g. coverage targets) in the PR comment
+
+# Setting coverage targets
+coverage:
+  status:
+    project:
+      default:
+        target: auto
+        threshold: 1%
+        removed_code_behavior: adjust_base
+    patch:
+      default:
+        target: 100%
+        threshold: 75%
+
+github_checks:
+  annotations: true
+
+component_management:
+  default_rules:
+    statuses: []
+  individual_components:
+    - component_id: main-package
+      name: 🏠 Main Package
+      paths:
+        - cmd/**
+    - component_id: driver-package
+      name: 🚗 Driver Package
+      paths:
+        - pkg/driver/**
+    - component_id: grpc-factory-package
+      name: 📡 gRPC Factory Package
+      paths:
+        - pkg/grpcfactory/**
+    - component_id: util-client-package
+      name: 🔧 Util Client Package
+      paths:
+        - pkg/util/**
+
+flag_management:
+  default_rules: # the rules that will be followed for any flag added, generally
+    carryforward: true
+    statuses: []
