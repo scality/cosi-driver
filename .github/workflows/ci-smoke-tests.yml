@@ -1,0 +1,86 @@
+name: CI Smoke Tests
+
+on:
+  push:
+    branches:
+      - '**'
+  workflow_dispatch:
+    inputs:
+      debug_enabled:
+        type: boolean
+        description: 'Run the build with tmate debugging enabled'
+        required: false
+        default: false
+      debug_delay_duration_minutes:
+        type: number
+        description: 'Duration to delay job completion in minutes'
+        required: false
+        default: 5
+
+jobs:
+  smoke-test-installation-with-helm:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Check out repository
+      uses: actions/checkout@v4
+
+    - name: Set up Helm
+      uses: azure/setup-helm@v4.2.0
+      with:
+        version: v3.16.3
+
+    - name: Create Kind Cluster
+      uses: helm/kind-action@v1.10.0
+      with:
+        version: v0.21.0
+        wait: 90s
+        cluster_name: helm-test-cluster
+
+    - name: "Debug: SSH to runner"
+      uses: scality/actions/action-ssh-to-runner@v1
+      with:
+        tmate-server-host: ${{ secrets.TMATE_SERVER_HOST }}
+        tmate-server-port: ${{ secrets.TMATE_SERVER_PORT }}
+        tmate-server-rsa-fingerprint: ${{ secrets.TMATE_SERVER_RSA_FINGERPRINT }}
+        tmate-server-ed25519-fingerprint: ${{ secrets.TMATE_SERVER_ED25519_FINGERPRINT }}
+        detached: true
+      if: ${{ github.event_name == 'workflow_dispatch' && inputs.debug_enabled }}
+      timeout-minutes: 10
+      continue-on-error: true
+
+    - name: Build COSI Driver Docker Image
+      run: |
+        make container
+
+    - name: Load Docker Image into Kind Cluster
+      run: |
+        kind load docker-image ghcr.io/scality/cosi-driver:latest --name helm-test-cluster
+
+    - name: Install Scality COSI Helm Chart
+      run: |
+        helm install scality-cosi-driver ./helm/scality-cosi-driver \
+          --namespace scality-object-storage \
+          --create-namespace \
+          --set image.tag=latest
+
+    - name: Print all resources in scality-object-storage namespace
+      run: |
+        kubectl get all -n scality-object-storage
+
+    - name: Verify Helm Installation
+      run: |
+        .github/scripts/verify_helm_install.sh
+
+    - name: "Delay completion"
+      if: ${{ github.event_name == 'workflow_dispatch' && inputs.debug_enabled }}
+      uses: scality/actions/action-delay-job-completion@1.11.0
+      with:
+        completion_delay_m: ${{ inputs.debug_delay_duration_minutes }}
+      continue-on-error: true
+
+    - name: Cleanup Helm Release and Namespace
+      run: |
+        helm uninstall scality-cosi-driver -n scality-object-storage
+        kubectl delete namespace scality-object-storage
+      if: always()

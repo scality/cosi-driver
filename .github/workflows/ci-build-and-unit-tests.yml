@@ -35,7 +35,7 @@ jobs:
           token: ${{ secrets.CODECOV_TOKEN }}
           slug: scality/cosi-driver
 
-  dev-container-build:
+  dev-container-with-docker:
     permissions:
       contents: read
       packages: write
