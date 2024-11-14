@@ -1,0 +1,5 @@
+apiVersion: v2
+name: scality-cosi-driver
+description: A Helm chart for deploying the Scality COSI Driver
+version: 0.1.0-beta
+appVersion: "1.0"

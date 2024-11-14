@@ -1,0 +1,40 @@
+image:
+  repository: ghcr.io/scality/cosi-driver
+  tag: latest
+  pullPolicy: IfNotPresent
+
+
+replicaCount: 1
+
+
+logLevels:
+  driver: "5"
+  sidecar: "5"
+
+
+namespace: scality-object-storage
+fullnameOverride: scality-cosi-driver
+
+
+serviceAccount:
+  name: scality-object-storage-provisioner
+  create: true
+
+
+resources:
+  limits:
+    cpu: "500m"
+    memory: "512Mi"
+  requests:
+    cpu: "250m"
+    memory: "256Mi"
+
+
+env:
+  POD_NAMESPACE:
+    valueFrom:
+      fieldRef:
+        fieldPath: metadata.namespace
+
+
+version: 0.1.0
