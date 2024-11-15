@@ -10,7 +10,7 @@ generatorOptions:
     generated-by: "kustomize"
 
 resources:
-  - ../base
+  - ../../base
 
 commonLabels:
   app.kubernetes.io/version: main
