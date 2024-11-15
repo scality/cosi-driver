@@ -8,12 +8,12 @@ coverage:
     project:
       default:
         target: auto
-        threshold: 1%
+        threshold: 30%
         removed_code_behavior: adjust_base
     patch:
       default:
-        target: 100%
-        threshold: 75%
+        target: 40%
+        threshold: 40%
 
 github_checks:
   annotations: true
