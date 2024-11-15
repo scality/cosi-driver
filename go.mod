@@ -11,7 +11,6 @@ require (
 	k8s.io/client-go v0.31.2
 	k8s.io/klog/v2 v2.130.1
 	sigs.k8s.io/container-object-storage-interface-api v0.1.0
-	sigs.k8s.io/container-object-storage-interface-provisioner-sidecar v0.1.0
 	sigs.k8s.io/container-object-storage-interface-spec v0.1.0
 )
 
@@ -57,7 +56,7 @@ require (
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.2 // indirect
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
-	github.com/pkg/errors v0.9.1 // indirect
+	github.com/pkg/errors v0.9.1
 	github.com/x448/float16 v0.8.4 // indirect
 	golang.org/x/net v0.30.0 // indirect
 	golang.org/x/oauth2 v0.21.0 // indirect
