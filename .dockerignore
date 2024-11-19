@@ -1,0 +1,10 @@
+bin/
+test/
+coverage/
+docker/
+.vscode/
+helm/
+kustomize/
+.git/
+.github/
+.devcontainer/
