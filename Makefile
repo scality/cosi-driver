@@ -25,3 +25,7 @@ clean:
 container:
 	@echo "Building container image..."
 	docker build -t $(IMAGE_NAME) .
+
+delve:
+	@echo "Building Delve container image..."
+	docker build -f docker/delve/Dockerfile -t $(IMAGE_NAME)-delve .
