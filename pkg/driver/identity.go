@@ -49,6 +49,7 @@ func (id *identityServer) DriverGetInfo(ctx context.Context,
 		klog.ErrorS(fmt.Errorf("provisioner name cannot be empty"), "invalid argument")
 		return nil, status.Error(codes.InvalidArgument, "Provisioner name is empty")
 	}
+	klog.InfoS("DriverGetInfo", "provisioner", id.provisioner)
 
 	return &cosiapi.DriverGetInfoResponse{
 		Name: id.provisioner,
