@@ -1,0 +1,41 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: scality-object-storage
+
+configMapGenerator:
+- name: scality-cosi-driver-properties
+  env: scality-cosi-driver.properties
+generatorOptions:         
+  disableNameSuffixHash: true
+  labels:                    
+    generated-by: "kustomize"
+
+resources:
+  - namespace.yaml
+  - serviceaccount.yaml
+  - rbac.yaml
+
+commonLabels:
+  app.kubernetes.io/version: main
+  app.kubernetes.io/component: driver
+  app.kubernetes.io/name: scality-cosi-driver
+  app.kubernetes.io/part-of: container-object-storage-interface
+  app.kubernetes.io/managed-by: kustomize
+
+vars:
+- name: COSI_DRIVER_LOG_LEVEL
+  objref:
+    name: scality-cosi-driver-properties
+    kind: ConfigMap
+    apiVersion: v1
+  fieldref:
+    fieldpath: data.COSI_DRIVER_LOG_LEVEL
+
+- name: OBJECTSTORAGE_PROVISIONER_SIDECAR_LOG_LEVEL
+  objref:
+    name: scality-cosi-driver-properties
+    kind: ConfigMap
+    apiVersion: v1
+  fieldref:
+    fieldpath: data.OBJECTSTORAGE_PROVISIONER_SIDECAR_LOG_LEVEL
