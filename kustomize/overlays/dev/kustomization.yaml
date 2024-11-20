@@ -12,9 +12,9 @@ generatorOptions:
     generated-by: "kustomize"
 
 resources:
-  - namespace.yaml
-  - serviceaccount.yaml
-  - rbac.yaml
+  - ../../base/namespace.yaml
+  - ../../base/serviceaccount.yaml
+  - ../../base/rbac.yaml
 
 commonLabels:
   app.kubernetes.io/version: main
