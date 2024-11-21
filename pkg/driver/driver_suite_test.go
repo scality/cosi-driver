@@ -7,7 +7,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-func TestCosiDev(t *testing.T) {
+func TestDriverSuite(t *testing.T) {
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "Driver Test Suite")
 }

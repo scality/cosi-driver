@@ -7,7 +7,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-func TestCosiDev(t *testing.T) {
+func TestGRPCFactorySuite(t *testing.T) {
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "gRPC Factory Test Suite")
 }
