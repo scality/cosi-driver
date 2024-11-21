@@ -96,6 +96,7 @@ It is also possible to describe the APIs
 ```sh
 grpcurl -plaintext -proto cosi.proto -import-path ./proto -unix ./cosi.sock describe cosi.v1alpha1.Provisioner.DriverCreateBucket
 
+#Output
 cosi.v1alpha1.Provisioner.DriverCreateBucket is a method:
 // This call is made to create the bucket in the backend.
 // This call is idempotent
