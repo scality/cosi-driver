@@ -1,4 +1,4 @@
-package driver_test
+package grpcfactory_test
 
 import (
 	"testing"
@@ -7,7 +7,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-func TestDriverSuite(t *testing.T) {
+func TestGRPCFactorySuite(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Driver Test Suite")
+	RunSpecs(t, "gRPC Factory Test Suite")
 }
