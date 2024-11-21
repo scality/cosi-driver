@@ -8,7 +8,7 @@ require (
 	github.com/onsi/ginkgo/v2 v2.22.0
 	github.com/onsi/gomega v1.35.1
 	google.golang.org/grpc v1.66.0
-	k8s.io/client-go v0.31.2
+	k8s.io/client-go v0.31.3
 	k8s.io/klog/v2 v2.130.1
 	sigs.k8s.io/container-object-storage-interface-api v0.1.0
 	sigs.k8s.io/container-object-storage-interface-spec v0.1.0
