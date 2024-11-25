@@ -59,35 +59,7 @@ There are 3 main scripts run in the CI:
 
 In the integrated terminal inside VS Code, run the following commands to set up resources, run end-to-end tests, and capture logs:
 
-1. **Update endpoint in [secrets file](../../cosi-examples/s3-secret-for-cosi.yaml)**
-
-Change `COSI_S3_ENDPOINT` to the IP (`hostname -I | awk '{print $1}'`) of codespace instance.
-
-#### Example
-
-```bash
-$ hostname -I | awk '{print $1}'
-10.0.1.236
-```
-
-New secret file with updated `COSI_S3_ENDPOINT`
-
-```
-apiVersion: v1
-kind: Secret
-metadata:
-  name: s3-secret-for-cosi
-  namespace: default
-type: Opaque
-stringData:
-  COSI_S3_ACCESS_KEY_ID: PBUOB68AVF39EVVAFNFL  # Plain text access key, generated in the CI
-  COSI_S3_SECRET_ACCESS_KEY: P+PK+uMB9spUc21huaQoOexqdJoV00tSnl+pc7t7  # Plain text secret key
-  COSI_S3_ENDPOINT: http://10.0.1.236:8000  # Plain text endpoint
-  COSI_S3_REGION: us-west-1  # Plain text region
-```
-
-
-2. **Set Up COSI Resources**
+1. **Set Up COSI Resources**
 
     ```bash
     eval $(minikube docker-env)
@@ -102,7 +74,7 @@ stringData:
     - Builds and deploys the Scality COSI Driver.
     - Verifies that the driver pod is running.
 
-3. **Run End-to-End Tests**
+2. **Run End-to-End Tests**
 
     ```bash
     eval $(minikube docker-env -u)
@@ -153,6 +125,9 @@ This command will run all the unit tests defined in your Go project, providing f
 To clean up resources after development or testing:
 
 1. **Stop S3 and IAM Services**
+
+    The start is automated using dev container setup. Restart using `cd .github/s3_and_iam_deployment && docker compose --profile iam_s3 up -d`ß
+    Stop deployment
 
     ```bash
         eval $(minikube docker-env -u)
