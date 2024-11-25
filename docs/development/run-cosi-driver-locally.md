@@ -126,8 +126,8 @@ grpcurl -plaintext -proto cosi.proto -import-path ./proto -unix ./cosi.sock cosi
 grpcurl -plaintext -proto cosi.proto -import-path ./proto -unix ./cosi.sock -d '{
   "name": "example-bucket",
   "parameters": {
-    "COSI_OBJECT_STORAGE_PROVIDER_SECRET_NAME": "s3-secret-for-cosi",
-    "COSI_OBJECT_STORAGE_PROVIDER_SECRET_NAMESPACE": "default"
+    "COSI_DRIVER_SECRET_NAME": "s3-secret-for-cosi",
+    "COSI_DRIVER_SECRET_NAMESPACE": "default"
   }
 }' cosi.v1alpha1.Provisioner.DriverCreateBucket
 ```

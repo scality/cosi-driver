@@ -164,10 +164,10 @@ func initializeObjectStorageClient(ctx context.Context, clientset kubernetes.Int
 func fetchObjectStorageProviderSecretInfo(parameters map[string]string) (string, string, error) {
 	klog.V(4).InfoS("Fetching object storage provider secret info", "parameters", parameters)
 
-	secretName := parameters["COSI_OBJECT_STORAGE_PROVIDER_SECRET_NAME"]
+	secretName := parameters["COSI_DRIVER_SECRET_NAME"]
 	namespace := os.Getenv("POD_NAMESPACE")
-	if parameters["COSI_OBJECT_STORAGE_PROVIDER_SECRET_NAMESPACE"] != "" {
-		namespace = parameters["COSI_OBJECT_STORAGE_PROVIDER_SECRET_NAMESPACE"]
+	if parameters["COSI_DRIVER_SECRET_NAMESPACE"] != "" {
+		namespace = parameters["COSI_DRIVER_SECRET_NAMESPACE"]
 	}
 	if secretName == "" || namespace == "" {
 		klog.ErrorS(nil, "Missing object storage provider secret name or namespace", "secretName", secretName, "namespace", namespace)
@@ -181,10 +181,10 @@ func fetchObjectStorageProviderSecretInfo(parameters map[string]string) (string,
 func fetchS3Parameters(secretData map[string][]byte) (*s3client.S3Params, error) {
 	klog.V(5).InfoS("Fetching S3 parameters from secret")
 
-	accessKey := string(secretData["COSI_S3_ACCESS_KEY_ID"])
-	secretKey := string(secretData["COSI_S3_SECRET_ACCESS_KEY"])
-	endpoint := string(secretData["COSI_S3_ENDPOINT"])
-	region := string(secretData["COSI_S3_REGION"])
+	accessKey := string(secretData["COSI_DRIVER_S3_ACCESS_KEY_ID"])
+	secretKey := string(secretData["COSI_DRIVER_S3_SECRET_ACCESS_KEY"])
+	endpoint := string(secretData["COSI_DRIVER_S3_ENDPOINT"])
+	region := string(secretData["COSI_DRIVER_S3_REGION"])
 
 	if endpoint == "" || accessKey == "" || secretKey == "" || region == "" {
 		klog.ErrorS(nil, "Missing required S3 parameters", "accessKey", accessKey != "", "secretKey", secretKey != "", "endpoint", endpoint != "", "region", region != "")
