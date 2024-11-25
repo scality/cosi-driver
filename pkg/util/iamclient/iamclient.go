@@ -2,21 +2,20 @@ package iamclient
 
 import (
 	"context"
-	"encoding/json"
+	"crypto/tls"
+	"crypto/x509"
 	"fmt"
+	"net/http"
 	"os"
+	"strings"
 	"time"
 
+	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/credentials"
 	"github.com/aws/aws-sdk-go-v2/service/iam"
 	"github.com/aws/smithy-go/logging"
 	"k8s.io/klog/v2"
-)
-
-const (
-	defaultRegion  = "us-east-1"
-	requestTimeout = 15 * time.Second
 )
 
 type IAMAPI interface {
@@ -25,10 +24,17 @@ type IAMAPI interface {
 	CreateAccessKey(ctx context.Context, input *iam.CreateAccessKeyInput, opts ...func(*iam.Options)) (*iam.CreateAccessKeyOutput, error)
 }
 
+const (
+	defaultRegion  = "us-east-1"
+	requestTimeout = 15 * time.Second
+)
+
 type IAMParams struct {
 	AccessKey string
 	SecretKey string
+	Endpoint  string
 	Region    string
+	TLSCert   []byte // Optional field for TLS certificates
 	Debug     bool
 }
 
@@ -36,7 +42,6 @@ type IAMClient struct {
 	IAMService IAMAPI
 }
 
-// InitIAMClient initializes the IAM client.
 func InitIAMClient(params IAMParams) (*IAMClient, error) {
 	if params.AccessKey == "" || params.SecretKey == "" {
 		return nil, fmt.Errorf("AWS credentials are missing")
@@ -49,30 +54,63 @@ func InitIAMClient(params IAMParams) (*IAMClient, error) {
 		logger = nil
 	}
 
-	ctx := context.Background()
+	httpClient := &http.Client{
+		Timeout: requestTimeout,
+	}
+
+	// in the case where endpoint is HTTPS but no certificate is provided, skip TLS validation
+	isHTTPSEndpoint := strings.HasPrefix(params.Endpoint, "https://")
+	skipTLSValidation := isHTTPSEndpoint && len(params.TLSCert) == 0
+	if isHTTPSEndpoint {
+		httpClient.Transport = ConfigureTLSTransport(params.TLSCert, skipTLSValidation)
+	}
 
 	region := params.Region
 	if region == "" {
 		region = defaultRegion
 	}
 
+	ctx := context.Background()
+
 	awsCfg, err := config.LoadDefaultConfig(ctx,
 		config.WithRegion(region),
 		config.WithCredentialsProvider(credentials.NewStaticCredentialsProvider(params.AccessKey, params.SecretKey, "")),
+		config.WithHTTPClient(httpClient),
 		config.WithLogger(logger),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load AWS config: %w", err)
 	}
 
-	iamClient := iam.NewFromConfig(awsCfg)
+	iamClient := iam.NewFromConfig(awsCfg, func(o *iam.Options) {
+		o.BaseEndpoint = aws.String(params.Endpoint)
+	})
 
 	return &IAMClient{
 		IAMService: iamClient,
 	}, nil
 }
 
-// CreateUser creates an IAM user.
+func ConfigureTLSTransport(certData []byte, skipTLSValidation bool) *http.Transport {
+	tlsSettings := &tls.Config{
+		MinVersion:         tls.VersionTLS12,
+		InsecureSkipVerify: skipTLSValidation,
+	}
+
+	if len(certData) > 0 {
+		caCertPool := x509.NewCertPool()
+		if ok := caCertPool.AppendCertsFromPEM(certData); !ok {
+			klog.Warning("Failed to append provided cert data to the certificate pool")
+		}
+		tlsSettings.RootCAs = caCertPool
+	}
+
+	return &http.Transport{
+		TLSClientConfig: tlsSettings,
+	}
+}
+
+// CreateUser creates an IAM user with the specified name.
 func (client *IAMClient) CreateUser(ctx context.Context, userName string) error {
 	input := &iam.CreateUserInput{
 		UserName: &userName,
@@ -87,36 +125,22 @@ func (client *IAMClient) CreateUser(ctx context.Context, userName string) error 
 	return nil
 }
 
-// GenerateBucketInlinePolicyDocument generates a policy JSON for S3 bucket access.
-func GenerateBucketInlinePolicyDocument(bucketName string) (string, error) {
-	policy := map[string]interface{}{
+// AttachInlinePolicy attaches an inline policy to an IAM user for a specific bucket.
+func (client *IAMClient) AttachInlinePolicy(ctx context.Context, userName, bucketName string) error {
+	policyName := fmt.Sprintf("%s-bucket-access", bucketName)
+	policyDocument := fmt.Sprintf(`{
 		"Version": "2012-10-17",
-		"Statement": []map[string]interface{}{
+		"Statement": [
 			{
 				"Effect": "Allow",
 				"Action": "s3:*",
-				"Resource": []string{
-					fmt.Sprintf("arn:aws:s3:::%s", bucketName),
-					fmt.Sprintf("arn:aws:s3:::%s/*", bucketName),
-				},
-			},
-		},
-	}
-
-	policyJSON, err := json.Marshal(policy)
-	if err != nil {
-		return "", fmt.Errorf("failed to generate policy JSON: %w", err)
-	}
-
-	return string(policyJSON), nil
-}
-
-// AttachInlinePolicy attaches an inline policy to an IAM user.
-func (client *IAMClient) AttachInlinePolicy(ctx context.Context, userName, policyName, bucketName string) error {
-	policyDocument, err := GenerateBucketInlinePolicyDocument(bucketName)
-	if err != nil {
-		return err
-	}
+				"Resource": [
+					"arn:aws:s3:::%s",
+					"arn:aws:s3:::%s/*"
+				]
+			}
+		]
+	}`, bucketName, bucketName)
 
 	input := &iam.PutUserPolicyInput{
 		UserName:       &userName,
@@ -124,12 +148,12 @@ func (client *IAMClient) AttachInlinePolicy(ctx context.Context, userName, polic
 		PolicyDocument: &policyDocument,
 	}
 
-	_, err = client.IAMService.PutUserPolicy(ctx, input)
+	_, err := client.IAMService.PutUserPolicy(ctx, input)
 	if err != nil {
-		return fmt.Errorf("failed to attach inline policy %s to IAM user %s: %w", policyName, userName, err)
+		return fmt.Errorf("failed to attach inline policy to IAM user %s: %w", userName, err)
 	}
 
-	klog.InfoS("Inline policy attachment succeeded", "user", userName, "policy", policyName)
+	klog.InfoS("Inline policy attachment succeeded", "user", userName, "policyName", policyName)
 	return nil
 }
 
@@ -148,15 +172,14 @@ func (client *IAMClient) CreateAccessKey(ctx context.Context, userName string) (
 	return output, nil
 }
 
-// CreateUserWithPolicyAndAccessKey creates a user, attaches a bucket policy, and generates access keys.
+// CreateUserWithPolicyAndAccessKey is a helper that combines user creation, policy attachment, and access key generation.
 func (client *IAMClient) CreateUserWithPolicyAndAccessKey(ctx context.Context, userName, bucketName string) (*iam.CreateAccessKeyOutput, error) {
 	err := client.CreateUser(ctx, userName)
 	if err != nil {
 		return nil, err
 	}
 
-	policyName := fmt.Sprintf("%s-bucket-access", bucketName)
-	err = client.AttachInlinePolicy(ctx, userName, policyName, bucketName)
+	err = client.AttachInlinePolicy(ctx, userName, bucketName)
 	if err != nil {
 		return nil, err
 	}
