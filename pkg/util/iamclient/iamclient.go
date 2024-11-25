@@ -10,7 +10,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/credentials"
 	"github.com/aws/aws-sdk-go-v2/service/iam"
@@ -83,7 +82,7 @@ func InitIAMClient(params IAMParams) (*IAMClient, error) {
 	}
 
 	iamClient := iam.NewFromConfig(awsCfg, func(o *iam.Options) {
-		o.BaseEndpoint = aws.String(params.Endpoint)
+		o.BaseEndpoint = &params.Endpoint
 	})
 
 	return &IAMClient{

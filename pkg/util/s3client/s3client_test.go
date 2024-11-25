@@ -27,7 +27,7 @@ func (m *MockS3Client) CreateBucket(ctx context.Context, input *s3.CreateBucketI
 
 func TestS3Client(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "S3Client Suite")
+	RunSpecs(t, "S3Client Test Suite")
 }
 
 var _ = Describe("S3Client", func() {
