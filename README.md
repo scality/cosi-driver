@@ -36,9 +36,6 @@ Certainly! Below is the directory structure including the root of your repositor
 
 ---
 
-### **Contents of the Root `README.md`**
-
-```markdown
 # Scality COSI Driver
 
 Welcome to the **Scality COSI Driver** repository! This project provides a Container Object Storage Interface (COSI) driver implementation for Scality's storage solutions, enabling seamless management of object storage resources within Kubernetes clusters.
