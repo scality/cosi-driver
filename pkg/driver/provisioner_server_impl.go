@@ -217,7 +217,7 @@ func fetchS3Parameters(secretData map[string][]byte) (*s3client.S3Params, error)
 //	non-nil err -           Internal error                                [requeue'd with exponential backoff]
 func (s *ProvisionerServer) DriverDeleteBucket(ctx context.Context,
 	req *cosiapi.DriverDeleteBucketRequest) (*cosiapi.DriverDeleteBucketResponse, error) {
-
+	klog.V(3).InfoS("Received DriverDeleteBucket request", "bucketId", req.GetBucketId())
 	return nil, status.Error(codes.Unimplemented, "DriverCreateBucket: not implemented")
 }
 
@@ -244,6 +244,6 @@ func (s *ProvisionerServer) DriverGrantBucketAccess(ctx context.Context,
 //	non-nil err -           Internal error                                [requeue'd with exponential backoff]
 func (s *ProvisionerServer) DriverRevokeBucketAccess(ctx context.Context,
 	req *cosiapi.DriverRevokeBucketAccessRequest) (*cosiapi.DriverRevokeBucketAccessResponse, error) {
-
+	klog.V(3).InfoS("Received DriverRevokeBucketAccess request", "bucketId", req.GetBucketId(), "accountId", req.GetAccountId())
 	return nil, status.Error(codes.Unimplemented, "DriverCreateBucket: not implemented")
 }
