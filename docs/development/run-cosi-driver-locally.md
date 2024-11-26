@@ -123,14 +123,23 @@ grpcurl -plaintext -proto cosi.proto -import-path ./proto -unix ./cosi.sock cosi
 - DriverCreateBucket gRPC API
 
 ```sh
-grpcurl -plaintext -proto cosi.proto -import-path ./proto -unix ./cosi.sock -d '{
+grpcurl -plaintext -proto cosi.proto -import-path ./proto -unix  -d '{
   "name": "example-bucket",
   "parameters": {
     "COSI_DRIVER_SECRET_NAME": "s3-secret-for-cosi",
     "COSI_DRIVER_SECRET_NAMESPACE": "default"
   }
-}' cosi.v1alpha1.Provisioner.DriverCreateBucket
+}' ./cosi.sock cosi.v1alpha1.Provisioner.DriverCreateBucket
 ```
+
+grpcurl -plaintext -proto cosi.proto -import-path ./proto -unix -d '{
+  "name": "example-bussscket",
+  "bucketId": "sssss",
+  "parameters": {
+    "COSI_DRIVER_SECRET_NAME": "s3-secret-for-cosi",
+    "COSI_DRIVER_SECRET_NAMESPACE": "default"
+  }
+}' ./cosi.sock cosi.v1alpha1.Provisioner.DriverGrantBucketAccess
 
 ## Troubleshooting
 

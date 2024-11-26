@@ -15,10 +15,10 @@ The table below details the configuration parameters for BucketClass, which dete
 
 | **Parameter**                 | **Description**                                                                                         | **Allowed Values**                          | **Required** |
 |-------------------------------|---------------------------------------------------------------------------------------------------------|---------------------------------------------|--------------|
-| `COSI_DRIVER_S3_ACCESS_KEY_ID`       | The Access Key ID of the identity with S3 bucket creation privileges.                                   | `string`                                    | Yes          |
-| `COSI_DRIVER_S3_SECRET_ACCESS_KEY`   | The Secret Access Key corresponding to the above Access Key ID.                                         | `string`                                    | Yes          |
-| `COSI_DRIVER_S3_ENDPOINT`            | The S3 endpoint URL. If HTTPS is used without a TLS certificate, an insecure connection will be used.   | `string` (e.g., `https://s3.ring.internal`) | Yes          |
-| `COSI_DRIVER_S3_REGION`              | The S3 region to use.                                                                                   | `string` (e.g., `us-east-1`)                | Yes          |
+| `COSI_DRIVER_OSP_ACCESS_KEY_ID`       | The Access Key ID of the identity with S3 bucket creation privileges.                                   | `string`                                    | Yes          |
+| `COSI_DRIVER_OSP_SECRET_ACCESS_KEY`   | The Secret Access Key corresponding to the above Access Key ID.                                         | `string`                                    | Yes          |
+| `COSI_DRIVER_OSP_ENDPOINT`            | The S3 endpoint URL. If HTTPS is used without a TLS certificate, an insecure connection will be used.   | `string` (e.g., `https://s3.ring.internal`) | Yes          |
+| `COSI_DRIVER_OSP_REGION`              | The S3 region to use.                                                                                   | `string` (e.g., `us-east-1`)                | Yes          |
 | `COSI_S3_TLS_CERT_SECRET_NAME`| The name of the secret containing the TLS certificate (optional).                                       | `string`                                    | No           |
 
 [Example](../cosi-examples/s3-secret-for-cosi.yaml)

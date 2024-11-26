@@ -181,10 +181,10 @@ func fetchObjectStorageProviderSecretInfo(parameters map[string]string) (string,
 func fetchS3Parameters(secretData map[string][]byte) (*s3client.S3Params, error) {
 	klog.V(5).InfoS("Fetching S3 parameters from secret")
 
-	accessKey := string(secretData["COSI_DRIVER_S3_ACCESS_KEY_ID"])
-	secretKey := string(secretData["COSI_DRIVER_S3_SECRET_ACCESS_KEY"])
-	endpoint := string(secretData["COSI_DRIVER_S3_ENDPOINT"])
-	region := string(secretData["COSI_DRIVER_S3_REGION"])
+	accessKey := string(secretData["COSI_DRIVER_OSP_ACCESS_KEY_ID"])
+	secretKey := string(secretData["COSI_DRIVER_OSP_SECRET_ACCESS_KEY"])
+	endpoint := string(secretData["COSI_DRIVER_OSP_ENDPOINT"])
+	region := string(secretData["COSI_DRIVER_OSP_REGION"])
 
 	if endpoint == "" || accessKey == "" || secretKey == "" || region == "" {
 		klog.ErrorS(nil, "Missing required S3 parameters", "accessKey", accessKey != "", "secretKey", secretKey != "", "endpoint", endpoint != "", "region", region != "")

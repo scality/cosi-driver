@@ -279,10 +279,10 @@ var _ = Describe("initializeObjectStorageClient", func() {
 				Namespace: "test-namespace",
 			},
 			Data: map[string][]byte{
-				"COSI_DRIVER_S3_ACCESS_KEY_ID":     []byte("test-access-key"),
-				"COSI_DRIVER_S3_SECRET_ACCESS_KEY": []byte("test-secret-key"),
-				"COSI_DRIVER_S3_ENDPOINT":          []byte("https://test-endpoint"),
-				"COSI_DRIVER_S3_REGION":            []byte("us-west-2"),
+				"COSI_DRIVER_OSP_ACCESS_KEY_ID":     []byte("test-access-key"),
+				"COSI_DRIVER_OSP_SECRET_ACCESS_KEY": []byte("test-secret-key"),
+				"COSI_DRIVER_OSP_ENDPOINT":          []byte("https://test-endpoint"),
+				"COSI_DRIVER_OSP_REGION":            []byte("us-west-2"),
 			},
 		}
 	})
@@ -342,10 +342,10 @@ var _ = Describe("FetchParameters", func() {
 
 	BeforeEach(func() {
 		secretData = map[string][]byte{
-			"COSI_DRIVER_S3_ACCESS_KEY_ID":     []byte("test-access-key"),
-			"COSI_DRIVER_S3_SECRET_ACCESS_KEY": []byte("test-secret-key"),
-			"COSI_DRIVER_S3_ENDPOINT":          []byte("https://test-endpoint"),
-			"COSI_DRIVER_S3_REGION":            []byte("us-west-2"),
+			"COSI_DRIVER_OSP_ACCESS_KEY_ID":     []byte("test-access-key"),
+			"COSI_DRIVER_OSP_SECRET_ACCESS_KEY": []byte("test-secret-key"),
+			"COSI_DRIVER_OSP_ENDPOINT":          []byte("https://test-endpoint"),
+			"COSI_DRIVER_OSP_REGION":            []byte("us-west-2"),
 		}
 	})
 
@@ -369,7 +369,7 @@ var _ = Describe("FetchParameters", func() {
 	})
 
 	It("should return error if AccessKey is missing", func() {
-		delete(secretData, "COSI_DRIVER_S3_ACCESS_KEY_ID")
+		delete(secretData, "COSI_DRIVER_OSP_ACCESS_KEY_ID")
 		s3Params, err := driver.FetchParameters(secretData)
 		Expect(err).To(HaveOccurred())
 		Expect(s3Params).To(BeNil())
@@ -378,7 +378,7 @@ var _ = Describe("FetchParameters", func() {
 	})
 
 	It("should return error if SecretKey is missing", func() {
-		delete(secretData, "COSI_DRIVER_S3_SECRET_ACCESS_KEY")
+		delete(secretData, "COSI_DRIVER_OSP_SECRET_ACCESS_KEY")
 		s3Params, err := driver.FetchParameters(secretData)
 		Expect(err).To(HaveOccurred())
 		Expect(s3Params).To(BeNil())
@@ -387,7 +387,7 @@ var _ = Describe("FetchParameters", func() {
 	})
 
 	It("should return error if Endpoint is missing", func() {
-		delete(secretData, "COSI_DRIVER_S3_ENDPOINT")
+		delete(secretData, "COSI_DRIVER_OSP_ENDPOINT")
 		s3Params, err := driver.FetchParameters(secretData)
 		Expect(err).To(HaveOccurred())
 		Expect(s3Params).To(BeNil())
@@ -396,7 +396,7 @@ var _ = Describe("FetchParameters", func() {
 	})
 
 	It("should return error if Region is missing", func() {
-		delete(secretData, "COSI_DRIVER_S3_REGION")
+		delete(secretData, "COSI_DRIVER_OSP_REGION")
 		s3Params, err := driver.FetchParameters(secretData)
 		Expect(err).To(HaveOccurred())
 		Expect(s3Params).To(BeNil())
