@@ -19,6 +19,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/fake"
 	cosiapi "sigs.k8s.io/container-object-storage-interface-spec"
+	config "github.com/scality/cosi-driver/pkg/util/config"
 )
 
 type MockS3Client struct {
@@ -39,9 +40,9 @@ var _ = Describe("ProvisionerServer DriverCreateBucket", func() {
 		ctx                      context.Context
 		clientset                *fake.Clientset
 		bucketName               string
-		s3Params                 s3client.S3Params
+		s3Params                 config.StorageClientParameters
 		request                  *cosiapi.DriverCreateBucketRequest
-		originalInitializeClient func(ctx context.Context, clientset kubernetes.Interface, parameters map[string]string) (*s3client.S3Client, *s3client.S3Params, error)
+		originalInitializeClient func(ctx context.Context, clientset kubernetes.Interface, parameters map[string]string) (*s3client.S3Client, *config.StorageClientParameters, error)
 	)
 
 	BeforeEach(func() {
@@ -53,7 +54,7 @@ var _ = Describe("ProvisionerServer DriverCreateBucket", func() {
 			Clientset:   clientset,
 		}
 		bucketName = "test-bucket"
-		s3Params = s3client.S3Params{
+		s3Params = config.StorageClientParameters{
 			AccessKey: "test-access-key",
 			SecretKey: "test-secret-key",
 			Endpoint:  "https://test-endpoint",
@@ -71,7 +72,7 @@ var _ = Describe("ProvisionerServer DriverCreateBucket", func() {
 	})
 
 	JustBeforeEach(func() {
-		driver.InitializeClient = func(ctx context.Context, clientset kubernetes.Interface, parameters map[string]string) (*s3client.S3Client, *s3client.S3Params, error) {
+		driver.InitializeClient = func(ctx context.Context, clientset kubernetes.Interface, parameters map[string]string) (*s3client.S3Client, *config.StorageClientParameters, error) {
 			return &s3client.S3Client{S3Service: mockS3}, &s3Params, nil
 		}
 	})
