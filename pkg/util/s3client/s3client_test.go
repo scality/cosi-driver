@@ -10,6 +10,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/s3/types"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	config "github.com/scality/cosi-driver/pkg/util/config"
 	"github.com/scality/cosi-driver/pkg/util/s3client"
 )
 
@@ -32,10 +33,10 @@ func TestS3Client(t *testing.T) {
 
 var _ = Describe("S3Client", func() {
 
-	var params s3client.S3Params
+	var params config.StorageClientParameters
 
 	BeforeEach(func() {
-		params = s3client.S3Params{
+		params = config.StorageClientParameters{
 			AccessKey: "test-access-key",
 			SecretKey: "test-secret-key",
 			Endpoint:  "https://s3.mock.endpoint",

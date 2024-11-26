@@ -11,11 +11,12 @@ import (
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
-	"github.com/aws/aws-sdk-go-v2/config"
+	awssdkconfig "github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/credentials"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/aws/aws-sdk-go-v2/service/s3/types"
 	"github.com/aws/smithy-go/logging"
+	"github.com/scality/cosi-driver/pkg/util/config"
 	"k8s.io/klog/v2"
 )
 
@@ -28,20 +29,11 @@ const (
 	requestTimeout = 15 * time.Second
 )
 
-type S3Params struct {
-	AccessKey string
-	SecretKey string
-	Endpoint  string
-	Region    string
-	TLSCert   []byte // Optional field for TLS certificates
-	Debug     bool
-}
-
 type S3Client struct {
 	S3Service S3API
 }
 
-func InitS3Client(params S3Params) (*S3Client, error) {
+func InitS3Client(params config.StorageClientParameters) (*S3Client, error) {
 	if params.AccessKey == "" || params.SecretKey == "" {
 		return nil, fmt.Errorf("AWS credentials are missing")
 	}
@@ -71,11 +63,11 @@ func InitS3Client(params S3Params) (*S3Client, error) {
 
 	ctx := context.Background()
 
-	awsCfg, err := config.LoadDefaultConfig(ctx,
-		config.WithRegion(region),
-		config.WithCredentialsProvider(credentials.NewStaticCredentialsProvider(params.AccessKey, params.SecretKey, "")),
-		config.WithHTTPClient(httpClient),
-		config.WithLogger(logger),
+	awsCfg, err := awssdkconfig.LoadDefaultConfig(ctx,
+		awssdkconfig.WithRegion(region),
+		awssdkconfig.WithCredentialsProvider(credentials.NewStaticCredentialsProvider(params.AccessKey, params.SecretKey, "")),
+		awssdkconfig.WithHTTPClient(httpClient),
+		awssdkconfig.WithLogger(logger),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load AWS config: %w", err)
@@ -110,7 +102,7 @@ func ConfigureTLSTransport(certData []byte, skipTLSValidation bool) *http.Transp
 	}
 }
 
-func (client *S3Client) CreateBucket(ctx context.Context, bucketName string, params S3Params) error {
+func (client *S3Client) CreateBucket(ctx context.Context, bucketName string, params config.StorageClientParameters) error {
 
 	input := &s3.CreateBucketInput{
 		Bucket: &bucketName,

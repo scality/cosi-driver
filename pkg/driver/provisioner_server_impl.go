@@ -22,6 +22,7 @@ import (
 
 	s3types "github.com/aws/aws-sdk-go-v2/service/s3/types"
 	"github.com/aws/smithy-go"
+	config "github.com/scality/cosi-driver/pkg/util/config"
 	s3client "github.com/scality/cosi-driver/pkg/util/s3client"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -130,7 +131,7 @@ func (s *ProvisionerServer) DriverCreateBucket(ctx context.Context,
 	}, nil
 }
 
-func initializeObjectStorageClient(ctx context.Context, clientset kubernetes.Interface, parameters map[string]string) (*s3client.S3Client, *s3client.S3Params, error) {
+func initializeObjectStorageClient(ctx context.Context, clientset kubernetes.Interface, parameters map[string]string) (*s3client.S3Client, *config.StorageClientParameters, error) {
 	klog.V(3).InfoS("Initializing object storage provider clients", "parameters", parameters)
 
 	ospSecretName, namespace, err := FetchSecretInformation(parameters)
@@ -178,7 +179,7 @@ func fetchObjectStorageProviderSecretInfo(parameters map[string]string) (string,
 	return secretName, namespace, nil
 }
 
-func fetchS3Parameters(secretData map[string][]byte) (*s3client.S3Params, error) {
+func fetchS3Parameters(secretData map[string][]byte) (*config.StorageClientParameters, error) {
 	klog.V(5).InfoS("Fetching S3 parameters from secret")
 
 	accessKey := string(secretData["COSI_DRIVER_OSP_ACCESS_KEY_ID"])
@@ -192,13 +193,13 @@ func fetchS3Parameters(secretData map[string][]byte) (*s3client.S3Params, error)
 	}
 
 	var tlsCert []byte
-	if cert, exists := secretData["COSI_S3_TLS_CERT_SECRET_NAME"]; exists {
+	if cert, exists := secretData["COSI_DRIVER_OSP_TLS_CERT_SECRET_NAME"]; exists {
 		tlsCert = cert
 	} else {
 		klog.V(5).InfoS("TLS certificate is not provided, proceeding without it")
 	}
 
-	return &s3client.S3Params{
+	return &config.StorageClientParameters{
 		AccessKey: accessKey,
 		SecretKey: secretKey,
 		Endpoint:  endpoint,

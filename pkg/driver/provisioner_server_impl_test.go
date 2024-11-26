@@ -361,7 +361,7 @@ var _ = Describe("FetchParameters", func() {
 	})
 
 	It("should successfully fetch S3 parameters with TLS certificate", func() {
-		secretData["COSI_S3_TLS_CERT_SECRET_NAME"] = []byte("test-tls-cert")
+		secretData["COSI_DRIVER_OSP_TLS_CERT_SECRET_NAME"] = []byte("test-tls-cert")
 		s3Params, err := driver.FetchParameters(secretData)
 		Expect(err).To(BeNil())
 		Expect(s3Params).NotTo(BeNil())

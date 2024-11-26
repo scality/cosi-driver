@@ -10,10 +10,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/aws/aws-sdk-go-v2/config"
+	awssdkconfig "github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/credentials"
 	"github.com/aws/aws-sdk-go-v2/service/iam"
 	"github.com/aws/smithy-go/logging"
+	config "github.com/scality/cosi-driver/pkg/util/config"
 	"k8s.io/klog/v2"
 )
 
@@ -28,20 +29,11 @@ const (
 	requestTimeout = 15 * time.Second
 )
 
-type IAMParams struct {
-	AccessKey string
-	SecretKey string
-	Endpoint  string
-	Region    string
-	TLSCert   []byte // Optional field for TLS certificates
-	Debug     bool
-}
-
 type IAMClient struct {
 	IAMService IAMAPI
 }
 
-func InitIAMClient(params IAMParams) (*IAMClient, error) {
+func InitIAMClient(params config.StorageClientParameters) (*IAMClient, error) {
 	if params.AccessKey == "" || params.SecretKey == "" {
 		return nil, fmt.Errorf("AWS credentials are missing")
 	}
@@ -71,11 +63,11 @@ func InitIAMClient(params IAMParams) (*IAMClient, error) {
 
 	ctx := context.Background()
 
-	awsCfg, err := config.LoadDefaultConfig(ctx,
-		config.WithRegion(region),
-		config.WithCredentialsProvider(credentials.NewStaticCredentialsProvider(params.AccessKey, params.SecretKey, "")),
-		config.WithHTTPClient(httpClient),
-		config.WithLogger(logger),
+	awsCfg, err := awssdkconfig.LoadDefaultConfig(ctx,
+		awssdkconfig.WithRegion(region),
+		awssdkconfig.WithCredentialsProvider(credentials.NewStaticCredentialsProvider(params.AccessKey, params.SecretKey, "")),
+		awssdkconfig.WithHTTPClient(httpClient),
+		awssdkconfig.WithLogger(logger),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load AWS config: %w", err)

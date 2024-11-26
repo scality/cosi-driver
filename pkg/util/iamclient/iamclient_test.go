@@ -12,6 +12,7 @@ import (
 	. "github.com/onsi/gomega"
 
 	"github.com/scality/cosi-driver/pkg/util/iamclient"
+	config "github.com/scality/cosi-driver/pkg/util/config"
 )
 
 // MockIAMClient implements the IAMAPI interface for testing
@@ -48,10 +49,10 @@ func TestIAMClient(t *testing.T) {
 }
 
 var _ = Describe("IAMClient", func() {
-	var params iamclient.IAMParams
+	var params config.StorageClientParameters
 
 	BeforeEach(func() {
-		params = iamclient.IAMParams{
+		params = config.StorageClientParameters{
 			AccessKey: "test-access-key",
 			SecretKey: "test-secret-key",
 			Endpoint:  "https://iam.mock.endpoint",
