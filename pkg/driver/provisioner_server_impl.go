@@ -289,25 +289,25 @@ func (s *ProvisionerServer) DriverGrantBucketAccess(ctx context.Context,
 		return nil, status.Error(codes.InvalidArgument, "endpoint, accessKeyID, secretKey and region are required")
 	}
 
-	// if err != nil {
-	// 	klog.ErrorS(err, "Failed to fetch IAM parameters from secret", "secretName", ospSecretName)
-	// 	return nil, status.Error(codes.Internal, "failed to fetch IAM parameters from secret")
-	// }
+	if err != nil {
+		klog.ErrorS(err, "Failed to fetch IAM parameters from secret", "secretName", ospSecretName)
+		return nil, status.Error(codes.Internal, "failed to fetch IAM parameters from secret")
+	}
 
-	// var tlsCert []byte
-	// if cert, exists := ospSecret.Data["COSI_DRIVER_OSP_TLS_CERT_SECRET_NAME"]; exists {
-	// 	tlsCert = cert
-	// } else {
-	// 	klog.V(5).InfoS("TLS certificate is not provided, proceeding without it")
-	// }
+	var tlsCert []byte
+	if cert, exists := ospSecret.Data["COSI_DRIVER_OSP_TLS_CERT_SECRET_NAME"]; exists {
+		tlsCert = cert
+	} else {
+		klog.V(5).InfoS("TLS certificate is not provided, proceeding without it")
+	}
 
-	// iamClientParams := config.StorageClientParameters{
-	// 	AccessKey: accessKey,
-	// 	SecretKey: secretKey,
-	// 	Endpoint:  endpoint,
-	// 	Region:    region,
-	// 	TLSCert:   tlsCert,
-	// }
+	iamClientParams := config.StorageClientParameters{
+		AccessKey: accessKey,
+		SecretKey: secretKey,
+		Endpoint:  endpoint,
+		Region:    region,
+		TLSCert:   tlsCert,
+	}
 
 	iamClient, err := iamclient.InitClient(iamClientParams)
 	if err != nil {
