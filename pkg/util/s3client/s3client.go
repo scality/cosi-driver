@@ -33,7 +33,7 @@ type S3Client struct {
 	S3Service S3API
 }
 
-func InitS3Client(params config.StorageClientParameters) (*S3Client, error) {
+func InitClient(params config.StorageClientParameters) (*S3Client, error) {
 	if params.AccessKey == "" || params.SecretKey == "" {
 		return nil, fmt.Errorf("AWS credentials are missing")
 	}

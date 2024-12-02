@@ -46,9 +46,9 @@ var _ = Describe("S3Client", func() {
 		}
 	})
 
-	Describe("InitS3Client", func() {
+	Describe("InitClient", func() {
 		It("should initialize the S3 client without error", func() {
-			client, err := s3client.InitS3Client(params)
+			client, err := s3client.InitClient(params)
 			Expect(err).To(BeNil())
 			Expect(client).NotTo(BeNil())
 			Expect(client).To(BeAssignableToTypeOf(&s3client.S3Client{}))
@@ -56,7 +56,7 @@ var _ = Describe("S3Client", func() {
 
 		It("should use the default region when none is provided", func() {
 			params.Region = ""
-			client, err := s3client.InitS3Client(params)
+			client, err := s3client.InitClient(params)
 			Expect(err).To(BeNil())
 			Expect(client).NotTo(BeNil())
 			Expect(client.S3Service).NotTo(BeNil())
@@ -67,7 +67,7 @@ var _ = Describe("S3Client", func() {
 		It("should fail if credentials are missing", func() {
 			params.AccessKey = ""
 			params.SecretKey = ""
-			client, err := s3client.InitS3Client(params)
+			client, err := s3client.InitClient(params)
 			Expect(err).NotTo(BeNil())
 			Expect(client).To(BeNil())
 		})
@@ -111,7 +111,7 @@ var _ = Describe("S3Client", func() {
 
 		BeforeEach(func() {
 			mockS3 = &MockS3Client{}
-			client, _ := s3client.InitS3Client(params)
+			client, _ := s3client.InitClient(params)
 			client.S3Service = mockS3
 		})
 
@@ -122,7 +122,7 @@ var _ = Describe("S3Client", func() {
 				return &s3.CreateBucketOutput{}, nil
 			}
 
-			client, _ := s3client.InitS3Client(params)
+			client, _ := s3client.InitClient(params)
 			client.S3Service = mockS3
 
 			err := client.CreateBucket(ctx, "new-bucket", params)
@@ -134,7 +134,7 @@ var _ = Describe("S3Client", func() {
 				return nil, fmt.Errorf("SomeOtherError: Something went wrong")
 			}
 
-			client, _ := s3client.InitS3Client(params)
+			client, _ := s3client.InitClient(params)
 			client.S3Service = mockS3
 
 			err := client.CreateBucket(ctx, "new-bucket", params)
