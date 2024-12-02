@@ -94,7 +94,7 @@ func (s *ProvisionerServer) DriverCreateBucket(ctx context.Context,
 	req *cosiapi.DriverCreateBucketRequest) (*cosiapi.DriverCreateBucketResponse, error) {
 	bucketName := req.GetName()
 	parameters := req.GetParameters()
-	clientType := "s3"
+	clientType := "S3"
 
 	klog.V(3).InfoS("Received DriverCreateBucket request", "bucketName", bucketName)
 	klog.V(5).InfoS("Processing DriverCreateBucket", "bucketName", bucketName, "parameters", parameters)
