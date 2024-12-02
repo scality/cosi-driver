@@ -14,9 +14,9 @@ import (
 	awssdkconfig "github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/credentials"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
-	"github.com/aws/aws-sdk-go-v2/service/s3/types"
+	s3types "github.com/aws/aws-sdk-go-v2/service/s3/types"
 	"github.com/aws/smithy-go/logging"
-	"github.com/scality/cosi-driver/pkg/util/config"
+	"github.com/scality/cosi-driver/pkg/util/types"
 	"k8s.io/klog/v2"
 )
 
@@ -33,7 +33,7 @@ type S3Client struct {
 	S3Service S3API
 }
 
-func InitClient(params config.StorageClientParameters) (*S3Client, error) {
+func InitClient(params types.StorageClientParameters) (*S3Client, error) {
 	if params.AccessKey == "" || params.SecretKey == "" {
 		return nil, fmt.Errorf("AWS credentials are missing")
 	}
@@ -102,15 +102,15 @@ func ConfigureTLSTransport(certData []byte, skipTLSValidation bool) *http.Transp
 	}
 }
 
-func (client *S3Client) CreateBucket(ctx context.Context, bucketName string, params config.StorageClientParameters) error {
+func (client *S3Client) CreateBucket(ctx context.Context, bucketName string, params types.StorageClientParameters) error {
 
 	input := &s3.CreateBucketInput{
 		Bucket: &bucketName,
 	}
 
 	if params.Region != "us-east-1" {
-		input.CreateBucketConfiguration = &types.CreateBucketConfiguration{
-			LocationConstraint: types.BucketLocationConstraint(params.Region),
+		input.CreateBucketConfiguration = &s3types.CreateBucketConfiguration{
+			LocationConstraint: s3types.BucketLocationConstraint(params.Region),
 		}
 	}
 

@@ -14,7 +14,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/credentials"
 	"github.com/aws/aws-sdk-go-v2/service/iam"
 	"github.com/aws/smithy-go/logging"
-	config "github.com/scality/cosi-driver/pkg/util/config"
+	types "github.com/scality/cosi-driver/pkg/util/types"
 	"k8s.io/klog/v2"
 )
 
@@ -33,7 +33,7 @@ type IAMClient struct {
 	IAMService IAMAPI
 }
 
-func InitClient(params config.StorageClientParameters) (*IAMClient, error) {
+func InitClient(params types.StorageClientParameters) (*IAMClient, error) {
 	if params.AccessKey == "" || params.SecretKey == "" {
 		return nil, fmt.Errorf("AWS credentials are missing")
 	}

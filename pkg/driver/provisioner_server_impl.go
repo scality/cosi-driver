@@ -22,9 +22,9 @@ import (
 
 	s3types "github.com/aws/aws-sdk-go-v2/service/s3/types"
 	"github.com/aws/smithy-go"
-	config "github.com/scality/cosi-driver/pkg/util/config"
 	"github.com/scality/cosi-driver/pkg/util/iamclient"
 	s3client "github.com/scality/cosi-driver/pkg/util/s3client"
+	types "github.com/scality/cosi-driver/pkg/util/types"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -139,7 +139,7 @@ func (s *ProvisionerServer) DriverCreateBucket(ctx context.Context,
 	}, nil
 }
 
-func initializeObjectStorageClient(ctx context.Context, clientset kubernetes.Interface, parameters map[string]string, clientType string) (interface{}, *config.StorageClientParameters, error) {
+func initializeObjectStorageClient(ctx context.Context, clientset kubernetes.Interface, parameters map[string]string, clientType string) (interface{}, *types.StorageClientParameters, error) {
 	klog.V(3).InfoS("Initializing object storage provider clients", "parameters", parameters)
 
 	ospSecretName, namespace, err := FetchSecretInformation(parameters)
@@ -207,7 +207,7 @@ func fetchObjectStorageProviderSecretInfo(parameters map[string]string) (string,
 	return secretName, namespace, nil
 }
 
-func fetchS3Parameters(secretData map[string][]byte) (*config.StorageClientParameters, error) {
+func fetchS3Parameters(secretData map[string][]byte) (*types.StorageClientParameters, error) {
 	klog.V(5).InfoS("Fetching S3 parameters from secret")
 
 	accessKey := string(secretData["COSI_DRIVER_OSP_ACCESS_KEY_ID"])
@@ -227,7 +227,7 @@ func fetchS3Parameters(secretData map[string][]byte) (*config.StorageClientParam
 		klog.V(5).InfoS("TLS certificate is not provided, proceeding without it")
 	}
 
-	return &config.StorageClientParameters{
+	return &types.StorageClientParameters{
 		AccessKey: accessKey,
 		SecretKey: secretKey,
 		Endpoint:  endpoint,
@@ -301,7 +301,7 @@ func (s *ProvisionerServer) DriverGrantBucketAccess(ctx context.Context,
 		klog.V(5).InfoS("TLS certificate is not provided, proceeding without it")
 	}
 
-	iamClientParams := config.StorageClientParameters{
+	iamClientParams := types.StorageClientParameters{
 		AccessKey: accessKey,
 		SecretKey: secretKey,
 		Endpoint:  endpoint,
