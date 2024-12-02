@@ -33,7 +33,7 @@ type IAMClient struct {
 	IAMService IAMAPI
 }
 
-func InitIAMClient(params config.StorageClientParameters) (*IAMClient, error) {
+func InitClient(params config.StorageClientParameters) (*IAMClient, error) {
 	if params.AccessKey == "" || params.SecretKey == "" {
 		return nil, fmt.Errorf("AWS credentials are missing")
 	}

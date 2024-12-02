@@ -11,8 +11,8 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
-	"github.com/scality/cosi-driver/pkg/util/iamclient"
 	config "github.com/scality/cosi-driver/pkg/util/config"
+	"github.com/scality/cosi-driver/pkg/util/iamclient"
 )
 
 // MockIAMClient implements the IAMAPI interface for testing
@@ -75,7 +75,7 @@ var _ = Describe("IAMClient", func() {
 				return &iam.CreateUserOutput{}, nil
 			}
 
-			client, _ := iamclient.InitIAMClient(params)
+			client, _ := iamclient.InitClient(params)
 			client.IAMService = mockIAM
 
 			err := client.CreateUser(ctx, "test-user")
@@ -87,7 +87,7 @@ var _ = Describe("IAMClient", func() {
 				return nil, fmt.Errorf("simulated CreateUser failure")
 			}
 
-			client, _ := iamclient.InitIAMClient(params)
+			client, _ := iamclient.InitClient(params)
 			client.IAMService = mockIAM
 
 			err := client.CreateUser(ctx, "test-user")
@@ -104,7 +104,7 @@ var _ = Describe("IAMClient", func() {
 				return &iam.PutUserPolicyOutput{}, nil
 			}
 
-			client, _ := iamclient.InitIAMClient(params)
+			client, _ := iamclient.InitClient(params)
 			client.IAMService = mockIAM
 
 			err := client.AttachInlinePolicy(ctx, "test-user", "test-bucket")
@@ -116,7 +116,7 @@ var _ = Describe("IAMClient", func() {
 				return nil, fmt.Errorf("simulated PutUserPolicy failure")
 			}
 
-			client, _ := iamclient.InitIAMClient(params)
+			client, _ := iamclient.InitClient(params)
 			client.IAMService = mockIAM
 
 			err := client.AttachInlinePolicy(ctx, "test-user", "test-bucket")
@@ -136,7 +136,7 @@ var _ = Describe("IAMClient", func() {
 				}, nil
 			}
 
-			client, _ := iamclient.InitIAMClient(params)
+			client, _ := iamclient.InitClient(params)
 			client.IAMService = mockIAM
 
 			output, err := client.CreateAccessKey(ctx, "test-user")
@@ -148,7 +148,7 @@ var _ = Describe("IAMClient", func() {
 		It("should fail if credentials are missing", func() {
 			params.AccessKey = ""
 			params.SecretKey = ""
-			client, err := iamclient.InitIAMClient(params)
+			client, err := iamclient.InitClient(params)
 			Expect(err).NotTo(BeNil())
 			Expect(client).To(BeNil())
 		})
@@ -158,7 +158,7 @@ var _ = Describe("IAMClient", func() {
 				return nil, fmt.Errorf("simulated CreateAccessKey failure")
 			}
 
-			client, _ := iamclient.InitIAMClient(params)
+			client, _ := iamclient.InitClient(params)
 			client.IAMService = mockIAM
 
 			output, err := client.CreateAccessKey(ctx, "test-user")
@@ -229,7 +229,7 @@ var _ = Describe("IAMClient", func() {
 				}, nil
 			}
 
-			client, _ := iamclient.InitIAMClient(params)
+			client, _ := iamclient.InitClient(params)
 			client.IAMService = mockIAM
 
 			output, err := client.CreateBucketAccess(ctx, "test-user", "test-bucket")
@@ -244,7 +244,7 @@ var _ = Describe("IAMClient", func() {
 				return nil, fmt.Errorf("simulated CreateUser failure")
 			}
 
-			client, _ := iamclient.InitIAMClient(params)
+			client, _ := iamclient.InitClient(params)
 			client.IAMService = mockIAM
 
 			output, err := client.CreateBucketAccess(ctx, "test-user", "test-bucket")
@@ -262,7 +262,7 @@ var _ = Describe("IAMClient", func() {
 				return nil, fmt.Errorf("simulated AttachInlinePolicy failure")
 			}
 
-			client, _ := iamclient.InitIAMClient(params)
+			client, _ := iamclient.InitClient(params)
 			client.IAMService = mockIAM
 
 			output, err := client.CreateBucketAccess(ctx, "test-user", "test-bucket")
@@ -284,7 +284,7 @@ var _ = Describe("IAMClient", func() {
 				return nil, fmt.Errorf("simulated CreateAccessKey failure")
 			}
 
-			client, _ := iamclient.InitIAMClient(params)
+			client, _ := iamclient.InitClient(params)
 			client.IAMService = mockIAM
 
 			output, err := client.CreateBucketAccess(ctx, "test-user", "test-bucket")

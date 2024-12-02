@@ -168,7 +168,7 @@ func initializeObjectStorageClient(ctx context.Context, clientset kubernetes.Int
 	switch clientType {
 	case "IAM":
 		klog.V(3).InfoS("Initializing IAM client", "endpoint", storageClientParameters.Endpoint)
-		client, err = iamclient.InitIAMClient(*storageClientParameters)
+		client, err = iamclient.InitClient(*storageClientParameters)
 		if err != nil {
 			klog.ErrorS(err, "Failed to create IAM client", "endpoint", storageClientParameters.Endpoint)
 			return nil, nil, status.Error(codes.Internal, "failed to create IAM client")
@@ -309,7 +309,7 @@ func (s *ProvisionerServer) DriverGrantBucketAccess(ctx context.Context,
 	// 	TLSCert:   tlsCert,
 	// }
 
-	iamClient, err := iamclient.InitIAMClient(iamClientParams)
+	iamClient, err := iamclient.InitClient(iamClientParams)
 	if err != nil {
 		klog.ErrorS(err, "Failed to create IAM client", "endpoint", iamClientParams.Endpoint)
 		return nil, status.Error(codes.Internal, "failed to create IAM client")
