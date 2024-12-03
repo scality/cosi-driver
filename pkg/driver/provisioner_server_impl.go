@@ -94,12 +94,11 @@ func (s *ProvisionerServer) DriverCreateBucket(ctx context.Context,
 	req *cosiapi.DriverCreateBucketRequest) (*cosiapi.DriverCreateBucketResponse, error) {
 	bucketName := req.GetName()
 	parameters := req.GetParameters()
-	clientType := "S3"
 
 	klog.V(3).InfoS("Received DriverCreateBucket request", "bucketName", bucketName)
 	klog.V(5).InfoS("Processing DriverCreateBucket", "bucketName", bucketName, "parameters", parameters)
 
-	client, s3Params, err := InitializeClient(ctx, s.Clientset, parameters, clientType)
+	client, s3Params, err := InitializeClient(ctx, s.Clientset, parameters, "S3")
 	if err != nil {
 		klog.ErrorS(err, "Failed to initialize object storage provider S3 client", "bucketName", bucketName)
 		return nil, status.Error(codes.Internal, "failed to initialize object storage provider S3 client")
@@ -170,52 +169,17 @@ func (s *ProvisionerServer) DriverGrantBucketAccess(ctx context.Context,
 	klog.V(4).InfoS("Processing DriverGrantBucketAccess", "parameters", parameters)
 	klog.V(5).InfoS("Request DriverGrantBucketAccess", "req", req)
 
-	ospSecretName, namespace, err := FetchSecretInformation(parameters)
-	if err != nil {
-		klog.ErrorS(err, "Failed to fetch object storage provider secret info")
-		return nil, status.Error(codes.Internal, "failed to fetch object storage provider secret info")
-	}
-	klog.V(4).InfoS("Fetching secret", "secretName", ospSecretName, "namespace", namespace)
-	ospSecret, err := s.Clientset.CoreV1().Secrets(namespace).Get(ctx, ospSecretName, metav1.GetOptions{})
-	if err != nil {
-		klog.ErrorS(err, "Failed to get object store user secret", "secretName", ospSecretName)
-		return nil, status.Error(codes.Internal, "failed to get object store user secret")
-	}
-
-	accessKey := string(ospSecret.Data["COSI_DRIVER_OSP_ACCESS_KEY_ID"])
-	secretKey := string(ospSecret.Data["COSI_DRIVER_OSP_SECRET_ACCESS_KEY"])
-	endpoint := string(ospSecret.Data["COSI_DRIVER_OSP_ENDPOINT"])
-	region := string(ospSecret.Data["COSI_DRIVER_OSP_REGION"])
-
-	if endpoint == "" || accessKey == "" || secretKey == "" || region == "" {
-		klog.ErrorS(nil, "Missing required IAM parameters", "accessKey", accessKey != "", "secretKey", secretKey != "", "endpoint", endpoint != "", "region", region != "")
-		return nil, status.Error(codes.InvalidArgument, "endpoint, accessKeyID, secretKey and region are required")
-	}
+	client, _, err := InitializeClient(ctx, s.Clientset, parameters, "IAM")
 
 	if err != nil {
-		klog.ErrorS(err, "Failed to fetch IAM parameters from secret", "secretName", ospSecretName)
-		return nil, status.Error(codes.Internal, "failed to fetch IAM parameters from secret")
+		klog.ErrorS(err, "Failed to initialize object storage provider IAM client", "bucketName", bucketName, "userName", userName)
+		return nil, status.Error(codes.Internal, "failed to initialize object storage provider IAM client")
 	}
 
-	var tlsCert []byte
-	if cert, exists := ospSecret.Data["COSI_DRIVER_OSP_TLS_CERT_SECRET_NAME"]; exists {
-		tlsCert = cert
-	} else {
-		klog.V(5).InfoS("TLS certificate is not provided, proceeding without it")
-	}
-
-	iamClientParams := types.StorageClientParameters{
-		AccessKey: accessKey,
-		SecretKey: secretKey,
-		Endpoint:  endpoint,
-		Region:    region,
-		TLSCert:   tlsCert,
-	}
-
-	iamClient, err := iamclient.InitClient(iamClientParams)
-	if err != nil {
-		klog.ErrorS(err, "Failed to create IAM client", "endpoint", iamClientParams.Endpoint)
-		return nil, status.Error(codes.Internal, "failed to create IAM client")
+	iamClient, ok := client.(*iamclient.IAMClient)
+	if !ok {
+		klog.ErrorS(nil, "Unsupported client type for bucket access", "bucketName", bucketName, "userName", userName)
+		return nil, status.Error(codes.InvalidArgument, "unsupported client type for bucket access")
 	}
 
 	userInfo, err := iamClient.CreateBucketAccess(ctx, bucketName, userName)
@@ -273,8 +237,6 @@ func initializeObjectStorageClient(ctx context.Context, clientset kubernetes.Int
 		klog.ErrorS(err, "Failed to fetch S3 parameters from secret", "secretName", ospSecretName)
 		return nil, nil, err
 	}
-
-	// clientType := parameters["clientType"]
 
 	var client interface{}
 	switch clientType {
