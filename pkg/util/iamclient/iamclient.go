@@ -34,7 +34,7 @@ type IAMClient struct {
 }
 
 func InitClient(params types.StorageClientParameters) (*IAMClient, error) {
-	if params.AccessKey == "" || params.SecretKey == "" {
+	if params.AccessKeyID == "" || params.SecretAccessKey == "" {
 		return nil, fmt.Errorf("AWS credentials are missing")
 	}
 
@@ -50,7 +50,7 @@ func InitClient(params types.StorageClientParameters) (*IAMClient, error) {
 	}
 
 	// in the case where endpoint is HTTPS but no certificate is provided, skip TLS validation
-	isHTTPSEndpoint := strings.HasPrefix(params.Endpoint, "https://")
+	isHTTPSEndpoint := strings.HasPrefix(params.IAMEndpoint, "https://")
 	skipTLSValidation := isHTTPSEndpoint && len(params.TLSCert) == 0
 	if isHTTPSEndpoint {
 		httpClient.Transport = ConfigureTLSTransport(params.TLSCert, skipTLSValidation)
@@ -65,7 +65,7 @@ func InitClient(params types.StorageClientParameters) (*IAMClient, error) {
 
 	awsCfg, err := awssdkconfig.LoadDefaultConfig(ctx,
 		awssdkconfig.WithRegion(region),
-		awssdkconfig.WithCredentialsProvider(credentials.NewStaticCredentialsProvider(params.AccessKey, params.SecretKey, "")),
+		awssdkconfig.WithCredentialsProvider(credentials.NewStaticCredentialsProvider(params.AccessKeyID, params.SecretAccessKey, "")),
 		awssdkconfig.WithHTTPClient(httpClient),
 		awssdkconfig.WithLogger(logger),
 	)
@@ -74,7 +74,7 @@ func InitClient(params types.StorageClientParameters) (*IAMClient, error) {
 	}
 
 	iamClient := iam.NewFromConfig(awsCfg, func(o *iam.Options) {
-		o.BaseEndpoint = &params.Endpoint
+		o.BaseEndpoint = &params.IAMEndpoint
 	})
 
 	return &IAMClient{

@@ -34,7 +34,7 @@ type S3Client struct {
 }
 
 func InitClient(params types.StorageClientParameters) (*S3Client, error) {
-	if params.AccessKey == "" || params.SecretKey == "" {
+	if params.AccessKeyID == "" || params.SecretAccessKey == "" {
 		return nil, fmt.Errorf("AWS credentials are missing")
 	}
 
@@ -65,7 +65,7 @@ func InitClient(params types.StorageClientParameters) (*S3Client, error) {
 
 	awsCfg, err := awssdkconfig.LoadDefaultConfig(ctx,
 		awssdkconfig.WithRegion(region),
-		awssdkconfig.WithCredentialsProvider(credentials.NewStaticCredentialsProvider(params.AccessKey, params.SecretKey, "")),
+		awssdkconfig.WithCredentialsProvider(credentials.NewStaticCredentialsProvider(params.AccessKeyID, params.SecretAccessKey, "")),
 		awssdkconfig.WithHTTPClient(httpClient),
 		awssdkconfig.WithLogger(logger),
 	)

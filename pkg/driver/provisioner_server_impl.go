@@ -169,7 +169,7 @@ func (s *ProvisionerServer) DriverGrantBucketAccess(ctx context.Context,
 	klog.V(4).InfoS("Processing DriverGrantBucketAccess", "parameters", parameters)
 	klog.V(5).InfoS("Request DriverGrantBucketAccess", "req", req)
 
-	client, _, err := InitializeClient(ctx, s.Clientset, parameters, "IAM")
+	client, iamParams, err := InitializeClient(ctx, s.Clientset, parameters, "IAM")
 
 	if err != nil {
 		klog.ErrorS(err, "Failed to initialize object storage provider IAM client", "bucketName", bucketName, "userName", userName)
@@ -196,6 +196,8 @@ func (s *ProvisionerServer) DriverGrantBucketAccess(ctx context.Context,
 				Secrets: map[string]string{
 					"accessKeyID":     *userInfo.AccessKey.AccessKeyId,
 					"accessSecretKey": *userInfo.AccessKey.SecretAccessKey,
+					"endpoint":        iamParams.Endpoint,
+					"region":          iamParams.Region,
 				},
 			},
 		},
@@ -282,13 +284,13 @@ func fetchObjectStorageProviderSecretInfo(parameters map[string]string) (string,
 func fetchS3Parameters(secretData map[string][]byte) (*types.StorageClientParameters, error) {
 	klog.V(5).InfoS("Fetching S3 parameters from secret")
 
-	accessKey := string(secretData["accessKeyId"])
-	secretKey := string(secretData["secretAccessKey"])
+	accessKeyID := string(secretData["accessKeyId"])
+	secretAccessKey := string(secretData["secretAccessKey"])
 	endpoint := string(secretData["endpoint"])
 	region := string(secretData["region"])
 
-	if endpoint == "" || accessKey == "" || secretKey == "" || region == "" {
-		klog.ErrorS(nil, "Missing required S3 parameters", "accessKey", accessKey != "", "secretKey", secretKey != "", "endpoint", endpoint != "", "region", region != "")
+	if endpoint == "" || accessKeyID == "" || secretAccessKey == "" || region == "" {
+		klog.ErrorS(nil, "Missing required S3 parameters", "accessKey", accessKeyID != "", "secretKey", secretAccessKey != "", "endpoint", endpoint != "", "region", region != "")
 		return nil, status.Error(codes.InvalidArgument, "endpoint, accessKeyID, secretKey and region are required")
 	}
 
@@ -307,11 +309,11 @@ func fetchS3Parameters(secretData map[string][]byte) (*types.StorageClientParame
 	}
 
 	return &types.StorageClientParameters{
-		AccessKey:   accessKey,
-		SecretKey:   secretKey,
-		Endpoint:    endpoint,
-		IAMEndpoint: iamEndpoint,
-		Region:      region,
-		TLSCert:     tlsCert,
+		AccessKeyID:     accessKeyID,
+		SecretAccessKey: secretAccessKey,
+		Endpoint:        endpoint,
+		IAMEndpoint:     iamEndpoint,
+		Region:          region,
+		TLSCert:         tlsCert,
 	}, nil
 }
