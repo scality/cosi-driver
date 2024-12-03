@@ -139,103 +139,6 @@ func (s *ProvisionerServer) DriverCreateBucket(ctx context.Context,
 	}, nil
 }
 
-func initializeObjectStorageClient(ctx context.Context, clientset kubernetes.Interface, parameters map[string]string, clientType string) (interface{}, *types.StorageClientParameters, error) {
-	klog.V(3).InfoS("Initializing object storage provider clients", "parameters", parameters)
-
-	ospSecretName, namespace, err := FetchSecretInformation(parameters)
-	if err != nil {
-		klog.ErrorS(err, "Failed to fetch object storage provider secret info")
-		return nil, nil, err
-	}
-
-	klog.V(4).InfoS("Fetching secret", "secretName", ospSecretName, "namespace", namespace)
-	ospSecret, err := clientset.CoreV1().Secrets(namespace).Get(ctx, ospSecretName, metav1.GetOptions{})
-	if err != nil {
-		klog.ErrorS(err, "Failed to get object store user secret", "secretName", ospSecretName)
-		return nil, nil, status.Error(codes.Internal, "failed to get object store user secret")
-	}
-
-	storageClientParameters, err := FetchParameters(ospSecret.Data)
-	if err != nil {
-		klog.ErrorS(err, "Failed to fetch S3 parameters from secret", "secretName", ospSecretName)
-		return nil, nil, err
-	}
-
-	// clientType := parameters["clientType"]
-
-	var client interface{}
-
-	switch clientType {
-	case "IAM":
-		klog.V(3).InfoS("Initializing IAM client", "endpoint", storageClientParameters.Endpoint)
-		client, err = iamclient.InitClient(*storageClientParameters)
-		if err != nil {
-			klog.ErrorS(err, "Failed to create IAM client", "endpoint", storageClientParameters.Endpoint)
-			return nil, nil, status.Error(codes.Internal, "failed to create IAM client")
-		}
-		klog.V(3).InfoS("Successfully initialized IAM client", "endpoint", storageClientParameters.Endpoint)
-	case "S3":
-		klog.V(3).InfoS("Initializing S3 client (default)", "endpoint", storageClientParameters.Endpoint)
-		client, err = s3client.InitClient(*storageClientParameters)
-		if err != nil {
-			klog.ErrorS(err, "Failed to create S3 client", "endpoint", storageClientParameters.Endpoint)
-			return nil, nil, status.Error(codes.Internal, "failed to create S3 client")
-		}
-		klog.V(3).InfoS("Successfully initialized S3 client", "endpoint", storageClientParameters.Endpoint)
-	default:
-		klog.ErrorS(nil, "Unsupported client type", "clientType", clientType)
-		return nil, nil, status.Error(codes.InvalidArgument, "unsupported client type")
-	}
-	klog.V(3).InfoS("Successfully initialized S3 client", "endpoint", storageClientParameters.Endpoint)
-	return client, storageClientParameters, nil
-}
-
-func fetchObjectStorageProviderSecretInfo(parameters map[string]string) (string, string, error) {
-	klog.V(4).InfoS("Fetching object storage provider secret info", "parameters", parameters)
-
-	secretName := parameters["COSI_DRIVER_SECRET_NAME"]
-	namespace := os.Getenv("POD_NAMESPACE")
-	if parameters["COSI_DRIVER_SECRET_NAMESPACE"] != "" {
-		namespace = parameters["COSI_DRIVER_SECRET_NAMESPACE"]
-	}
-	if secretName == "" || namespace == "" {
-		klog.ErrorS(nil, "Missing object storage provider secret name or namespace", "secretName", secretName, "namespace", namespace)
-		return "", "", status.Error(codes.InvalidArgument, "Object storage provider secret name and namespace are required")
-	}
-
-	klog.V(4).InfoS("Object storage provider secret info fetched", "secretName", secretName, "namespace", namespace)
-	return secretName, namespace, nil
-}
-
-func fetchS3Parameters(secretData map[string][]byte) (*types.StorageClientParameters, error) {
-	klog.V(5).InfoS("Fetching S3 parameters from secret")
-
-	accessKey := string(secretData["COSI_DRIVER_OSP_ACCESS_KEY_ID"])
-	secretKey := string(secretData["COSI_DRIVER_OSP_SECRET_ACCESS_KEY"])
-	endpoint := string(secretData["COSI_DRIVER_OSP_ENDPOINT"])
-	region := string(secretData["COSI_DRIVER_OSP_REGION"])
-
-	if endpoint == "" || accessKey == "" || secretKey == "" || region == "" {
-		klog.ErrorS(nil, "Missing required S3 parameters", "accessKey", accessKey != "", "secretKey", secretKey != "", "endpoint", endpoint != "", "region", region != "")
-		return nil, status.Error(codes.InvalidArgument, "endpoint, accessKeyID, secretKey and region are required")
-	}
-
-	var tlsCert []byte
-	if cert, exists := secretData["COSI_DRIVER_OSP_TLS_CERT_SECRET_NAME"]; exists {
-		tlsCert = cert
-	} else {
-		klog.V(5).InfoS("TLS certificate is not provided, proceeding without it")
-	}
-
-	return &types.StorageClientParameters{
-		AccessKey: accessKey,
-		SecretKey: secretKey,
-		Endpoint:  endpoint,
-		Region:    region,
-		TLSCert:   tlsCert,
-	}, nil
-}
-
 // DriverDeleteBucket is an idempotent method for deleting buckets
 // It is expected to delete the same bucket given a bucketId
 // If the bucket does not exist, then it MUST return no error
@@ -347,4 +250,98 @@ func (s *ProvisionerServer) DriverRevokeBucketAccess(ctx context.Context,
 	req *cosiapi.DriverRevokeBucketAccessRequest) (*cosiapi.DriverRevokeBucketAccessResponse, error) {
 	klog.V(3).InfoS("Received DriverRevokeBucketAccess request", "bucketId", req.GetBucketId(), "accountId", req.GetAccountId())
 	return nil, status.Error(codes.Unimplemented, "DriverCreateBucket: not implemented")
+}
+
+func initializeObjectStorageClient(ctx context.Context, clientset kubernetes.Interface, parameters map[string]string, clientType string) (interface{}, *types.StorageClientParameters, error) {
+	klog.V(3).InfoS("Initializing object storage provider clients", "parameters", parameters)
+
+	ospSecretName, namespace, err := FetchSecretInformation(parameters)
+	if err != nil {
+		klog.ErrorS(err, "Failed to fetch object storage provider secret info")
+		return nil, nil, err
+	}
+
+	klog.V(4).InfoS("Fetching secret", "secretName", ospSecretName, "namespace", namespace)
+	ospSecret, err := clientset.CoreV1().Secrets(namespace).Get(ctx, ospSecretName, metav1.GetOptions{})
+	if err != nil {
+		klog.ErrorS(err, "Failed to get object store user secret", "secretName", ospSecretName)
+		return nil, nil, status.Error(codes.Internal, "failed to get object store user secret")
+	}
+
+	storageClientParameters, err := FetchParameters(ospSecret.Data)
+	if err != nil {
+		klog.ErrorS(err, "Failed to fetch S3 parameters from secret", "secretName", ospSecretName)
+		return nil, nil, err
+	}
+
+	// clientType := parameters["clientType"]
+
+	var client interface{}
+	switch clientType {
+	case "IAM":
+		client, err = iamclient.InitClient(*storageClientParameters)
+		if err != nil {
+			klog.ErrorS(err, "Failed to initialize IAM client", "endpoint", storageClientParameters.Endpoint)
+			return nil, nil, status.Error(codes.Internal, "failed to initialize IAM client")
+		}
+		klog.V(3).InfoS("Successfully initialized IAM client", "endpoint", storageClientParameters.Endpoint)
+	case "S3":
+		client, err = s3client.InitClient(*storageClientParameters)
+		if err != nil {
+			klog.ErrorS(err, "Failed to initialize S3 client", "endpoint", storageClientParameters.Endpoint)
+			return nil, nil, status.Error(codes.Internal, "failed to initialize S3 client")
+		}
+		klog.V(3).InfoS("Successfully initialized S3 client", "endpoint", storageClientParameters.Endpoint)
+	default:
+		klog.ErrorS(nil, "Unsupported client type", "clientType", clientType)
+		return nil, nil, status.Error(codes.InvalidArgument, "unsupported client type")
+	}
+
+	return client, storageClientParameters, nil
+}
+
+func fetchObjectStorageProviderSecretInfo(parameters map[string]string) (string, string, error) {
+	klog.V(4).InfoS("Fetching object storage provider secret info", "parameters", parameters)
+
+	secretName := parameters["COSI_DRIVER_SECRET_NAME"]
+	namespace := os.Getenv("POD_NAMESPACE")
+	if parameters["COSI_DRIVER_SECRET_NAMESPACE"] != "" {
+		namespace = parameters["COSI_DRIVER_SECRET_NAMESPACE"]
+	}
+	if secretName == "" || namespace == "" {
+		klog.ErrorS(nil, "Missing object storage provider secret name or namespace", "secretName", secretName, "namespace", namespace)
+		return "", "", status.Error(codes.InvalidArgument, "Object storage provider secret name and namespace are required")
+	}
+
+	klog.V(4).InfoS("Object storage provider secret info fetched", "secretName", secretName, "namespace", namespace)
+	return secretName, namespace, nil
+}
+
+func fetchS3Parameters(secretData map[string][]byte) (*types.StorageClientParameters, error) {
+	klog.V(5).InfoS("Fetching S3 parameters from secret")
+
+	accessKey := string(secretData["COSI_DRIVER_OSP_ACCESS_KEY_ID"])
+	secretKey := string(secretData["COSI_DRIVER_OSP_SECRET_ACCESS_KEY"])
+	endpoint := string(secretData["COSI_DRIVER_OSP_ENDPOINT"])
+	region := string(secretData["COSI_DRIVER_OSP_REGION"])
+
+	if endpoint == "" || accessKey == "" || secretKey == "" || region == "" {
+		klog.ErrorS(nil, "Missing required S3 parameters", "accessKey", accessKey != "", "secretKey", secretKey != "", "endpoint", endpoint != "", "region", region != "")
+		return nil, status.Error(codes.InvalidArgument, "endpoint, accessKeyID, secretKey and region are required")
+	}
+
+	var tlsCert []byte
+	if cert, exists := secretData["COSI_DRIVER_OSP_TLS_CERT_SECRET_NAME"]; exists {
+		tlsCert = cert
+	} else {
+		klog.V(5).InfoS("TLS certificate is not provided, proceeding without it")
+	}
+
+	return &types.StorageClientParameters{
+		AccessKey: accessKey,
+		SecretKey: secretKey,
+		Endpoint:  endpoint,
+		Region:    region,
+		TLSCert:   tlsCert,
+	}, nil
 }
