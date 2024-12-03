@@ -118,7 +118,7 @@ func (client *IAMClient) CreateUser(ctx context.Context, userName string) error 
 
 // AttachInlinePolicy attaches an inline policy to an IAM user for a specific bucket.
 func (client *IAMClient) AttachInlinePolicy(ctx context.Context, userName, bucketName string) error {
-	policyName := fmt.Sprintf("%s-bucket-access", bucketName)
+	policyName := fmt.Sprintf("%s-cosi-ba", bucketName)
 	policyDocument := fmt.Sprintf(`{
 		"Version": "2012-10-17",
 		"Statement": [

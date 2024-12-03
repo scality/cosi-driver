@@ -182,7 +182,7 @@ func (s *ProvisionerServer) DriverGrantBucketAccess(ctx context.Context,
 		return nil, status.Error(codes.InvalidArgument, "unsupported client type for bucket access")
 	}
 
-	userInfo, err := iamClient.CreateBucketAccess(ctx, bucketName, userName)
+	userInfo, err := iamClient.CreateBucketAccess(ctx, userName, bucketName)
 	if err != nil {
 		klog.ErrorS(err, "Failed to create bucket access", "bucketName", bucketName, "userName", userName)
 		return nil, status.Error(codes.Internal, "failed to create bucket access")
