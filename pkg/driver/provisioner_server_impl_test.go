@@ -13,13 +13,13 @@ import (
 	"google.golang.org/grpc/status"
 
 	"github.com/scality/cosi-driver/pkg/driver"
+	config "github.com/scality/cosi-driver/pkg/util/config"
 	s3client "github.com/scality/cosi-driver/pkg/util/s3client"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/fake"
 	cosiapi "sigs.k8s.io/container-object-storage-interface-spec"
-	config "github.com/scality/cosi-driver/pkg/util/config"
 )
 
 type MockS3Client struct {
@@ -196,8 +196,8 @@ var _ = Describe("FetchSecretInformation", func() {
 	})
 
 	It("should fetch secret name and namespace from parameters when all are provided", func() {
-		parameters["COSI_DRIVER_SECRET_NAME"] = secretName
-		parameters["COSI_DRIVER_SECRET_NAMESPACE"] = namespace
+		parameters["objectStorageSecretName"] = secretName
+		parameters["objectStorageSecretNameSpace"] = namespace
 
 		fetchedSecretName, fetchedNamespace, err := driver.FetchSecretInformation(parameters)
 		Expect(err).To(BeNil())
@@ -206,7 +206,7 @@ var _ = Describe("FetchSecretInformation", func() {
 	})
 
 	It("should use POD_NAMESPACE environment variable when namespace is not in parameters", func() {
-		parameters["COSI_DRIVER_SECRET_NAME"] = secretName
+		parameters["objectStorageSecretName"] = secretName
 		os.Setenv("POD_NAMESPACE", namespace)
 
 		fetchedSecretName, fetchedNamespace, err := driver.FetchSecretInformation(parameters)
@@ -216,7 +216,7 @@ var _ = Describe("FetchSecretInformation", func() {
 	})
 
 	It("should return error when secret name is missing", func() {
-		parameters["COSI_DRIVER_SECRET_NAMESPACE"] = namespace
+		parameters["objectStorageSecretNameSpace"] = namespace
 
 		fetchedSecretName, fetchedNamespace, err := driver.FetchSecretInformation(parameters)
 		Expect(err).To(HaveOccurred())
@@ -227,7 +227,7 @@ var _ = Describe("FetchSecretInformation", func() {
 	})
 
 	It("should return error when namespace is missing and POD_NAMESPACE is not set", func() {
-		parameters["COSI_DRIVER_SECRET_NAME"] = secretName
+		parameters["objectStorageSecretName"] = secretName
 
 		fetchedSecretName, fetchedNamespace, err := driver.FetchSecretInformation(parameters)
 		Expect(err).To(HaveOccurred())
@@ -238,8 +238,8 @@ var _ = Describe("FetchSecretInformation", func() {
 	})
 
 	It("should prioritize namespace from parameters over POD_NAMESPACE environment variable", func() {
-		parameters["COSI_DRIVER_SECRET_NAME"] = secretName
-		parameters["COSI_DRIVER_SECRET_NAMESPACE"] = namespace
+		parameters["objectStorageSecretName"] = secretName
+		parameters["objectStorageSecretNameSpace"] = namespace
 		os.Setenv("POD_NAMESPACE", "env-namespace")
 
 		fetchedSecretName, fetchedNamespace, err := driver.FetchSecretInformation(parameters)
@@ -270,8 +270,8 @@ var _ = Describe("initializeObjectStorageClient", func() {
 		ctx = context.TODO()
 		clientset = fake.NewSimpleClientset()
 		parameters = map[string]string{
-			"COSI_DRIVER_SECRET_NAME":      "test-secret",
-			"COSI_DRIVER_SECRET_NAMESPACE": "test-namespace",
+			"objectStorageSecretName":      "test-secret",
+			"objectStorageSecretNameSpace": "test-namespace",
 		}
 
 		secret = &corev1.Secret{
@@ -280,10 +280,10 @@ var _ = Describe("initializeObjectStorageClient", func() {
 				Namespace: "test-namespace",
 			},
 			Data: map[string][]byte{
-				"COSI_DRIVER_OSP_ACCESS_KEY_ID":     []byte("test-access-key"),
-				"COSI_DRIVER_OSP_SECRET_ACCESS_KEY": []byte("test-secret-key"),
-				"COSI_DRIVER_OSP_ENDPOINT":          []byte("https://test-endpoint"),
-				"COSI_DRIVER_OSP_REGION":            []byte("us-west-2"),
+				"accessKeyId":     []byte("test-access-key"),
+				"secretAccessKey": []byte("test-secret-key"),
+				"endpoint":        []byte("https://test-endpoint"),
+				"region":          []byte("us-west-2"),
 			},
 		}
 	})
@@ -303,7 +303,7 @@ var _ = Describe("initializeObjectStorageClient", func() {
 	})
 
 	It("should return error when FetchSecretInformation fails", func() {
-		delete(parameters, "COSI_DRIVER_SECRET_NAME")
+		delete(parameters, "objectStorageSecretName")
 
 		s3Client, s3Params, err := driver.InitializeClient(ctx, clientset, parameters)
 		Expect(err).To(HaveOccurred())
@@ -343,10 +343,10 @@ var _ = Describe("FetchParameters", func() {
 
 	BeforeEach(func() {
 		secretData = map[string][]byte{
-			"COSI_DRIVER_OSP_ACCESS_KEY_ID":     []byte("test-access-key"),
-			"COSI_DRIVER_OSP_SECRET_ACCESS_KEY": []byte("test-secret-key"),
-			"COSI_DRIVER_OSP_ENDPOINT":          []byte("https://test-endpoint"),
-			"COSI_DRIVER_OSP_REGION":            []byte("us-west-2"),
+			"accessKeyId":     []byte("test-access-key"),
+			"secretAccessKey": []byte("test-secret-key"),
+			"endpoint":        []byte("https://test-endpoint"),
+			"region":          []byte("us-west-2"),
 		}
 	})
 
@@ -362,7 +362,7 @@ var _ = Describe("FetchParameters", func() {
 	})
 
 	It("should successfully fetch S3 parameters with TLS certificate", func() {
-		secretData["COSI_DRIVER_OSP_TLS_CERT_SECRET_NAME"] = []byte("test-tls-cert")
+		secretData["tlsCert"] = []byte("test-tls-cert")
 		s3Params, err := driver.FetchParameters(secretData)
 		Expect(err).To(BeNil())
 		Expect(s3Params).NotTo(BeNil())
@@ -370,7 +370,7 @@ var _ = Describe("FetchParameters", func() {
 	})
 
 	It("should return error if AccessKey is missing", func() {
-		delete(secretData, "COSI_DRIVER_OSP_ACCESS_KEY_ID")
+		delete(secretData, "accessKeyId")
 		s3Params, err := driver.FetchParameters(secretData)
 		Expect(err).To(HaveOccurred())
 		Expect(s3Params).To(BeNil())
@@ -379,7 +379,7 @@ var _ = Describe("FetchParameters", func() {
 	})
 
 	It("should return error if SecretKey is missing", func() {
-		delete(secretData, "COSI_DRIVER_OSP_SECRET_ACCESS_KEY")
+		delete(secretData, "secretAccessKey")
 		s3Params, err := driver.FetchParameters(secretData)
 		Expect(err).To(HaveOccurred())
 		Expect(s3Params).To(BeNil())
@@ -388,7 +388,7 @@ var _ = Describe("FetchParameters", func() {
 	})
 
 	It("should return error if Endpoint is missing", func() {
-		delete(secretData, "COSI_DRIVER_OSP_ENDPOINT")
+		delete(secretData, "endpoint")
 		s3Params, err := driver.FetchParameters(secretData)
 		Expect(err).To(HaveOccurred())
 		Expect(s3Params).To(BeNil())
@@ -397,7 +397,7 @@ var _ = Describe("FetchParameters", func() {
 	})
 
 	It("should return error if Region is missing", func() {
-		delete(secretData, "COSI_DRIVER_OSP_REGION")
+		delete(secretData, "region")
 		s3Params, err := driver.FetchParameters(secretData)
 		Expect(err).To(HaveOccurred())
 		Expect(s3Params).To(BeNil())

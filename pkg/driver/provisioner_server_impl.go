@@ -265,10 +265,10 @@ func initializeObjectStorageClient(ctx context.Context, clientset kubernetes.Int
 func fetchObjectStorageProviderSecretInfo(parameters map[string]string) (string, string, error) {
 	klog.V(4).InfoS("Fetching object storage provider secret info", "parameters", parameters)
 
-	secretName := parameters["COSI_DRIVER_SECRET_NAME"]
+	secretName := parameters["objectStorageSecretName"]
 	namespace := os.Getenv("POD_NAMESPACE")
-	if parameters["COSI_DRIVER_SECRET_NAMESPACE"] != "" {
-		namespace = parameters["COSI_DRIVER_SECRET_NAMESPACE"]
+	if parameters["objectStorageSecretNameSpace"] != "" {
+		namespace = parameters["objectStorageSecretNameSpace"]
 	}
 	if secretName == "" || namespace == "" {
 		klog.ErrorS(nil, "Missing object storage provider secret name or namespace", "secretName", secretName, "namespace", namespace)
@@ -282,28 +282,36 @@ func fetchObjectStorageProviderSecretInfo(parameters map[string]string) (string,
 func fetchS3Parameters(secretData map[string][]byte) (*types.StorageClientParameters, error) {
 	klog.V(5).InfoS("Fetching S3 parameters from secret")
 
-	accessKey := string(secretData["COSI_DRIVER_OSP_ACCESS_KEY_ID"])
-	secretKey := string(secretData["COSI_DRIVER_OSP_SECRET_ACCESS_KEY"])
-	endpoint := string(secretData["COSI_DRIVER_OSP_ENDPOINT"])
-	region := string(secretData["COSI_DRIVER_OSP_REGION"])
+	accessKey := string(secretData["accessKeyId"])
+	secretKey := string(secretData["secretAccessKey"])
+	endpoint := string(secretData["endpoint"])
+	region := string(secretData["region"])
 
 	if endpoint == "" || accessKey == "" || secretKey == "" || region == "" {
 		klog.ErrorS(nil, "Missing required S3 parameters", "accessKey", accessKey != "", "secretKey", secretKey != "", "endpoint", endpoint != "", "region", region != "")
 		return nil, status.Error(codes.InvalidArgument, "endpoint, accessKeyID, secretKey and region are required")
 	}
 
+	iamEndpoint := endpoint
+	if value, exists := secretData["iamEndpoint"]; exists && len(value) > 0 {
+		iamEndpoint = string(value)
+	}
+
+	klog.V(4).InfoS("IAM endpoint determined", "iamEndpoint", iamEndpoint)
+
 	var tlsCert []byte
-	if cert, exists := secretData["COSI_DRIVER_OSP_TLS_CERT_SECRET_NAME"]; exists {
+	if cert, exists := secretData["tlsCert"]; exists {
 		tlsCert = cert
 	} else {
 		klog.V(5).InfoS("TLS certificate is not provided, proceeding without it")
 	}
 
 	return &types.StorageClientParameters{
-		AccessKey: accessKey,
-		SecretKey: secretKey,
-		Endpoint:  endpoint,
-		Region:    region,
-		TLSCert:   tlsCert,
+		AccessKey:   accessKey,
+		SecretKey:   secretKey,
+		Endpoint:    endpoint,
+		IAMEndpoint: iamEndpoint,
+		Region:      region,
+		TLSCert:     tlsCert,
 	}, nil
 }

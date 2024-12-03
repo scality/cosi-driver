@@ -59,10 +59,10 @@ metadata:
   namespace: default
 type: Opaque
 stringData:
-  COSI_DRIVER_OSP_ACCESS_KEY_ID: PBUOB68AVF39EVVAFNFL
-  COSI_DRIVER_OSP_SECRET_ACCESS_KEY: P+PK+uMB9spUc21huaQoOexqdJoV00tSnl+pc7t7
-  COSI_DRIVER_OSP_ENDPOINT: http://$HOST_IP:8000
-  COSI_DRIVER_OSP_REGION: us-west-1
+  accessKeyId: PBUOB68AVF39EVVAFNFL
+  secretAccessKey: P+PK+uMB9spUc21huaQoOexqdJoV00tSnl+pc7t7
+  endpoint: http://$HOST_IP:8000
+  region: us-west-1
 EOF
 
 # Step 4: Apply Bucket Class
