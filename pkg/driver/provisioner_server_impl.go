@@ -22,7 +22,7 @@ import (
 
 	s3types "github.com/aws/aws-sdk-go-v2/service/s3/types"
 	"github.com/aws/smithy-go"
-	s3client "github.com/scality/cosi-driver/pkg/util/s3client"
+	s3client "github.com/scality/cosi-driver/pkg/clients/s3"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"

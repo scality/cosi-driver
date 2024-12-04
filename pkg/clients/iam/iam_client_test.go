@@ -11,7 +11,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
-	"github.com/scality/cosi-driver/pkg/util/iamclient"
+	iamclient "github.com/scality/cosi-driver/pkg/clients/iam"
 )
 
 // MockIAMClient implements the IAMAPI interface for testing
