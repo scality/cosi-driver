@@ -23,6 +23,7 @@ import (
 	s3types "github.com/aws/aws-sdk-go-v2/service/s3/types"
 	"github.com/aws/smithy-go"
 	s3client "github.com/scality/cosi-driver/pkg/clients/s3"
+	"github.com/scality/cosi-driver/pkg/util"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -130,7 +131,7 @@ func (s *ProvisionerServer) DriverCreateBucket(ctx context.Context,
 	}, nil
 }
 
-func initializeObjectStorageClient(ctx context.Context, clientset kubernetes.Interface, parameters map[string]string) (*s3client.S3Client, *s3client.S3Params, error) {
+func initializeObjectStorageClient(ctx context.Context, clientset kubernetes.Interface, parameters map[string]string) (*s3client.S3Client, *util.StorageClientParameters, error) {
 	klog.V(3).InfoS("Initializing object storage provider clients", "parameters", parameters)
 
 	ospSecretName, namespace, err := FetchSecretInformation(parameters)
@@ -178,33 +179,28 @@ func fetchObjectStorageProviderSecretInfo(parameters map[string]string) (string,
 	return secretName, namespace, nil
 }
 
-func fetchS3Parameters(secretData map[string][]byte) (*s3client.S3Params, error) {
+func fetchS3Parameters(secretData map[string][]byte) (*util.StorageClientParameters, error) {
 	klog.V(5).InfoS("Fetching S3 parameters from secret")
 
-	accessKey := string(secretData["accessKeyId"])
-	secretKey := string(secretData["secretAccessKey"])
-	endpoint := string(secretData["endpoint"])
-	region := string(secretData["region"])
+	params := util.NewStorageClientParameters()
 
-	if endpoint == "" || accessKey == "" || secretKey == "" || region == "" {
-		klog.ErrorS(nil, "Missing required S3 parameters", "accessKey", accessKey != "", "secretKey", secretKey != "", "endpoint", endpoint != "", "region", region != "")
-		return nil, status.Error(codes.InvalidArgument, "endpoint, accessKeyID, secretKey and region are required")
-	}
+	params.AccessKeyID = string(secretData["accessKeyId"])
+	params.SecretAccessKey = string(secretData["secretAccessKey"])
+	params.Endpoint = string(secretData["endpoint"])
+	params.Region = string(secretData["region"])
 
-	var tlsCert []byte
 	if cert, exists := secretData["tlsCert"]; exists {
-		tlsCert = cert
+		params.TLSCert = cert
 	} else {
 		klog.V(5).InfoS("TLS certificate is not provided, proceeding without it")
 	}
 
-	return &s3client.S3Params{
-		AccessKey: accessKey,
-		SecretKey: secretKey,
-		Endpoint:  endpoint,
-		Region:    region,
-		TLSCert:   tlsCert,
-	}, nil
+	if err := params.Validate(); err != nil {
+		klog.ErrorS(err, "invalid object storage parameters")
+		return nil, err
+	}
+
+	return params, nil
 }
 
 // DriverDeleteBucket is an idempotent method for deleting buckets

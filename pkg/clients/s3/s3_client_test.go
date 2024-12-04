@@ -11,6 +11,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	s3client "github.com/scality/cosi-driver/pkg/clients/s3"
+	"github.com/scality/cosi-driver/pkg/util"
 )
 
 // MockS3Client implements the S3API interface for testing
@@ -32,17 +33,16 @@ func TestS3Client(t *testing.T) {
 
 var _ = Describe("S3Client", func() {
 
-	var params s3client.S3Params
+	var params util.StorageClientParameters
 
 	BeforeEach(func() {
-		params = s3client.S3Params{
-			AccessKey: "test-access-key",
-			SecretKey: "test-secret-key",
-			Endpoint:  "https://s3.mock.endpoint",
-			Region:    "us-west-2",
-			TLSCert:   nil,
-			Debug:     false,
-		}
+		params = *util.NewStorageClientParameters()
+		// Override fields as needed for the test
+		params.AccessKeyID = "test-access-key"
+		params.SecretAccessKey = "test-secret-key"
+		params.Endpoint = "https://s3.mock.endpoint"
+		params.TLSCert = nil
+		params.Debug = false
 	})
 
 	Describe("InitS3Client", func() {
@@ -54,21 +54,12 @@ var _ = Describe("S3Client", func() {
 		})
 
 		It("should use the default region when none is provided", func() {
-			params.Region = ""
 			client, err := s3client.InitS3Client(params)
 			Expect(err).To(BeNil())
 			Expect(client).NotTo(BeNil())
 			Expect(client.S3Service).NotTo(BeNil())
-			opts := client.S3Service.(*s3.Client).Options()
+			opts := client.S3Service.(*s3.Client).Options() // print the opts to see the region
 			Expect(opts.Region).To(Equal("us-east-1"))
-		})
-
-		It("should fail if credentials are missing", func() {
-			params.AccessKey = ""
-			params.SecretKey = ""
-			client, err := s3client.InitS3Client(params)
-			Expect(err).NotTo(BeNil())
-			Expect(client).To(BeNil())
 		})
 	})
 
@@ -110,6 +101,7 @@ var _ = Describe("S3Client", func() {
 
 		BeforeEach(func() {
 			mockS3 = &MockS3Client{}
+			params.Region = "us-west-2"
 			client, _ := s3client.InitS3Client(params)
 			client.S3Service = mockS3
 		})

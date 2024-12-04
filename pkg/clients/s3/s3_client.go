@@ -8,7 +8,6 @@ import (
 	"net/http"
 	"os"
 	"strings"
-	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
@@ -16,6 +15,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/aws/aws-sdk-go-v2/service/s3/types"
 	"github.com/aws/smithy-go/logging"
+	"github.com/scality/cosi-driver/pkg/util"
 	"k8s.io/klog/v2"
 )
 
@@ -23,29 +23,11 @@ type S3API interface {
 	CreateBucket(ctx context.Context, input *s3.CreateBucketInput, opts ...func(*s3.Options)) (*s3.CreateBucketOutput, error)
 }
 
-const (
-	defaultRegion  = "us-east-1"
-	requestTimeout = 15 * time.Second
-)
-
-type S3Params struct {
-	AccessKey string
-	SecretKey string
-	Endpoint  string
-	Region    string
-	TLSCert   []byte // Optional field for TLS certificates
-	Debug     bool
-}
-
 type S3Client struct {
 	S3Service S3API
 }
 
-func InitS3Client(params S3Params) (*S3Client, error) {
-	if params.AccessKey == "" || params.SecretKey == "" {
-		return nil, fmt.Errorf("AWS credentials are missing")
-	}
-
+func InitS3Client(params util.StorageClientParameters) (*S3Client, error) {
 	var logger logging.Logger
 	if params.Debug {
 		logger = logging.NewStandardLogger(os.Stdout)
@@ -54,7 +36,7 @@ func InitS3Client(params S3Params) (*S3Client, error) {
 	}
 
 	httpClient := &http.Client{
-		Timeout: requestTimeout,
+		Timeout: util.DefaultRequestTimeout,
 	}
 
 	// in the case where endpoint is HTTPS but no certificate is provided, skip TLS validation
@@ -64,16 +46,11 @@ func InitS3Client(params S3Params) (*S3Client, error) {
 		httpClient.Transport = ConfigureTLSTransport(params.TLSCert, skipTLSValidation)
 	}
 
-	region := params.Region
-	if region == "" {
-		region = defaultRegion
-	}
-
 	ctx := context.Background()
 
 	awsCfg, err := config.LoadDefaultConfig(ctx,
-		config.WithRegion(region),
-		config.WithCredentialsProvider(credentials.NewStaticCredentialsProvider(params.AccessKey, params.SecretKey, "")),
+		config.WithRegion(params.Region),
+		config.WithCredentialsProvider(credentials.NewStaticCredentialsProvider(params.AccessKeyID, params.SecretAccessKey, "")),
 		config.WithHTTPClient(httpClient),
 		config.WithLogger(logger),
 	)
@@ -110,13 +87,13 @@ func ConfigureTLSTransport(certData []byte, skipTLSValidation bool) *http.Transp
 	}
 }
 
-func (client *S3Client) CreateBucket(ctx context.Context, bucketName string, params S3Params) error {
+func (client *S3Client) CreateBucket(ctx context.Context, bucketName string, params util.StorageClientParameters) error {
 
 	input := &s3.CreateBucketInput{
 		Bucket: &bucketName,
 	}
 
-	if params.Region != "us-east-1" {
+	if params.Region != util.DefaultRegion {
 		input.CreateBucketConfiguration = &types.CreateBucketConfiguration{
 			LocationConstraint: types.BucketLocationConstraint(params.Region),
 		}

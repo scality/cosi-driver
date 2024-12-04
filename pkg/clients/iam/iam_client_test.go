@@ -12,6 +12,7 @@ import (
 	. "github.com/onsi/gomega"
 
 	iamclient "github.com/scality/cosi-driver/pkg/clients/iam"
+	"github.com/scality/cosi-driver/pkg/util"
 )
 
 // MockIAMClient implements the IAMAPI interface for testing
@@ -48,16 +49,16 @@ func TestIAMClient(t *testing.T) {
 }
 
 var _ = Describe("IAMClient", func() {
-	var params iamclient.IAMParams
+	var params util.StorageClientParameters
 
 	BeforeEach(func() {
-		params = iamclient.IAMParams{
-			AccessKey: "test-access-key",
-			SecretKey: "test-secret-key",
-			Endpoint:  "https://iam.mock.endpoint",
-			Region:    "us-west-2",
-			TLSCert:   nil,
-			Debug:     false,
+		params = util.StorageClientParameters{
+			AccessKeyID:     "test-access-key",
+			SecretAccessKey: "test-secret-key",
+			Endpoint:        "https://iam.mock.endpoint",
+			Region:          "us-west-2",
+			TLSCert:         nil,
+			Debug:           false,
 		}
 	})
 
@@ -142,14 +143,6 @@ var _ = Describe("IAMClient", func() {
 			Expect(err).To(BeNil())
 			Expect(output.AccessKey.AccessKeyId).To(Equal(aws.String("test-access-key-id")))
 			Expect(output.AccessKey.SecretAccessKey).To(Equal(aws.String("test-secret-access-key")))
-		})
-
-		It("should fail if credentials are missing", func() {
-			params.AccessKey = ""
-			params.SecretKey = ""
-			client, err := iamclient.InitIAMClient(params)
-			Expect(err).NotTo(BeNil())
-			Expect(client).To(BeNil())
 		})
 
 		It("should return an error when CreateAccessKey fails", func(ctx SpecContext) {

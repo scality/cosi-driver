@@ -8,12 +8,12 @@ import (
 	"net/http"
 	"os"
 	"strings"
-	"time"
 
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/credentials"
 	"github.com/aws/aws-sdk-go-v2/service/iam"
 	"github.com/aws/smithy-go/logging"
+	"github.com/scality/cosi-driver/pkg/util"
 	"k8s.io/klog/v2"
 )
 
@@ -23,29 +23,11 @@ type IAMAPI interface {
 	CreateAccessKey(ctx context.Context, input *iam.CreateAccessKeyInput, opts ...func(*iam.Options)) (*iam.CreateAccessKeyOutput, error)
 }
 
-const (
-	defaultRegion  = "us-east-1"
-	requestTimeout = 15 * time.Second
-)
-
-type IAMParams struct {
-	AccessKey string
-	SecretKey string
-	Endpoint  string
-	Region    string
-	TLSCert   []byte // Optional field for TLS certificates
-	Debug     bool
-}
-
 type IAMClient struct {
 	IAMService IAMAPI
 }
 
-func InitIAMClient(params IAMParams) (*IAMClient, error) {
-	if params.AccessKey == "" || params.SecretKey == "" {
-		return nil, fmt.Errorf("AWS credentials are missing")
-	}
-
+func InitIAMClient(params util.StorageClientParameters) (*IAMClient, error) {
 	var logger logging.Logger
 	if params.Debug {
 		logger = logging.NewStandardLogger(os.Stdout)
@@ -54,7 +36,7 @@ func InitIAMClient(params IAMParams) (*IAMClient, error) {
 	}
 
 	httpClient := &http.Client{
-		Timeout: requestTimeout,
+		Timeout: util.DefaultRequestTimeout,
 	}
 
 	// in the case where endpoint is HTTPS but no certificate is provided, skip TLS validation
@@ -64,16 +46,11 @@ func InitIAMClient(params IAMParams) (*IAMClient, error) {
 		httpClient.Transport = ConfigureTLSTransport(params.TLSCert, skipTLSValidation)
 	}
 
-	region := params.Region
-	if region == "" {
-		region = defaultRegion
-	}
-
 	ctx := context.Background()
 
 	awsCfg, err := config.LoadDefaultConfig(ctx,
-		config.WithRegion(region),
-		config.WithCredentialsProvider(credentials.NewStaticCredentialsProvider(params.AccessKey, params.SecretKey, "")),
+		config.WithRegion(params.Region),
+		config.WithCredentialsProvider(credentials.NewStaticCredentialsProvider(params.AccessKeyID, params.SecretAccessKey, "")),
 		config.WithHTTPClient(httpClient),
 		config.WithLogger(logger),
 	)

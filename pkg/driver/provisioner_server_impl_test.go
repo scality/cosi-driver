@@ -14,6 +14,7 @@ import (
 
 	s3client "github.com/scality/cosi-driver/pkg/clients/s3"
 	"github.com/scality/cosi-driver/pkg/driver"
+	"github.com/scality/cosi-driver/pkg/util"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
@@ -39,9 +40,9 @@ var _ = Describe("ProvisionerServer DriverCreateBucket", func() {
 		ctx                      context.Context
 		clientset                *fake.Clientset
 		bucketName               string
-		s3Params                 s3client.S3Params
+		s3Params                 util.StorageClientParameters
 		request                  *cosiapi.DriverCreateBucketRequest
-		originalInitializeClient func(ctx context.Context, clientset kubernetes.Interface, parameters map[string]string) (*s3client.S3Client, *s3client.S3Params, error)
+		originalInitializeClient func(ctx context.Context, clientset kubernetes.Interface, parameters map[string]string) (*s3client.S3Client, *util.StorageClientParameters, error)
 	)
 
 	BeforeEach(func() {
@@ -53,11 +54,11 @@ var _ = Describe("ProvisionerServer DriverCreateBucket", func() {
 			Clientset:   clientset,
 		}
 		bucketName = "test-bucket"
-		s3Params = s3client.S3Params{
-			AccessKey: "test-access-key",
-			SecretKey: "test-secret-key",
-			Endpoint:  "https://test-endpoint",
-			Region:    "us-west-2",
+		s3Params = util.StorageClientParameters{
+			AccessKeyID:     "test-access-key",
+			SecretAccessKey: "test-secret-key",
+			Endpoint:        "https://test-endpoint",
+			Region:          "us-west-2",
 		}
 		request = &cosiapi.DriverCreateBucketRequest{Name: bucketName}
 
@@ -71,7 +72,7 @@ var _ = Describe("ProvisionerServer DriverCreateBucket", func() {
 	})
 
 	JustBeforeEach(func() {
-		driver.InitializeClient = func(ctx context.Context, clientset kubernetes.Interface, parameters map[string]string) (*s3client.S3Client, *s3client.S3Params, error) {
+		driver.InitializeClient = func(ctx context.Context, clientset kubernetes.Interface, parameters map[string]string) (*s3client.S3Client, *util.StorageClientParameters, error) {
 			return &s3client.S3Client{S3Service: mockS3}, &s3Params, nil
 		}
 	})
@@ -295,8 +296,8 @@ var _ = Describe("initializeObjectStorageClient", func() {
 		Expect(err).To(BeNil())
 		Expect(s3Client).NotTo(BeNil())
 		Expect(s3Params).NotTo(BeNil())
-		Expect(s3Params.AccessKey).To(Equal("test-access-key"))
-		Expect(s3Params.SecretKey).To(Equal("test-secret-key"))
+		Expect(s3Params.AccessKeyID).To(Equal("test-access-key"))
+		Expect(s3Params.SecretAccessKey).To(Equal("test-secret-key"))
 		Expect(s3Params.Endpoint).To(Equal("https://test-endpoint"))
 		Expect(s3Params.Region).To(Equal("us-west-2"))
 	})
@@ -331,7 +332,7 @@ var _ = Describe("initializeObjectStorageClient", func() {
 		Expect(s3Client).To(BeNil())
 		Expect(s3Params).To(BeNil())
 		Expect(status.Code(err)).To(Equal(codes.InvalidArgument))
-		Expect(err.Error()).To(ContainSubstring("endpoint, accessKeyID, secretKey and region are required"))
+		Expect(err.Error()).To(ContainSubstring("accessKeyID is required"))
 	})
 })
 
@@ -353,8 +354,8 @@ var _ = Describe("FetchParameters", func() {
 		s3Params, err := driver.FetchParameters(secretData)
 		Expect(err).To(BeNil())
 		Expect(s3Params).NotTo(BeNil())
-		Expect(s3Params.AccessKey).To(Equal("test-access-key"))
-		Expect(s3Params.SecretKey).To(Equal("test-secret-key"))
+		Expect(s3Params.AccessKeyID).To(Equal("test-access-key"))
+		Expect(s3Params.SecretAccessKey).To(Equal("test-secret-key"))
 		Expect(s3Params.Endpoint).To(Equal("https://test-endpoint"))
 		Expect(s3Params.Region).To(Equal("us-west-2"))
 		Expect(s3Params.TLSCert).To(BeNil())
@@ -374,7 +375,7 @@ var _ = Describe("FetchParameters", func() {
 		Expect(err).To(HaveOccurred())
 		Expect(s3Params).To(BeNil())
 		Expect(status.Code(err)).To(Equal(codes.InvalidArgument))
-		Expect(err.Error()).To(ContainSubstring("endpoint, accessKeyID, secretKey and region are required"))
+		Expect(err.Error()).To(ContainSubstring("accessKeyID is required"))
 	})
 
 	It("should return error if SecretKey is missing", func() {
@@ -383,7 +384,7 @@ var _ = Describe("FetchParameters", func() {
 		Expect(err).To(HaveOccurred())
 		Expect(s3Params).To(BeNil())
 		Expect(status.Code(err)).To(Equal(codes.InvalidArgument))
-		Expect(err.Error()).To(ContainSubstring("endpoint, accessKeyID, secretKey and region are required"))
+		Expect(err.Error()).To(ContainSubstring("secretAccessKey is required"))
 	})
 
 	It("should return error if Endpoint is missing", func() {
@@ -392,15 +393,6 @@ var _ = Describe("FetchParameters", func() {
 		Expect(err).To(HaveOccurred())
 		Expect(s3Params).To(BeNil())
 		Expect(status.Code(err)).To(Equal(codes.InvalidArgument))
-		Expect(err.Error()).To(ContainSubstring("endpoint, accessKeyID, secretKey and region are required"))
-	})
-
-	It("should return error if Region is missing", func() {
-		delete(secretData, "region")
-		s3Params, err := driver.FetchParameters(secretData)
-		Expect(err).To(HaveOccurred())
-		Expect(s3Params).To(BeNil())
-		Expect(status.Code(err)).To(Equal(codes.InvalidArgument))
-		Expect(err.Error()).To(ContainSubstring("endpoint, accessKeyID, secretKey and region are required"))
+		Expect(err.Error()).To(ContainSubstring("endpoint is required"))
 	})
 })
