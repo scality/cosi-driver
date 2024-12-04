@@ -6,4 +6,4 @@ driverName: cosi.scality.com
 authenticationType: KEY
 parameters:
   objectStorageSecretName: s3-secret-for-cosi
-  objectStorageSecretNameSpace: default
+  objectStorageSecretNamespace: default
