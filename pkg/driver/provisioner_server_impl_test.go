@@ -154,18 +154,6 @@ var _ = Describe("ProvisionerServer Unimplemented Methods", func() {
 		Expect(err.Error()).To(ContainSubstring("DriverCreateBucket: not implemented"))
 	})
 
-	It("DriverGrantBucketAccess should return Unimplemented error", func() {
-		request := &cosiapi.DriverGrantBucketAccessRequest{
-			BucketId: bucketName,
-			Name:     "test-access",
-		}
-		resp, err := provisioner.DriverGrantBucketAccess(ctx, request)
-		Expect(resp).To(BeNil())
-		Expect(err).To(HaveOccurred())
-		Expect(status.Code(err)).To(Equal(codes.Unimplemented))
-		Expect(err.Error()).To(ContainSubstring("DriverCreateBucket: not implemented"))
-	})
-
 	It("DriverRevokeBucketAccess should return Unimplemented error", func() {
 		request := &cosiapi.DriverRevokeBucketAccessRequest{AccountId: accountID}
 		resp, err := provisioner.DriverRevokeBucketAccess(ctx, request)

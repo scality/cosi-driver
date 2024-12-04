@@ -59,6 +59,7 @@ var _ = Describe("IAMClient", func() {
 			Region:          "us-west-2",
 			TLSCert:         nil,
 			Debug:           false,
+			IAMEndpoint:     "https://iam.mock.endpoint",
 		}
 	})
 
@@ -96,18 +97,21 @@ var _ = Describe("IAMClient", func() {
 			Expect(err.Error()).To(ContainSubstring("simulated CreateUser failure"))
 		})
 
-		It("should attach an inline policy successfully", func(ctx SpecContext) {
+		It("should attach an inline policy with the correct name and content", func(ctx SpecContext) {
+			bucketName := "inline-policy-bucket-test"
 			mockIAM.PutUserPolicyFunc = func(ctx context.Context, input *iam.PutUserPolicyInput, opts ...func(*iam.Options)) (*iam.PutUserPolicyOutput, error) {
+				expectedPolicyName := bucketName + iamclient.IAMUserInlinePolicyPostfix
 				Expect(input.UserName).To(Equal(aws.String("test-user")))
+				Expect(*input.PolicyName).To(Equal(expectedPolicyName))
 				Expect(*input.PolicyDocument).To(ContainSubstring("s3:*"))
-				Expect(*input.PolicyDocument).To(ContainSubstring("arn:aws:s3:::test-bucket"))
+				Expect(*input.PolicyDocument).To(ContainSubstring(fmt.Sprintf("arn:aws:s3:::%s", bucketName)))
 				return &iam.PutUserPolicyOutput{}, nil
 			}
 
 			client, _ := iamclient.InitIAMClient(params)
 			client.IAMService = mockIAM
 
-			err := client.AttachS3WildcardInlinePolicy(ctx, "test-user", "test-bucket")
+			err := client.AttachS3WildcardInlinePolicy(ctx, "test-user", bucketName)
 			Expect(err).To(BeNil())
 		})
 
