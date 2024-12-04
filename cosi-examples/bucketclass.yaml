@@ -5,5 +5,5 @@ metadata:
 driverName: cosi.scality.com
 deletionPolicy: Retain
 parameters:
-  COSI_OBJECT_STORAGE_PROVIDER_SECRET_NAME: s3-secret-for-cosi
-  COSI_OBJECT_STORAGE_PROVIDER_SECRET_NAMESPACE: default
+  objectStorageSecretName: s3-secret-for-cosi
+  objectStorageSecretNamespace: default
