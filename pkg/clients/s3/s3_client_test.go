@@ -63,39 +63,6 @@ var _ = Describe("S3Client", func() {
 		})
 	})
 
-	Describe("ConfigureTLSTransport", func() {
-
-		It("should configure TLS when certData is provided", func() {
-			// Fake certificate data
-			certData := []byte("fake-cert-data")
-			transport := s3client.ConfigureTLSTransport(certData, false)
-
-			Expect(transport).NotTo(BeNil())
-			Expect(transport.TLSClientConfig).NotTo(BeNil())
-			Expect(transport.TLSClientConfig.InsecureSkipVerify).To(BeFalse())
-			Expect(transport.TLSClientConfig.RootCAs).NotTo(BeNil())
-		})
-
-		It("should skip TLS validation when no certData is provided and skipTLSValidation is true", func() {
-			transport := s3client.ConfigureTLSTransport(nil, true)
-
-			Expect(transport).NotTo(BeNil())
-			Expect(transport.TLSClientConfig).NotTo(BeNil())
-			Expect(transport.TLSClientConfig.InsecureSkipVerify).To(BeTrue())
-			Expect(transport.TLSClientConfig.RootCAs).To(BeNil())
-		})
-
-		It("should not configure TLS when no certData is provided and skipTLSValidation is false", func() {
-			transport := s3client.ConfigureTLSTransport(nil, false)
-
-			Expect(transport).NotTo(BeNil())
-			Expect(transport.TLSClientConfig).NotTo(BeNil())
-			Expect(transport.TLSClientConfig.InsecureSkipVerify).To(BeFalse())
-			Expect(transport.TLSClientConfig.RootCAs).To(BeNil())
-		})
-
-	})
-
 	Describe("CreateBucket", func() {
 		var mockS3 *MockS3Client
 

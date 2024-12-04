@@ -1,10 +1,14 @@
 package util
 
 import (
+	"crypto/tls"
+	"crypto/x509"
+	"net/http"
 	"time"
 
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	"k8s.io/klog/v2"
 )
 
 // Constants for storage client configuration
@@ -43,4 +47,25 @@ func (p *StorageClientParameters) Validate() error {
 		return status.Error(codes.InvalidArgument, "endpoint is required")
 	}
 	return nil
+}
+
+func ConfigureTLSTransport(certData []byte) *http.Transport {
+	tlsSettings := &tls.Config{
+		MinVersion: tls.VersionTLS12,
+	}
+
+	if len(certData) > 0 {
+		caCertPool := x509.NewCertPool()
+		if ok := caCertPool.AppendCertsFromPEM(certData); !ok {
+			klog.Warning("Failed to append provided cert data to the certificate pool")
+		}
+		tlsSettings.RootCAs = caCertPool
+	} else {
+		klog.V(4).Info("No certificate data provided; skipping TLS verification")
+		tlsSettings.InsecureSkipVerify = true
+	}
+
+	return &http.Transport{
+		TLSClientConfig: tlsSettings,
+	}
 }

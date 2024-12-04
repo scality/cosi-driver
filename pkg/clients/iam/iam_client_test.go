@@ -161,37 +161,6 @@ var _ = Describe("IAMClient", func() {
 		})
 	})
 
-	Describe("ConfigureTLSTransport", func() {
-		It("should configure TLS when valid certData is provided", func() {
-			certData := []byte("invalid-cert-data")
-			transport := iamclient.ConfigureTLSTransport(certData, false)
-
-			Expect(transport).NotTo(BeNil())
-			Expect(transport.TLSClientConfig).NotTo(BeNil())
-			Expect(transport.TLSClientConfig.InsecureSkipVerify).To(BeFalse())
-			Expect(transport.TLSClientConfig.RootCAs).NotTo(BeNil())
-		})
-
-		It("should log a warning if invalid certData is provided", func() {
-			certData := []byte("invalid-cert-data")
-			transport := iamclient.ConfigureTLSTransport(certData, false)
-
-			Expect(transport).NotTo(BeNil())
-			Expect(transport.TLSClientConfig).NotTo(BeNil())
-			Expect(transport.TLSClientConfig.InsecureSkipVerify).To(BeFalse())
-			Expect(transport.TLSClientConfig.RootCAs).NotTo(BeNil())
-		})
-
-		It("should skip RootCAs configuration when no certData is provided", func() {
-			transport := iamclient.ConfigureTLSTransport(nil, false)
-
-			Expect(transport).NotTo(BeNil())
-			Expect(transport.TLSClientConfig).NotTo(BeNil())
-			Expect(transport.TLSClientConfig.InsecureSkipVerify).To(BeFalse())
-			Expect(transport.TLSClientConfig.RootCAs).To(BeNil())
-		})
-	})
-
 	Describe("CreateBucketAccess", func() {
 		var mockIAM *MockIAMClient
 

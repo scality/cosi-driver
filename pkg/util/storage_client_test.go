@@ -1,14 +1,14 @@
 package util_test
 
 import (
-	"github.com/scality/cosi-driver/pkg/util"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"github.com/scality/cosi-driver/pkg/util"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
 
-var _ = Describe("StorageClientParameters", func() {
+var _ = Describe("StorageClientUtilities", func() {
 	Context("NewStorageClientParameters", func() {
 		It("should initialize default parameters", func() {
 			params := util.NewStorageClientParameters()
@@ -86,6 +86,37 @@ var _ = Describe("StorageClientParameters", func() {
 			err := params.Validate()
 			Expect(err).To(HaveOccurred())
 			Expect(err.Error()).To(ContainSubstring("accessKeyID is required"))
+		})
+	})
+
+	Describe("ConfigureTLSTransport", func() {
+		It("should configure TLS when certData is provided", func() {
+			certData := []byte("-----BEGIN CERTIFICATE-----\nFakeCert\n-----END CERTIFICATE-----")
+			transport := util.ConfigureTLSTransport(certData)
+
+			Expect(transport).NotTo(BeNil())
+			Expect(transport.TLSClientConfig).NotTo(BeNil())
+			Expect(transport.TLSClientConfig.InsecureSkipVerify).To(BeFalse())
+			Expect(transport.TLSClientConfig.RootCAs).NotTo(BeNil())
+		})
+
+		It("should skip TLS validation when no certData is provided", func() {
+			transport := util.ConfigureTLSTransport(nil)
+
+			Expect(transport).NotTo(BeNil())
+			Expect(transport.TLSClientConfig).NotTo(BeNil())
+			Expect(transport.TLSClientConfig.InsecureSkipVerify).To(BeTrue())
+			Expect(transport.TLSClientConfig.RootCAs).To(BeNil())
+		})
+
+		It("should log a warning if invalid certData is provided", func() {
+			certData := []byte("InvalidCertData")
+			transport := util.ConfigureTLSTransport(certData)
+
+			Expect(transport).NotTo(BeNil())
+			Expect(transport.TLSClientConfig).NotTo(BeNil())
+			Expect(transport.TLSClientConfig.InsecureSkipVerify).To(BeFalse())
+			Expect(transport.TLSClientConfig.RootCAs).NotTo(BeNil())
 		})
 	})
 })

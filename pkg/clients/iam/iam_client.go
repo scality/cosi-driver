@@ -2,8 +2,6 @@ package iamclient
 
 import (
 	"context"
-	"crypto/tls"
-	"crypto/x509"
 	"fmt"
 	"net/http"
 	"os"
@@ -39,11 +37,8 @@ func InitIAMClient(params util.StorageClientParameters) (*IAMClient, error) {
 		Timeout: util.DefaultRequestTimeout,
 	}
 
-	// in the case where endpoint is HTTPS but no certificate is provided, skip TLS validation
-	isHTTPSEndpoint := strings.HasPrefix(params.Endpoint, "https://")
-	skipTLSValidation := isHTTPSEndpoint && len(params.TLSCert) == 0
-	if isHTTPSEndpoint {
-		httpClient.Transport = ConfigureTLSTransport(params.TLSCert, skipTLSValidation)
+	if strings.HasPrefix(params.Endpoint, "https://") {
+		httpClient.Transport = util.ConfigureTLSTransport(params.TLSCert)
 	}
 
 	ctx := context.Background()
@@ -65,25 +60,6 @@ func InitIAMClient(params util.StorageClientParameters) (*IAMClient, error) {
 	return &IAMClient{
 		IAMService: iamClient,
 	}, nil
-}
-
-func ConfigureTLSTransport(certData []byte, skipTLSValidation bool) *http.Transport {
-	tlsSettings := &tls.Config{
-		MinVersion:         tls.VersionTLS12,
-		InsecureSkipVerify: skipTLSValidation,
-	}
-
-	if len(certData) > 0 {
-		caCertPool := x509.NewCertPool()
-		if ok := caCertPool.AppendCertsFromPEM(certData); !ok {
-			klog.Warning("Failed to append provided cert data to the certificate pool")
-		}
-		tlsSettings.RootCAs = caCertPool
-	}
-
-	return &http.Transport{
-		TLSClientConfig: tlsSettings,
-	}
 }
 
 // CreateUser creates an IAM user with the specified name.
