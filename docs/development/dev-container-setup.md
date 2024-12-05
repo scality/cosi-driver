@@ -52,7 +52,7 @@ Once the Dev Container is up and running, you will have access to the pre-config
 There are 3 main scripts run in the CI:
 
 - **.github/scripts/setup_cosi_resources.sh**: setups up COSI CRDs, COSI controller, COSI sidecar, and Scality COSI driver.
-- **.github/scripts/e2e_test_bucket_creation.sh**: Sets up BucketClass, Bucket Claim, s3 secret(changed needed below), in kubernetes and tests create bucket using AWS CLI.
+- **.github/scripts/e2e_tests.sh**: Sets up BucketClass, Bucket Claim, s3 secret(changed needed below), in kubernetes and tests create bucket using AWS CLI.
 - **.github/scripts/cleanup_cosi_resources.sh**: Deletes all researources created in above two steps.
 
 ### Running Setup and Test Scripts
@@ -78,7 +78,7 @@ In the integrated terminal inside VS Code, run the following commands to set up 
     ```bash
     eval $(minikube docker-env -u)
 
-    .github/scripts/e2e_test_bucket_creation.sh
+    .github/scripts/e2e_tests.sh
     ```
 
     This script:
