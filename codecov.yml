@@ -34,8 +34,16 @@ component_management:
       name: 📡 gRPC Factory Package
       paths:
         - pkg/grpcfactory/**
-    - component_id: util-client-package
-      name: 🔧 Util Client Package
+    - component_id: iam-client-package
+      name: 🔐 IAM Client Package
+      paths:
+        - pkg/clients/iam/**
+    - component_id: s3-client-package
+      name: 🌐 S3 Client Package
+      paths:
+        - pkg/clients/s3/**
+    - component_id: util-package
+      name: 🔧 Util Package
       paths:
         - pkg/util/**
 

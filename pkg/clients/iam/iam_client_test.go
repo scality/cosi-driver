@@ -11,7 +11,8 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
-	"github.com/scality/cosi-driver/pkg/util/iamclient"
+	iamclient "github.com/scality/cosi-driver/pkg/clients/iam"
+	"github.com/scality/cosi-driver/pkg/util"
 )
 
 // MockIAMClient implements the IAMAPI interface for testing
@@ -48,16 +49,16 @@ func TestIAMClient(t *testing.T) {
 }
 
 var _ = Describe("IAMClient", func() {
-	var params iamclient.IAMParams
+	var params util.StorageClientParameters
 
 	BeforeEach(func() {
-		params = iamclient.IAMParams{
-			AccessKey: "test-access-key",
-			SecretKey: "test-secret-key",
-			Endpoint:  "https://iam.mock.endpoint",
-			Region:    "us-west-2",
-			TLSCert:   nil,
-			Debug:     false,
+		params = util.StorageClientParameters{
+			AccessKeyID:     "test-access-key",
+			SecretAccessKey: "test-secret-key",
+			Endpoint:        "https://iam.mock.endpoint",
+			Region:          "us-west-2",
+			TLSCert:         nil,
+			Debug:           false,
 		}
 	})
 
@@ -144,14 +145,6 @@ var _ = Describe("IAMClient", func() {
 			Expect(output.AccessKey.SecretAccessKey).To(Equal(aws.String("test-secret-access-key")))
 		})
 
-		It("should fail if credentials are missing", func() {
-			params.AccessKey = ""
-			params.SecretKey = ""
-			client, err := iamclient.InitIAMClient(params)
-			Expect(err).NotTo(BeNil())
-			Expect(client).To(BeNil())
-		})
-
 		It("should return an error when CreateAccessKey fails", func(ctx SpecContext) {
 			mockIAM.CreateAccessKeyFunc = func(ctx context.Context, input *iam.CreateAccessKeyInput, opts ...func(*iam.Options)) (*iam.CreateAccessKeyOutput, error) {
 				return nil, fmt.Errorf("simulated CreateAccessKey failure")
@@ -165,37 +158,6 @@ var _ = Describe("IAMClient", func() {
 			Expect(output).To(BeNil())
 			Expect(err.Error()).To(ContainSubstring("failed to create access key for IAM user test-user"))
 			Expect(err.Error()).To(ContainSubstring("simulated CreateAccessKey failure"))
-		})
-	})
-
-	Describe("ConfigureTLSTransport", func() {
-		It("should configure TLS when valid certData is provided", func() {
-			certData := []byte("invalid-cert-data")
-			transport := iamclient.ConfigureTLSTransport(certData, false)
-
-			Expect(transport).NotTo(BeNil())
-			Expect(transport.TLSClientConfig).NotTo(BeNil())
-			Expect(transport.TLSClientConfig.InsecureSkipVerify).To(BeFalse())
-			Expect(transport.TLSClientConfig.RootCAs).NotTo(BeNil())
-		})
-
-		It("should log a warning if invalid certData is provided", func() {
-			certData := []byte("invalid-cert-data")
-			transport := iamclient.ConfigureTLSTransport(certData, false)
-
-			Expect(transport).NotTo(BeNil())
-			Expect(transport.TLSClientConfig).NotTo(BeNil())
-			Expect(transport.TLSClientConfig.InsecureSkipVerify).To(BeFalse())
-			Expect(transport.TLSClientConfig.RootCAs).NotTo(BeNil())
-		})
-
-		It("should skip RootCAs configuration when no certData is provided", func() {
-			transport := iamclient.ConfigureTLSTransport(nil, false)
-
-			Expect(transport).NotTo(BeNil())
-			Expect(transport.TLSClientConfig).NotTo(BeNil())
-			Expect(transport.TLSClientConfig.InsecureSkipVerify).To(BeFalse())
-			Expect(transport.TLSClientConfig.RootCAs).To(BeNil())
 		})
 	})
 
