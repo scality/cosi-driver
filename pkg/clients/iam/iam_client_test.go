@@ -317,5 +317,132 @@ var _ = Describe("IAMClient", func() {
 			err := client.RevokeBucketAccess(ctx, "non-existent-user", "test-bucket")
 			Expect(err).To(BeNil())
 		})
+
+		It("should return an error if getting user fails", func(ctx SpecContext) {
+			mockIAM.GetUserFunc = func(ctx context.Context, input *iam.GetUserInput, opts ...func(*iam.Options)) (*iam.GetUserOutput, error) {
+				return nil, fmt.Errorf("simulated GetUser failure")
+			}
+		
+			client, _ := iamclient.InitIAMClient(params)
+			client.IAMService = mockIAM
+		
+			err := client.RevokeBucketAccess(ctx, "test-user", "test-bucket")
+			Expect(err).NotTo(BeNil())
+			Expect(err.Error()).To(ContainSubstring("failed to get IAM user test-user"))
+		})
+
+		It("should skip deletion if inline policy does not exist", func(ctx SpecContext) {
+			mockIAM.GetUserFunc = func(ctx context.Context, input *iam.GetUserInput, opts ...func(*iam.Options)) (*iam.GetUserOutput, error) {
+				return &iam.GetUserOutput{}, nil
+			}
+			mockIAM.DeleteUserPolicyFunc = func(ctx context.Context, input *iam.DeleteUserPolicyInput, opts ...func(*iam.Options)) (*iam.DeleteUserPolicyOutput, error) {
+				return nil, &types.NoSuchEntityException{}
+			}
+		
+			client, _ := iamclient.InitIAMClient(params)
+			client.IAMService = mockIAM
+		
+			err := client.RevokeBucketAccess(ctx, "test-user", "test-bucket")
+			Expect(err).To(BeNil())
+		})
+
+		It("should return an error if deleting inline policy fails", func(ctx SpecContext) {
+			mockIAM.GetUserFunc = func(ctx context.Context, input *iam.GetUserInput, opts ...func(*iam.Options)) (*iam.GetUserOutput, error) {
+				return &iam.GetUserOutput{}, nil
+			}
+			mockIAM.DeleteUserPolicyFunc = func(ctx context.Context, input *iam.DeleteUserPolicyInput, opts ...func(*iam.Options)) (*iam.DeleteUserPolicyOutput, error) {
+				return nil, fmt.Errorf("simulated DeleteUserPolicy failure")
+			}
+		
+			client, _ := iamclient.InitIAMClient(params)
+			client.IAMService = mockIAM
+		
+			err := client.RevokeBucketAccess(ctx, "test-user", "test-bucket")
+			Expect(err).NotTo(BeNil())
+			Expect(err.Error()).To(ContainSubstring("failed to delete inline policy test-bucket for user test-user"))
+		})
+
+		It("should successfully delete all access keys for the user", func(ctx SpecContext) {
+			mockIAM.GetUserFunc = func(ctx context.Context, input *iam.GetUserInput, opts ...func(*iam.Options)) (*iam.GetUserOutput, error) {
+				return &iam.GetUserOutput{}, nil
+			}
+			mockIAM.ListAccessKeysFunc = func(ctx context.Context, input *iam.ListAccessKeysInput, opts ...func(*iam.Options)) (*iam.ListAccessKeysOutput, error) {
+				return &iam.ListAccessKeysOutput{
+					AccessKeyMetadata: []types.AccessKeyMetadata{
+						{AccessKeyId: aws.String("key-1")},
+						{AccessKeyId: aws.String("key-2")},
+					},
+				}, nil
+			}
+			mockIAM.DeleteAccessKeyFunc = func(ctx context.Context, input *iam.DeleteAccessKeyInput, opts ...func(*iam.Options)) (*iam.DeleteAccessKeyOutput, error) {
+				return &iam.DeleteAccessKeyOutput{}, nil
+			}
+		
+			client, _ := iamclient.InitIAMClient(params)
+			client.IAMService = mockIAM
+		
+			err := client.RevokeBucketAccess(ctx, "test-user", "test-bucket")
+			Expect(err).To(BeNil())
+		})
+
+		It("should return an error if deleting access key fails", func(ctx SpecContext) {
+			mockIAM.GetUserFunc = func(ctx context.Context, input *iam.GetUserInput, opts ...func(*iam.Options)) (*iam.GetUserOutput, error) {
+				return &iam.GetUserOutput{}, nil
+			}
+			mockIAM.ListAccessKeysFunc = func(ctx context.Context, input *iam.ListAccessKeysInput, opts ...func(*iam.Options)) (*iam.ListAccessKeysOutput, error) {
+				return &iam.ListAccessKeysOutput{
+					AccessKeyMetadata: []types.AccessKeyMetadata{
+						{AccessKeyId: aws.String("key-1")},
+					},
+				}, nil
+			}
+			mockIAM.DeleteAccessKeyFunc = func(ctx context.Context, input *iam.DeleteAccessKeyInput, opts ...func(*iam.Options)) (*iam.DeleteAccessKeyOutput, error) {
+				return nil, fmt.Errorf("simulated DeleteAccessKey failure")
+			}
+		
+			client, _ := iamclient.InitIAMClient(params)
+			client.IAMService = mockIAM
+		
+			err := client.RevokeBucketAccess(ctx, "test-user", "test-bucket")
+			Expect(err).NotTo(BeNil())
+			Expect(err.Error()).To(ContainSubstring("failed to delete access key key-1 for IAM user test-user"))
+		})
+
+		It("should successfully delete the user", func(ctx SpecContext) {
+			mockIAM.GetUserFunc = func(ctx context.Context, input *iam.GetUserInput, opts ...func(*iam.Options)) (*iam.GetUserOutput, error) {
+				return &iam.GetUserOutput{}, nil
+			}
+			mockIAM.ListAccessKeysFunc = func(ctx context.Context, input *iam.ListAccessKeysInput, opts ...func(*iam.Options)) (*iam.ListAccessKeysOutput, error) {
+				return &iam.ListAccessKeysOutput{}, nil
+			}
+			mockIAM.DeleteUserFunc = func(ctx context.Context, input *iam.DeleteUserInput, opts ...func(*iam.Options)) (*iam.DeleteUserOutput, error) {
+				return &iam.DeleteUserOutput{}, nil
+			}
+		
+			client, _ := iamclient.InitIAMClient(params)
+			client.IAMService = mockIAM
+		
+			err := client.RevokeBucketAccess(ctx, "test-user", "test-bucket")
+			Expect(err).To(BeNil())
+		})
+
+		It("should return an error if deleting user fails", func(ctx SpecContext) {
+			mockIAM.GetUserFunc = func(ctx context.Context, input *iam.GetUserInput, opts ...func(*iam.Options)) (*iam.GetUserOutput, error) {
+				return &iam.GetUserOutput{}, nil
+			}
+			mockIAM.ListAccessKeysFunc = func(ctx context.Context, input *iam.ListAccessKeysInput, opts ...func(*iam.Options)) (*iam.ListAccessKeysOutput, error) {
+				return &iam.ListAccessKeysOutput{}, nil
+			}
+			mockIAM.DeleteUserFunc = func(ctx context.Context, input *iam.DeleteUserInput, opts ...func(*iam.Options)) (*iam.DeleteUserOutput, error) {
+				return nil, fmt.Errorf("simulated DeleteUser failure")
+			}
+		
+			client, _ := iamclient.InitIAMClient(params)
+			client.IAMService = mockIAM
+		
+			err := client.RevokeBucketAccess(ctx, "test-user", "test-bucket")
+			Expect(err).NotTo(BeNil())
+			Expect(err.Error()).To(ContainSubstring("failed to delete IAM user test-user"))
+		})
 	})
 })
