@@ -339,6 +339,19 @@ var _ = Describe("initializeObjectStorageClient", Ordered, func() {
 		Expect(s3Params.Region).To(Equal("us-west-2"))
 	})
 
+	It("should return InvalidArgument error for unsupported object storage provider service", func() {
+		_, err := clientset.CoreV1().Secrets("test-namespace").Create(ctx, secret, metav1.CreateOptions{})
+		Expect(err).To(BeNil())
+
+		client, params, err := driver.InitializeClient(ctx, clientset, parameters, "UnsupportedService")
+
+		Expect(client).To(BeNil())
+		Expect(params).To(BeNil())
+		Expect(err).To(HaveOccurred())
+		Expect(status.Code(err)).To(Equal(codes.Internal))
+		Expect(err.Error()).To(ContainSubstring("unsupported object storage provider service"))
+	})
+
 	It("should return error when FetchSecretInformation fails", func() {
 		delete(parameters, "objectStorageSecretName")
 
