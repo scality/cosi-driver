@@ -100,7 +100,7 @@ var _ = Describe("IAMClient", func() {
 		It("should attach an inline policy with the correct name and content", func(ctx SpecContext) {
 			bucketName := "inline-policy-bucket-test"
 			mockIAM.PutUserPolicyFunc = func(ctx context.Context, input *iam.PutUserPolicyInput, opts ...func(*iam.Options)) (*iam.PutUserPolicyOutput, error) {
-				expectedPolicyName := bucketName + iamclient.IAMUserInlinePolicyPostfix
+				expectedPolicyName := bucketName
 				Expect(input.UserName).To(Equal(aws.String("test-user")))
 				Expect(*input.PolicyName).To(Equal(expectedPolicyName))
 				Expect(*input.PolicyDocument).To(ContainSubstring("s3:*"))
