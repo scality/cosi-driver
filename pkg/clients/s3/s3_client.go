@@ -25,7 +25,7 @@ type S3Client struct {
 	S3Service S3API
 }
 
-func InitS3Client(params util.StorageClientParameters) (*S3Client, error) {
+var InitS3Client = func(params util.StorageClientParameters) (*S3Client, error) {
 	var logger logging.Logger
 	if params.Debug {
 		logger = logging.NewStandardLogger(os.Stdout)

@@ -18,6 +18,7 @@ var _ = Describe("StorageClientUtilities", func() {
 			Expect(params.AccessKeyID).To(BeEmpty())
 			Expect(params.SecretAccessKey).To(BeEmpty())
 			Expect(params.Endpoint).To(BeEmpty())
+			Expect(params.IAMEndpoint).To(BeEmpty())
 			Expect(params.TLSCert).To(BeNil())
 		})
 	})

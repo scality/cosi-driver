@@ -15,6 +15,9 @@ import (
 	"k8s.io/klog/v2"
 )
 
+// postfix for inline policy which is created when COSI receives a BucketAccess (BA) request
+const IAMUserInlinePolicyPostfix = "-cosi-ba"
+
 type IAMAPI interface {
 	CreateUser(ctx context.Context, input *iam.CreateUserInput, opts ...func(*iam.Options)) (*iam.CreateUserOutput, error)
 	PutUserPolicy(ctx context.Context, input *iam.PutUserPolicyInput, opts ...func(*iam.Options)) (*iam.PutUserPolicyOutput, error)
@@ -37,7 +40,7 @@ func InitIAMClient(params util.StorageClientParameters) (*IAMClient, error) {
 		Timeout: util.DefaultRequestTimeout,
 	}
 
-	if strings.HasPrefix(params.Endpoint, "https://") {
+	if strings.HasPrefix(params.IAMEndpoint, "https://") {
 		httpClient.Transport = util.ConfigureTLSTransport(params.TLSCert)
 	}
 
@@ -54,7 +57,7 @@ func InitIAMClient(params util.StorageClientParameters) (*IAMClient, error) {
 	}
 
 	iamClient := iam.NewFromConfig(awsCfg, func(o *iam.Options) {
-		o.BaseEndpoint = &params.Endpoint
+		o.BaseEndpoint = &params.IAMEndpoint
 	})
 
 	return &IAMClient{
@@ -79,7 +82,7 @@ func (client *IAMClient) CreateUser(ctx context.Context, userName string) error 
 
 // AttachS3WildcardInlinePolicy attaches an inline policy to an IAM user for a specific bucket.
 func (client *IAMClient) AttachS3WildcardInlinePolicy(ctx context.Context, userName, bucketName string) error {
-	policyName := fmt.Sprintf("%s-bucket-access", bucketName)
+	policyName := fmt.Sprintf("%s%s", bucketName, IAMUserInlinePolicyPostfix)
 	policyDocument := fmt.Sprintf(`{
 		"Version": "2012-10-17",
 		"Statement": [

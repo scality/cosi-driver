@@ -22,7 +22,8 @@ type StorageClientParameters struct {
 	AccessKeyID     string
 	SecretAccessKey string
 	Endpoint        string
-	Region          string
+	IAMEndpoint     string // Optional field for IAM endpoint(default: Endpoint)
+	Region          string // Optional field for region
 	TLSCert         []byte // Optional field for TLS certificates
 	Debug           bool   // Optional field for debug mode
 }
