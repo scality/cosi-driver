@@ -27,15 +27,33 @@ if kubectl get namespace scality-object-storage &>/dev/null; then
   exit 1
 fi
 
+log_and_run echo "Removing Finalizers from BucketAccess and BucketAccessClass..."
+# Remove finalizers from all BucketAccess resources
+BUCKET_ACCESS_NAMES=$(kubectl get bucketaccess -o jsonpath='{.items[*].metadata.name}')
+for BUCKET_ACCESS_NAME in $BUCKET_ACCESS_NAMES; do
+  log_and_run echo "Removing finalizers from BucketAccess: $BUCKET_ACCESS_NAME"
+  log_and_run kubectl patch bucketaccess "$BUCKET_ACCESS_NAME" -p '{"metadata":{"finalizers":[]}}' --type=merge || { echo "Finalizers not found for BucketAccess: $BUCKET_ACCESS_NAME" | tee -a "$LOG_FILE"; }
+done
+
+# Remove finalizers from all BucketAccessClass resources
+BUCKET_ACCESS_CLASS_NAMES=$(kubectl get bucketaccessclass -o jsonpath='{.items[*].metadata.name}')
+for BUCKET_ACCESS_CLASS_NAME in $BUCKET_ACCESS_CLASS_NAMES; do
+  log_and_run echo "Removing finalizers from BucketAccessClass: $BUCKET_ACCESS_CLASS_NAME"
+  log_and_run kubectl patch bucketaccessclass "$BUCKET_ACCESS_CLASS_NAME" -p '{"metadata":{"finalizers":[]}}' --type=merge || { echo "Finalizers not found for BucketAccessClass: $BUCKET_ACCESS_CLASS_NAME" | tee -a "$LOG_FILE"; }
+done
+
 log_and_run echo "Removing Finalizers from Bucket Claim and Bucket"
-log_and_run kubectl patch bucketclaim my-bucket-claim  -p '{"metadata":{"finalizers":[]}}' --type=merge || { echo "Bucket Claim finalizers not found." | tee -a "$LOG_FILE"; }
+log_and_run kubectl patch bucketclaim my-bucket-claim -p '{"metadata":{"finalizers":[]}}' --type=merge || { echo "Bucket Claim finalizers not found." | tee -a "$LOG_FILE"; }
 
 BUCKET_NAMES=$(kubectl get bucket -o jsonpath='{.items[*].metadata.name}')
-
 for BUCKET_NAME in $BUCKET_NAMES; do
   log_and_run echo "Removing finalizers from bucket: $BUCKET_NAME"
   log_and_run kubectl patch bucket "$BUCKET_NAME" -p '{"metadata":{"finalizers":[]}}' --type=merge || { echo "Finalizers not found for bucket: $BUCKET_NAME" | tee -a "$LOG_FILE"; }
 done
+
+log_and_run echo "Deleting Bucket Access and Bucket Access Class..."
+log_and_run kubectl delete -f cosi-examples/bucketaccess.yaml || { echo "No BucketAccess resources found." | tee -a "$LOG_FILE"; }
+log_and_run kubectl delete -f cosi-examples/bucketaccessclass.yaml --all || { echo "No BucketAccessClass resources found." | tee -a "$LOG_FILE"; }
 
 log_and_run echo "Deleting Bucket Class and Bucket Claim..."
 log_and_run kubectl delete -f cosi-examples/bucketclass.yaml || { echo "Bucket Class not found." | tee -a "$LOG_FILE"; }
