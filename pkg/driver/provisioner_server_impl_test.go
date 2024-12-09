@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"os"
 
-	iamtypes "github.com/aws/aws-sdk-go-v2/service/iam/types"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/aws/aws-sdk-go-v2/service/s3/types"
 	. "github.com/onsi/ginkgo/v2"
@@ -16,6 +15,7 @@ import (
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/iam"
+	iamtypes "github.com/aws/aws-sdk-go-v2/service/iam/types"
 	iamclient "github.com/scality/cosi-driver/pkg/clients/iam"
 	s3client "github.com/scality/cosi-driver/pkg/clients/s3"
 	"github.com/scality/cosi-driver/pkg/driver"
@@ -43,10 +43,56 @@ func (m *MockS3Client) CreateBucket(ctx context.Context, input *s3.CreateBucketI
 }
 
 type MockIAMClient struct {
-	CreateAccessKeyFunc    func(ctx context.Context, input *iam.CreateAccessKeyInput, opts ...func(*iam.Options)) (*iam.CreateAccessKeyOutput, error)
-	RevokeBucketAccessFunc func(ctx context.Context, userName, bucketName string) error
-	CreateBucketAccessFunc func(ctx context.Context, userName, bucketName string) (*iam.CreateAccessKeyOutput, error)
 	CreateUserFunc         func(ctx context.Context, input *iam.CreateUserInput, opts ...func(*iam.Options)) (*iam.CreateUserOutput, error)
+	PutUserPolicyFunc      func(ctx context.Context, input *iam.PutUserPolicyInput, opts ...func(*iam.Options)) (*iam.PutUserPolicyOutput, error)
+	CreateAccessKeyFunc    func(ctx context.Context, input *iam.CreateAccessKeyInput, opts ...func(*iam.Options)) (*iam.CreateAccessKeyOutput, error)
+	GetUserFunc            func(ctx context.Context, input *iam.GetUserInput, opts ...func(*iam.Options)) (*iam.GetUserOutput, error)
+	DeleteUserPolicyFunc   func(ctx context.Context, input *iam.DeleteUserPolicyInput, opts ...func(*iam.Options)) (*iam.DeleteUserPolicyOutput, error)
+	ListAccessKeysFunc     func(ctx context.Context, input *iam.ListAccessKeysInput, opts ...func(*iam.Options)) (*iam.ListAccessKeysOutput, error)
+	DeleteAccessKeyFunc    func(ctx context.Context, input *iam.DeleteAccessKeyInput, opts ...func(*iam.Options)) (*iam.DeleteAccessKeyOutput, error)
+	DeleteUserFunc         func(ctx context.Context, input *iam.DeleteUserInput, opts ...func(*iam.Options)) (*iam.DeleteUserOutput, error)
+	CreateBucketAccessFunc func(ctx context.Context, userName, bucketName string) (*iam.CreateAccessKeyOutput, error)
+	RevokeBucketAccessFunc func(ctx context.Context, userName, bucketName string) error
+}
+
+// Implement CreateUser
+func (m *MockIAMClient) CreateUser(ctx context.Context, input *iam.CreateUserInput, opts ...func(*iam.Options)) (*iam.CreateUserOutput, error) {
+	if m.CreateUserFunc != nil {
+		return m.CreateUserFunc(ctx, input, opts...)
+	}
+	return &iam.CreateUserOutput{
+		User: &iamtypes.User{
+			UserName: input.UserName,
+			UserId:   aws.String("mock-user-id"),
+		},
+	}, nil
+}
+
+func (m *MockIAMClient) RevokeBucketAccess(ctx context.Context, userName, bucketName string) error {
+	if m.RevokeBucketAccessFunc != nil {
+		return m.RevokeBucketAccessFunc(ctx, userName, bucketName)
+	}
+	return nil
+}
+
+func (m *MockIAMClient) CreateBucketAccess(ctx context.Context, userName, bucketName string) (*iam.CreateAccessKeyOutput, error) {
+	if m.CreateBucketAccessFunc != nil {
+		return m.CreateBucketAccessFunc(ctx, userName, bucketName)
+	}
+	return &iam.CreateAccessKeyOutput{
+		AccessKey: &iamtypes.AccessKey{
+			AccessKeyId:     aws.String("mock-access-key-id"),
+			SecretAccessKey: aws.String("mock-secret-access-key"),
+		},
+	}, nil
+}
+
+// Implement PutUserPolicy
+func (m *MockIAMClient) PutUserPolicy(ctx context.Context, input *iam.PutUserPolicyInput, opts ...func(*iam.Options)) (*iam.PutUserPolicyOutput, error) {
+	if m.PutUserPolicyFunc != nil {
+		return m.PutUserPolicyFunc(ctx, input, opts...)
+	}
+	return &iam.PutUserPolicyOutput{}, nil
 }
 
 // Implement CreateAccessKey
@@ -62,38 +108,55 @@ func (m *MockIAMClient) CreateAccessKey(ctx context.Context, input *iam.CreateAc
 	}, nil
 }
 
-// Implement CreateBucketAccess
-func (m *MockIAMClient) CreateBucketAccess(ctx context.Context, userName, bucketName string) (*iam.CreateAccessKeyOutput, error) {
-	if m.CreateBucketAccessFunc != nil {
-		return m.CreateBucketAccessFunc(ctx, userName, bucketName)
+// Implement GetUser
+func (m *MockIAMClient) GetUser(ctx context.Context, input *iam.GetUserInput, opts ...func(*iam.Options)) (*iam.GetUserOutput, error) {
+	if m.GetUserFunc != nil {
+		return m.GetUserFunc(ctx, input, opts...)
 	}
-	return &iam.CreateAccessKeyOutput{
-		AccessKey: &iamtypes.AccessKey{
-			AccessKeyId:     aws.String("mock-access-key-id"),
-			SecretAccessKey: aws.String("mock-secret-access-key"),
-		},
-	}, nil
-}
-
-// Implement RevokeBucketAccess
-func (m *MockIAMClient) RevokeBucketAccess(ctx context.Context, userName, bucketName string) error {
-	if m.RevokeBucketAccessFunc != nil {
-		return m.RevokeBucketAccessFunc(ctx, userName, bucketName)
-	}
-	return nil
-}
-
-// Implement CreateUser
-func (m *MockIAMClient) CreateUser(ctx context.Context, input *iam.CreateUserInput, opts ...func(*iam.Options)) (*iam.CreateUserOutput, error) {
-	if m.CreateUserFunc != nil {
-		return m.CreateUserFunc(ctx, input, opts...)
-	}
-	return &iam.CreateUserOutput{
+	return &iam.GetUserOutput{
 		User: &iamtypes.User{
-			UserName: aws.String("mock-user-name"),
+			UserName: input.UserName,
 			UserId:   aws.String("mock-user-id"),
 		},
 	}, nil
+}
+
+// Implement DeleteUserPolicy
+func (m *MockIAMClient) DeleteUserPolicy(ctx context.Context, input *iam.DeleteUserPolicyInput, opts ...func(*iam.Options)) (*iam.DeleteUserPolicyOutput, error) {
+	if m.DeleteUserPolicyFunc != nil {
+		return m.DeleteUserPolicyFunc(ctx, input, opts...)
+	}
+	return &iam.DeleteUserPolicyOutput{}, nil
+}
+
+// Implement ListAccessKeys
+func (m *MockIAMClient) ListAccessKeys(ctx context.Context, input *iam.ListAccessKeysInput, opts ...func(*iam.Options)) (*iam.ListAccessKeysOutput, error) {
+	if m.ListAccessKeysFunc != nil {
+		return m.ListAccessKeysFunc(ctx, input, opts...)
+	}
+	return &iam.ListAccessKeysOutput{
+		AccessKeyMetadata: []iamtypes.AccessKeyMetadata{
+			{
+				AccessKeyId: aws.String("mock-access-key-id"),
+			},
+		},
+	}, nil
+}
+
+// Implement DeleteAccessKey
+func (m *MockIAMClient) DeleteAccessKey(ctx context.Context, input *iam.DeleteAccessKeyInput, opts ...func(*iam.Options)) (*iam.DeleteAccessKeyOutput, error) {
+	if m.DeleteAccessKeyFunc != nil {
+		return m.DeleteAccessKeyFunc(ctx, input, opts...)
+	}
+	return &iam.DeleteAccessKeyOutput{}, nil
+}
+
+// Implement DeleteUser
+func (m *MockIAMClient) DeleteUser(ctx context.Context, input *iam.DeleteUserInput, opts ...func(*iam.Options)) (*iam.DeleteUserOutput, error) {
+	if m.DeleteUserFunc != nil {
+		return m.DeleteUserFunc(ctx, input, opts...)
+	}
+	return &iam.DeleteUserOutput{}, nil
 }
 
 var _ = Describe("ProvisionerServer DriverCreateBucket", Ordered, func() {
