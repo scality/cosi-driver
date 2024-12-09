@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"os"
 
-	iamtypes "github.com/aws/aws-sdk-go-v2/service/iam/types"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/aws/aws-sdk-go-v2/service/s3/types"
 	. "github.com/onsi/ginkgo/v2"
@@ -14,10 +13,10 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
-	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/iam"
 	s3client "github.com/scality/cosi-driver/pkg/clients/s3"
 	"github.com/scality/cosi-driver/pkg/driver"
+	mock "github.com/scality/cosi-driver/pkg/mock"
 	"github.com/scality/cosi-driver/pkg/util"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -26,37 +25,9 @@ import (
 	cosiapi "sigs.k8s.io/container-object-storage-interface-spec"
 )
 
-type MockS3Client struct {
-	CreateBucketFunc func(ctx context.Context, input *s3.CreateBucketInput, opts ...func(*s3.Options)) (*s3.CreateBucketOutput, error)
-}
-
-func (m *MockS3Client) CreateBucket(ctx context.Context, input *s3.CreateBucketInput, opts ...func(*s3.Options)) (*s3.CreateBucketOutput, error) {
-	if m.CreateBucketFunc != nil {
-		return m.CreateBucketFunc(ctx, input, opts...)
-	}
-	return &s3.CreateBucketOutput{}, nil
-}
-
-type MockIAMClient struct {
-	CreateBucketAccessFunc func(ctx context.Context, userName, bucketName string) (*iam.CreateAccessKeyOutput, error)
-}
-
-// Mock CreateBucketAccess
-func (m *MockIAMClient) CreateBucketAccess(ctx context.Context, userName, bucketName string) (*iam.CreateAccessKeyOutput, error) {
-	if m.CreateBucketAccessFunc != nil {
-		return m.CreateBucketAccessFunc(ctx, userName, bucketName)
-	}
-	return &iam.CreateAccessKeyOutput{
-		AccessKey: &iamtypes.AccessKey{
-			AccessKeyId:     aws.String("mock-access-key-id"),
-			SecretAccessKey: aws.String("mock-secret-access-key"),
-		},
-	}, nil
-}
-
 var _ = Describe("ProvisionerServer DriverCreateBucket", Ordered, func() {
 	var (
-		mockS3                   *MockS3Client
+		mockS3                   *mock.MockS3Client
 		provisioner              *driver.ProvisionerServer
 		ctx                      context.Context
 		clientset                *fake.Clientset
@@ -68,7 +39,7 @@ var _ = Describe("ProvisionerServer DriverCreateBucket", Ordered, func() {
 
 	BeforeEach(func() {
 		ctx = context.TODO()
-		mockS3 = &MockS3Client{}
+		mockS3 = &mock.MockS3Client{}
 		clientset = fake.NewSimpleClientset()
 		provisioner = &driver.ProvisionerServer{
 			Provisioner: "test-provisioner",
@@ -180,7 +151,6 @@ var _ = Describe("ProvisionerServer Unimplemented Methods", Ordered, func() {
 		ctx         context.Context
 		clientset   *fake.Clientset
 		bucketName  string
-		accountID   string
 	)
 
 	BeforeEach(func() {
@@ -191,21 +161,11 @@ var _ = Describe("ProvisionerServer Unimplemented Methods", Ordered, func() {
 			Clientset:   clientset,
 		}
 		bucketName = "test-bucket"
-		accountID = "test-account-id"
 	})
 
 	It("DriverDeleteBucket should return Unimplemented error", func() {
 		request := &cosiapi.DriverDeleteBucketRequest{BucketId: bucketName}
 		resp, err := provisioner.DriverDeleteBucket(ctx, request)
-		Expect(resp).To(BeNil())
-		Expect(err).To(HaveOccurred())
-		Expect(status.Code(err)).To(Equal(codes.Unimplemented))
-		Expect(err.Error()).To(ContainSubstring("DriverCreateBucket: not implemented"))
-	})
-
-	It("DriverRevokeBucketAccess should return Unimplemented error", func() {
-		request := &cosiapi.DriverRevokeBucketAccessRequest{AccountId: accountID}
-		resp, err := provisioner.DriverRevokeBucketAccess(ctx, request)
 		Expect(resp).To(BeNil())
 		Expect(err).To(HaveOccurred())
 		Expect(status.Code(err)).To(Equal(codes.Unimplemented))
@@ -496,7 +456,7 @@ var _ = Describe("FetchParameters", Ordered, func() {
 
 var _ = Describe("ProvisionerServer DriverGrantBucketAccess", func() {
 	var (
-		mockIAMClient            *MockIAMClient
+		mockIAMClient            *mock.MockIAMClient
 		provisioner              *driver.ProvisionerServer
 		ctx                      context.Context
 		clientset                *fake.Clientset
@@ -530,7 +490,7 @@ var _ = Describe("ProvisionerServer DriverGrantBucketAccess", func() {
 
 		// Mock InitializeClient
 		originalInitializeClient = driver.InitializeClient
-		mockIAMClient = &MockIAMClient{}
+		mockIAMClient = &mock.MockIAMClient{}
 		driver.InitializeClient = func(ctx context.Context, clientset kubernetes.Interface, parameters map[string]string, service string) (interface{}, *util.StorageClientParameters, error) {
 			if service == "IAM" {
 				return mockIAMClient, iamParams, nil
@@ -568,8 +528,15 @@ var _ = Describe("ProvisionerServer DriverGrantBucketAccess", func() {
 	})
 
 	It("should return Internal error when CreateBucketAccess fails", func() {
-		mockIAMClient.CreateBucketAccessFunc = func(ctx context.Context, userName, bucketName string) (*iam.CreateAccessKeyOutput, error) {
-			return nil, fmt.Errorf("mock failure")
+		// Mock lower-level methods used by CreateBucketAccess.
+		// mockIAMClient.CreateUserFunc = func(ctx context.Context, input *iam.CreateUserInput, opts ...func(*iam.Options)) (*iam.CreateUserOutput, error) {
+		// 	return &iam.CreateUserOutput{}, nil
+		// }
+		// mockIAMClient.PutUserPolicyFunc = func(ctx context.Context, input *iam.PutUserPolicyInput, opts ...func(*iam.Options)) (*iam.PutUserPolicyOutput, error) {
+		// 	return &iam.PutUserPolicyOutput{}, nil
+		// }
+		mockIAMClient.CreateAccessKeyFunc = func(ctx context.Context, input *iam.CreateAccessKeyInput, opts ...func(*iam.Options)) (*iam.CreateAccessKeyOutput, error) {
+			return nil, fmt.Errorf("mock failure: unable to create access key") // Simulating failure here.
 		}
 
 		resp, err := provisioner.DriverGrantBucketAccess(ctx, request)
@@ -579,3 +546,84 @@ var _ = Describe("ProvisionerServer DriverGrantBucketAccess", func() {
 		Expect(err.Error()).To(ContainSubstring("failed to initialize object storage provider IAM client"))
 	})
 })
+
+// var _ = Describe("ProvisionerServer DriverRevokeBucketAccess", func() {
+// 	var (
+// 		provisioner          *driver.ProvisionerServer
+// 		ctx                  context.Context
+// 		mockIAMClient        *mock.MockIAMClient
+// 		originalInitClient   func(context.Context, kubernetes.Interface, map[string]string, string) (interface{}, *util.StorageClientParameters, error)
+// 		bucketName, userName string
+// 		iamParams            *util.StorageClientParameters
+// 	)
+
+// 	BeforeEach(func() {
+// 		ctx = context.TODO()
+// 		mockIAMClient = &mock.MockIAMClient{}
+
+// 		// Mock InitializeClient
+// 		originalInitClient = driver.InitializeClient
+// 		driver.InitializeClient = func(ctx context.Context, clientset kubernetes.Interface, parameters map[string]string, service string) (interface{}, *util.StorageClientParameters, error) {
+// 			if service == "IAM" {
+// 				return &iamclient.IAMClient{
+// 					IAMService: mockIAMClient,
+// 				}, iamParams, nil
+// 			}
+// 			return nil, nil, fmt.Errorf("unsupported service: %s", service)
+// 		}
+
+// 		// Mock BucketClientset with a test bucket
+// 		bucket := &bucketv1alpha1.Bucket{
+// 			ObjectMeta: metav1.ObjectMeta{
+// 				Name:      "test-bucket",
+// 				Namespace: "default",
+// 			},
+// 			Spec: bucketv1alpha1.BucketSpec{
+// 				Parameters: map[string]string{
+// 					"objectStorageSecretName":      "s3-secret-for-cosi",
+// 					"objectStorageSecretNamespace": "default",
+// 				},
+// 			},
+// 		}
+// 		bucketClientset := bucketclientset.NewSimpleClientset(bucket)
+// 		bucketClientset.Fake.PrependReactor("get", "buckets", func(action k8stesting.Action) (bool, runtime.Object, error) {
+// 			getAction := action.(k8stesting.GetAction)
+// 			if getAction.GetName() == bucket.Name {
+// 				return true, bucket, nil
+// 			}
+// 			return true, nil, fmt.Errorf("bucket not found")
+// 		})
+
+// 		provisioner = &driver.ProvisionerServer{
+// 			Clientset:       fake.NewSimpleClientset(),
+// 			BucketClientset: bucketClientset,
+// 		}
+
+// 		bucketName = "test-bucket"
+// 		userName = "test-user"
+// 		iamParams = &util.StorageClientParameters{
+// 			Endpoint: "https://test-iam-endpoint",
+// 			Region:   "us-west-2",
+// 		}
+// 	})
+
+// 	AfterEach(func() {
+// 		driver.InitializeClient = originalInitClient
+// 	})
+
+// 	It("should successfully revoke bucket access", func() {
+// 		mockIAMClient.RevokeBucketAccessFunc = func(ctx context.Context, userName, bucketName string) error {
+// 			if userName == "invalid-user" {
+// 				return fmt.Errorf("user not found")
+// 			}
+// 			return nil
+// 		}
+
+// 		resp, err := provisioner.DriverRevokeBucketAccess(ctx, &cosiapi.DriverRevokeBucketAccessRequest{
+// 			BucketId:  bucketName,
+// 			AccountId: userName,
+// 		})
+// 		Expect(err).To(BeNil())
+// 		Expect(resp).To(BeAssignableToTypeOf(&cosiapi.DriverRevokeBucketAccessResponse{}))
+// 	})
+// })

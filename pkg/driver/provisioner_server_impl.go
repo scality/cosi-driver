@@ -308,5 +308,40 @@ func (s *ProvisionerServer) DriverGrantBucketAccess(ctx context.Context,
 func (s *ProvisionerServer) DriverRevokeBucketAccess(ctx context.Context,
 	req *cosiapi.DriverRevokeBucketAccessRequest) (*cosiapi.DriverRevokeBucketAccessResponse, error) {
 
-	return nil, status.Error(codes.Unimplemented, "DriverCreateBucket: not implemented")
+	bucketName := req.GetBucketId()
+	userName := req.GetAccountId()
+
+	klog.V(3).InfoS("Received DriverRevokeBucketAccess request", "bucketName", bucketName, "userName", userName)
+
+	// Fetch the bucket to retrieve parameters
+	bucket, err := s.BucketClientset.ObjectstorageV1alpha1().Buckets().Get(ctx, bucketName, metav1.GetOptions{})
+	if err != nil {
+		klog.ErrorS(err, "Failed to get bucket object from kubernetes", "bucketName", bucketName)
+		return nil, status.Error(codes.Internal, "failed to get bucket object from kubernetes")
+	}
+
+	parameters := bucket.Spec.Parameters
+
+	// Initialize IAM client using parameters from the bucket
+	client, _, err := InitializeClient(ctx, s.Clientset, parameters, "IAM")
+	if err != nil {
+		klog.ErrorS(err, "Failed to initialize IAM client", "bucketName", bucketName, "userName", userName)
+		return nil, status.Error(codes.Internal, "failed to initialize object storage provider IAM client")
+	}
+
+	iamClient, ok := client.(*iamclient.IAMClient)
+	if !ok {
+		klog.ErrorS(nil, "Unsupported client type for revoking bucket access", "bucketName", bucketName, "userName", userName)
+		return nil, status.Error(codes.Internal, "unsupported client type for IAM operations")
+	}
+
+	// Call the RevokeBucketAccess method in the IAM client
+	err = iamClient.RevokeBucketAccess(ctx, userName, bucketName)
+	if err != nil {
+		klog.ErrorS(err, "Failed to revoke bucket access", "bucketName", bucketName, "userName", userName)
+		return nil, status.Error(codes.Internal, "failed to revoke bucket access")
+	}
+
+	klog.V(3).InfoS("Successfully revoked bucket access", "bucketName", bucketName, "userName", userName)
+	return &cosiapi.DriverRevokeBucketAccessResponse{}, nil
 }
