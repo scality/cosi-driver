@@ -12,76 +12,9 @@ import (
 	. "github.com/onsi/gomega"
 
 	iamclient "github.com/scality/cosi-driver/pkg/clients/iam"
+	mock "github.com/scality/cosi-driver/pkg/mock"
 	"github.com/scality/cosi-driver/pkg/util"
 )
-
-// MockIAMClient implements the IAMAPI interface for testing
-type MockIAMClient struct {
-	CreateUserFunc       func(ctx context.Context, input *iam.CreateUserInput, opts ...func(*iam.Options)) (*iam.CreateUserOutput, error)
-	PutUserPolicyFunc    func(ctx context.Context, input *iam.PutUserPolicyInput, opts ...func(*iam.Options)) (*iam.PutUserPolicyOutput, error)
-	CreateAccessKeyFunc  func(ctx context.Context, input *iam.CreateAccessKeyInput, opts ...func(*iam.Options)) (*iam.CreateAccessKeyOutput, error)
-	GetUserFunc          func(ctx context.Context, input *iam.GetUserInput, opts ...func(*iam.Options)) (*iam.GetUserOutput, error)
-	DeleteUserPolicyFunc func(ctx context.Context, input *iam.DeleteUserPolicyInput, opts ...func(*iam.Options)) (*iam.DeleteUserPolicyOutput, error)
-	ListAccessKeysFunc   func(ctx context.Context, input *iam.ListAccessKeysInput, opts ...func(*iam.Options)) (*iam.ListAccessKeysOutput, error)
-	DeleteAccessKeyFunc  func(ctx context.Context, input *iam.DeleteAccessKeyInput, opts ...func(*iam.Options)) (*iam.DeleteAccessKeyOutput, error)
-	DeleteUserFunc       func(ctx context.Context, input *iam.DeleteUserInput, opts ...func(*iam.Options)) (*iam.DeleteUserOutput, error)
-}
-
-func (m *MockIAMClient) CreateUser(ctx context.Context, input *iam.CreateUserInput, opts ...func(*iam.Options)) (*iam.CreateUserOutput, error) {
-	if m.CreateUserFunc != nil {
-		return m.CreateUserFunc(ctx, input, opts...)
-	}
-	return &iam.CreateUserOutput{}, nil
-}
-
-func (m *MockIAMClient) PutUserPolicy(ctx context.Context, input *iam.PutUserPolicyInput, opts ...func(*iam.Options)) (*iam.PutUserPolicyOutput, error) {
-	if m.PutUserPolicyFunc != nil {
-		return m.PutUserPolicyFunc(ctx, input, opts...)
-	}
-	return &iam.PutUserPolicyOutput{}, nil
-}
-
-func (m *MockIAMClient) CreateAccessKey(ctx context.Context, input *iam.CreateAccessKeyInput, opts ...func(*iam.Options)) (*iam.CreateAccessKeyOutput, error) {
-	if m.CreateAccessKeyFunc != nil {
-		return m.CreateAccessKeyFunc(ctx, input, opts...)
-	}
-	return &iam.CreateAccessKeyOutput{}, nil
-}
-
-func (m *MockIAMClient) GetUser(ctx context.Context, input *iam.GetUserInput, opts ...func(*iam.Options)) (*iam.GetUserOutput, error) {
-	if m.GetUserFunc != nil {
-		return m.GetUserFunc(ctx, input, opts...)
-	}
-	return &iam.GetUserOutput{}, nil
-}
-
-func (m *MockIAMClient) DeleteUserPolicy(ctx context.Context, input *iam.DeleteUserPolicyInput, opts ...func(*iam.Options)) (*iam.DeleteUserPolicyOutput, error) {
-	if m.DeleteUserPolicyFunc != nil {
-		return m.DeleteUserPolicyFunc(ctx, input, opts...)
-	}
-	return &iam.DeleteUserPolicyOutput{}, nil
-}
-
-func (m *MockIAMClient) ListAccessKeys(ctx context.Context, input *iam.ListAccessKeysInput, opts ...func(*iam.Options)) (*iam.ListAccessKeysOutput, error) {
-	if m.ListAccessKeysFunc != nil {
-		return m.ListAccessKeysFunc(ctx, input, opts...)
-	}
-	return &iam.ListAccessKeysOutput{}, nil
-}
-
-func (m *MockIAMClient) DeleteAccessKey(ctx context.Context, input *iam.DeleteAccessKeyInput, opts ...func(*iam.Options)) (*iam.DeleteAccessKeyOutput, error) {
-	if m.DeleteAccessKeyFunc != nil {
-		return m.DeleteAccessKeyFunc(ctx, input, opts...)
-	}
-	return &iam.DeleteAccessKeyOutput{}, nil
-}
-
-func (m *MockIAMClient) DeleteUser(ctx context.Context, input *iam.DeleteUserInput, opts ...func(*iam.Options)) (*iam.DeleteUserOutput, error) {
-	if m.DeleteUserFunc != nil {
-		return m.DeleteUserFunc(ctx, input, opts...)
-	}
-	return &iam.DeleteUserOutput{}, nil
-}
 
 func TestIAMClient(t *testing.T) {
 	RegisterFailHandler(Fail)
@@ -104,10 +37,10 @@ var _ = Describe("IAMClient", func() {
 	})
 
 	Describe("IAM Operations", func() {
-		var mockIAM *MockIAMClient
+		var mockIAM *mock.MockIAMClient
 
 		BeforeEach(func() {
-			mockIAM = &MockIAMClient{}
+			mockIAM = &mock.MockIAMClient{}
 		})
 
 		It("should successfully create a user", func(ctx SpecContext) {
@@ -206,10 +139,10 @@ var _ = Describe("IAMClient", func() {
 	})
 
 	Describe("CreateBucketAccess", func() {
-		var mockIAM *MockIAMClient
+		var mockIAM *mock.MockIAMClient
 
 		BeforeEach(func() {
-			mockIAM = &MockIAMClient{}
+			mockIAM = &mock.MockIAMClient{}
 		})
 
 		It("should successfully create a user, attach a policy, and generate an access key", func(ctx SpecContext) {
@@ -300,10 +233,10 @@ var _ = Describe("IAMClient", func() {
 	})
 
 	Describe("RevokeBucketAccess", func() {
-		var mockIAM *MockIAMClient
+		var mockIAM *mock.MockIAMClient
 
 		BeforeEach(func() {
-			mockIAM = &MockIAMClient{}
+			mockIAM = &mock.MockIAMClient{}
 		})
 
 		It("should handle non-existent user gracefully", func(ctx SpecContext) {
@@ -322,10 +255,10 @@ var _ = Describe("IAMClient", func() {
 			mockIAM.GetUserFunc = func(ctx context.Context, input *iam.GetUserInput, opts ...func(*iam.Options)) (*iam.GetUserOutput, error) {
 				return nil, fmt.Errorf("simulated GetUser failure")
 			}
-		
+
 			client, _ := iamclient.InitIAMClient(params)
 			client.IAMService = mockIAM
-		
+
 			err := client.RevokeBucketAccess(ctx, "test-user", "test-bucket")
 			Expect(err).NotTo(BeNil())
 			Expect(err.Error()).To(ContainSubstring("failed to get IAM user test-user"))
@@ -338,10 +271,10 @@ var _ = Describe("IAMClient", func() {
 			mockIAM.DeleteUserPolicyFunc = func(ctx context.Context, input *iam.DeleteUserPolicyInput, opts ...func(*iam.Options)) (*iam.DeleteUserPolicyOutput, error) {
 				return nil, &types.NoSuchEntityException{}
 			}
-		
+
 			client, _ := iamclient.InitIAMClient(params)
 			client.IAMService = mockIAM
-		
+
 			err := client.RevokeBucketAccess(ctx, "test-user", "test-bucket")
 			Expect(err).To(BeNil())
 		})
@@ -353,10 +286,10 @@ var _ = Describe("IAMClient", func() {
 			mockIAM.DeleteUserPolicyFunc = func(ctx context.Context, input *iam.DeleteUserPolicyInput, opts ...func(*iam.Options)) (*iam.DeleteUserPolicyOutput, error) {
 				return nil, fmt.Errorf("simulated DeleteUserPolicy failure")
 			}
-		
+
 			client, _ := iamclient.InitIAMClient(params)
 			client.IAMService = mockIAM
-		
+
 			err := client.RevokeBucketAccess(ctx, "test-user", "test-bucket")
 			Expect(err).NotTo(BeNil())
 			Expect(err.Error()).To(ContainSubstring("failed to delete inline policy test-bucket for user test-user"))
@@ -377,10 +310,10 @@ var _ = Describe("IAMClient", func() {
 			mockIAM.DeleteAccessKeyFunc = func(ctx context.Context, input *iam.DeleteAccessKeyInput, opts ...func(*iam.Options)) (*iam.DeleteAccessKeyOutput, error) {
 				return &iam.DeleteAccessKeyOutput{}, nil
 			}
-		
+
 			client, _ := iamclient.InitIAMClient(params)
 			client.IAMService = mockIAM
-		
+
 			err := client.RevokeBucketAccess(ctx, "test-user", "test-bucket")
 			Expect(err).To(BeNil())
 		})
@@ -399,10 +332,10 @@ var _ = Describe("IAMClient", func() {
 			mockIAM.DeleteAccessKeyFunc = func(ctx context.Context, input *iam.DeleteAccessKeyInput, opts ...func(*iam.Options)) (*iam.DeleteAccessKeyOutput, error) {
 				return nil, fmt.Errorf("simulated DeleteAccessKey failure")
 			}
-		
+
 			client, _ := iamclient.InitIAMClient(params)
 			client.IAMService = mockIAM
-		
+
 			err := client.RevokeBucketAccess(ctx, "test-user", "test-bucket")
 			Expect(err).NotTo(BeNil())
 			Expect(err.Error()).To(ContainSubstring("failed to delete access key key-1 for IAM user test-user"))
@@ -418,10 +351,10 @@ var _ = Describe("IAMClient", func() {
 			mockIAM.DeleteUserFunc = func(ctx context.Context, input *iam.DeleteUserInput, opts ...func(*iam.Options)) (*iam.DeleteUserOutput, error) {
 				return &iam.DeleteUserOutput{}, nil
 			}
-		
+
 			client, _ := iamclient.InitIAMClient(params)
 			client.IAMService = mockIAM
-		
+
 			err := client.RevokeBucketAccess(ctx, "test-user", "test-bucket")
 			Expect(err).To(BeNil())
 		})
@@ -436,10 +369,10 @@ var _ = Describe("IAMClient", func() {
 			mockIAM.DeleteUserFunc = func(ctx context.Context, input *iam.DeleteUserInput, opts ...func(*iam.Options)) (*iam.DeleteUserOutput, error) {
 				return nil, fmt.Errorf("simulated DeleteUser failure")
 			}
-		
+
 			client, _ := iamclient.InitIAMClient(params)
 			client.IAMService = mockIAM
-		
+
 			err := client.RevokeBucketAccess(ctx, "test-user", "test-bucket")
 			Expect(err).NotTo(BeNil())
 			Expect(err.Error()).To(ContainSubstring("failed to delete IAM user test-user"))
