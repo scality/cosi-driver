@@ -153,25 +153,25 @@ func (client *IAMClient) CreateBucketAccess(ctx context.Context, userName, bucke
 // RevokeBucketAccess is a helper that revokes bucket access by orchestrating individual steps.
 func (client *IAMClient) RevokeBucketAccess(ctx context.Context, userName, bucketName string) error {
 	// Check if the user exists.
-	err := client.ensureUserExists(ctx, userName)
+	err := client.EnsureUserExists(ctx, userName)
 	if err != nil {
 		return err
 	}
 
 	// Delete the inline policy associated with the bucket.
-	err = client.deleteInlinePolicy(ctx, userName, bucketName)
+	err = client.DeleteInlinePolicy(ctx, userName, bucketName)
 	if err != nil {
 		return err
 	}
 
 	// Delete all access keys for the user.
-	err = client.deleteAllAccessKeys(ctx, userName)
+	err = client.DeleteAllAccessKeys(ctx, userName)
 	if err != nil {
 		return err
 	}
 
 	// Delete the user.
-	err = client.deleteUser(ctx, userName)
+	err = client.DeleteUser(ctx, userName)
 	if err != nil {
 		return err
 	}
@@ -180,7 +180,7 @@ func (client *IAMClient) RevokeBucketAccess(ctx context.Context, userName, bucke
 	return nil
 }
 
-func (client *IAMClient) ensureUserExists(ctx context.Context, userName string) error {
+func (client *IAMClient) EnsureUserExists(ctx context.Context, userName string) error {
 	_, err := client.IAMService.GetUser(ctx, &iam.GetUserInput{UserName: &userName})
 	if err != nil {
 		var noSuchEntityErr *types.NoSuchEntityException
@@ -193,7 +193,7 @@ func (client *IAMClient) ensureUserExists(ctx context.Context, userName string) 
 	return nil
 }
 
-func (client *IAMClient) deleteInlinePolicy(ctx context.Context, userName, bucketName string) error {
+func (client *IAMClient) DeleteInlinePolicy(ctx context.Context, userName, bucketName string) error {
 	_, err := client.IAMService.DeleteUserPolicy(ctx, &iam.DeleteUserPolicyInput{
 		UserName:   &userName,
 		PolicyName: &bucketName,
@@ -210,7 +210,7 @@ func (client *IAMClient) deleteInlinePolicy(ctx context.Context, userName, bucke
 	return nil
 }
 
-func (client *IAMClient) deleteAllAccessKeys(ctx context.Context, userName string) error {
+func (client *IAMClient) DeleteAllAccessKeys(ctx context.Context, userName string) error {
 	listKeysOutput, err := client.IAMService.ListAccessKeys(ctx, &iam.ListAccessKeysInput{UserName: &userName})
 	if err != nil {
 		return fmt.Errorf("failed to list access keys for IAM user %s: %w", userName, err)
@@ -229,7 +229,7 @@ func (client *IAMClient) deleteAllAccessKeys(ctx context.Context, userName strin
 	return nil
 }
 
-func (client *IAMClient) deleteUser(ctx context.Context, userName string) error {
+func (client *IAMClient) DeleteUser(ctx context.Context, userName string) error {
 	_, err := client.IAMService.DeleteUser(ctx, &iam.DeleteUserInput{UserName: &userName})
 	if err != nil {
 		var noSuchEntityErr *types.NoSuchEntityException
