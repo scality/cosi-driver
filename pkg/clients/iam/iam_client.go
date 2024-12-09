@@ -150,37 +150,67 @@ func (client *IAMClient) CreateBucketAccess(ctx context.Context, userName, bucke
 	return accessKeyOutput, nil
 }
 
-// RevokeBucketAccess revokes bucket access for a user by performing the following:
-// 1. Checks if the user exists.
-// 2. Deletes the inline policy associated with the bucket (if it exists).
-// 3. Lists and deletes all access keys for the user.
-// 4. Deletes the user itself.
+// RevokeBucketAccess is a helper that revokes bucket access by orchestrating individual steps.
 func (client *IAMClient) RevokeBucketAccess(ctx context.Context, userName, bucketName string) error {
+	// Check if the user exists.
+	err := client.ensureUserExists(ctx, userName)
+	if err != nil {
+		return err
+	}
+
+	// Delete the inline policy associated with the bucket.
+	err = client.deleteInlinePolicy(ctx, userName, bucketName)
+	if err != nil {
+		return err
+	}
+
+	// Delete all access keys for the user.
+	err = client.deleteAllAccessKeys(ctx, userName)
+	if err != nil {
+		return err
+	}
+
+	// Delete the user.
+	err = client.deleteUser(ctx, userName)
+	if err != nil {
+		return err
+	}
+
+	klog.InfoS("Successfully revoked bucket access", "user", userName, "bucket", bucketName)
+	return nil
+}
+
+func (client *IAMClient) ensureUserExists(ctx context.Context, userName string) error {
 	_, err := client.IAMService.GetUser(ctx, &iam.GetUserInput{UserName: &userName})
 	if err != nil {
 		var noSuchEntityErr *types.NoSuchEntityException
 		if errors.As(err, &noSuchEntityErr) {
 			klog.InfoS("IAM user does not exist, nothing to revoke", "user", userName)
-			return nil // User doesn't exist, no action needed
+			return nil // User doesn't exist, nothing to do
 		}
 		return fmt.Errorf("failed to get IAM user %s: %w", userName, err)
 	}
+	return nil
+}
 
-	_, err = client.IAMService.DeleteUserPolicy(ctx, &iam.DeleteUserPolicyInput{
+func (client *IAMClient) deleteInlinePolicy(ctx context.Context, userName, bucketName string) error {
+	_, err := client.IAMService.DeleteUserPolicy(ctx, &iam.DeleteUserPolicyInput{
 		UserName:   &userName,
-		PolicyName: &bucketName, // Assuming the policy name is the same as the bucket name
+		PolicyName: &bucketName,
 	})
 	if err != nil {
 		var noSuchEntityErr *types.NoSuchEntityException
-		if !errors.As(err, &noSuchEntityErr) {
-			// Log and proceed if the policy doesn't exist
-			return fmt.Errorf("failed to delete inline policy %s for user %s: %w", bucketName, userName, err)
+		if errors.As(err, &noSuchEntityErr) {
+			klog.V(3).InfoS("Inline policy does not exist, skipping deletion", "user", userName, "policyName", bucketName)
+			return nil
 		}
-		klog.V(3).InfoS("Inline policy does not exist, skipping deletion", "user", userName, "policyName", bucketName)
-	} else {
-		klog.InfoS("Successfully deleted inline policy", "user", userName, "policyName", bucketName)
+		return fmt.Errorf("failed to delete inline policy %s for user %s: %w", bucketName, userName, err)
 	}
+	klog.InfoS("Successfully deleted inline policy", "user", userName, "policyName", bucketName)
+	return nil
+}
 
+func (client *IAMClient) deleteAllAccessKeys(ctx context.Context, userName string) error {
 	listKeysOutput, err := client.IAMService.ListAccessKeys(ctx, &iam.ListAccessKeysInput{UserName: &userName})
 	if err != nil {
 		return fmt.Errorf("failed to list access keys for IAM user %s: %w", userName, err)
@@ -196,17 +226,80 @@ func (client *IAMClient) RevokeBucketAccess(ctx context.Context, userName, bucke
 		}
 		klog.InfoS("Successfully deleted access key", "user", userName, "accessKeyId", *key.AccessKeyId)
 	}
-
-	_, err = client.IAMService.DeleteUser(ctx, &iam.DeleteUserInput{UserName: &userName})
-	if err != nil {
-		var noSuchEntityErr *types.NoSuchEntityException
-		if !errors.As(err, &noSuchEntityErr) {
-			return fmt.Errorf("failed to delete IAM user %s: %w", userName, err)
-		}
-		klog.InfoS("IAM user does not exist, skipping deletion", "user", userName)
-	} else {
-		klog.InfoS("Successfully deleted IAM user", "user", userName)
-	}
-
 	return nil
 }
+
+func (client *IAMClient) deleteUser(ctx context.Context, userName string) error {
+	_, err := client.IAMService.DeleteUser(ctx, &iam.DeleteUserInput{UserName: &userName})
+	if err != nil {
+		var noSuchEntityErr *types.NoSuchEntityException
+		if errors.As(err, &noSuchEntityErr) {
+			klog.InfoS("IAM user does not exist, skipping deletion", "user", userName)
+			return nil // User doesn't exist, nothing to delete
+		}
+		return fmt.Errorf("failed to delete IAM user %s: %w", userName, err)
+	}
+	klog.InfoS("Successfully deleted IAM user", "user", userName)
+	return nil
+}
+
+// // RevokeBucketAccess revokes bucket access for a user by performing the following:
+// // 1. Checks if the user exists.
+// // 2. Deletes the inline policy associated with the bucket (if it exists).
+// // 3. Lists and deletes all access keys for the user.
+// // 4. Deletes the user itself.
+// func (client *IAMClient) RevokeBucketAccess(ctx context.Context, userName, bucketName string) error {
+// 	_, err := client.IAMService.GetUser(ctx, &iam.GetUserInput{UserName: &userName})
+// 	if err != nil {
+// 		var noSuchEntityErr *types.NoSuchEntityException
+// 		if errors.As(err, &noSuchEntityErr) {
+// 			klog.InfoS("IAM user does not exist, nothing to revoke", "user", userName)
+// 			return nil // User doesn't exist, no action needed
+// 		}
+// 		return fmt.Errorf("failed to get IAM user %s: %w", userName, err)
+// 	}
+
+// 	_, err = client.IAMService.DeleteUserPolicy(ctx, &iam.DeleteUserPolicyInput{
+// 		UserName:   &userName,
+// 		PolicyName: &bucketName, // Assuming the policy name is the same as the bucket name
+// 	})
+// 	if err != nil {
+// 		var noSuchEntityErr *types.NoSuchEntityException
+// 		if !errors.As(err, &noSuchEntityErr) {
+// 			// Log and proceed if the policy doesn't exist
+// 			return fmt.Errorf("failed to delete inline policy %s for user %s: %w", bucketName, userName, err)
+// 		}
+// 		klog.V(3).InfoS("Inline policy does not exist, skipping deletion", "user", userName, "policyName", bucketName)
+// 	} else {
+// 		klog.InfoS("Successfully deleted inline policy", "user", userName, "policyName", bucketName)
+// 	}
+
+// 	listKeysOutput, err := client.IAMService.ListAccessKeys(ctx, &iam.ListAccessKeysInput{UserName: &userName})
+// 	if err != nil {
+// 		return fmt.Errorf("failed to list access keys for IAM user %s: %w", userName, err)
+// 	}
+
+// 	for _, key := range listKeysOutput.AccessKeyMetadata {
+// 		_, err := client.IAMService.DeleteAccessKey(ctx, &iam.DeleteAccessKeyInput{
+// 			UserName:    &userName,
+// 			AccessKeyId: key.AccessKeyId,
+// 		})
+// 		if err != nil {
+// 			return fmt.Errorf("failed to delete access key %s for IAM user %s: %w", *key.AccessKeyId, userName, err)
+// 		}
+// 		klog.InfoS("Successfully deleted access key", "user", userName, "accessKeyId", *key.AccessKeyId)
+// 	}
+
+// 	_, err = client.IAMService.DeleteUser(ctx, &iam.DeleteUserInput{UserName: &userName})
+// 	if err != nil {
+// 		var noSuchEntityErr *types.NoSuchEntityException
+// 		if !errors.As(err, &noSuchEntityErr) {
+// 			return fmt.Errorf("failed to delete IAM user %s: %w", userName, err)
+// 		}
+// 		klog.InfoS("IAM user does not exist, skipping deletion", "user", userName)
+// 	} else {
+// 		klog.InfoS("Successfully deleted IAM user", "user", userName)
+// 	}
+
+// 	return nil
+// }
