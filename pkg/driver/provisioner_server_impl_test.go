@@ -529,12 +529,12 @@ var _ = Describe("ProvisionerServer DriverGrantBucketAccess", func() {
 
 	It("should return Internal error when CreateBucketAccess fails", func() {
 		// Mock lower-level methods used by CreateBucketAccess.
-		mockIAMClient.CreateUserFunc = func(ctx context.Context, input *iam.CreateUserInput, opts ...func(*iam.Options)) (*iam.CreateUserOutput, error) {
-			return &iam.CreateUserOutput{}, nil
-		}
-		mockIAMClient.PutUserPolicyFunc = func(ctx context.Context, input *iam.PutUserPolicyInput, opts ...func(*iam.Options)) (*iam.PutUserPolicyOutput, error) {
-			return &iam.PutUserPolicyOutput{}, nil
-		}
+		// mockIAMClient.CreateUserFunc = func(ctx context.Context, input *iam.CreateUserInput, opts ...func(*iam.Options)) (*iam.CreateUserOutput, error) {
+		// 	return &iam.CreateUserOutput{}, nil
+		// }
+		// mockIAMClient.PutUserPolicyFunc = func(ctx context.Context, input *iam.PutUserPolicyInput, opts ...func(*iam.Options)) (*iam.PutUserPolicyOutput, error) {
+		// 	return &iam.PutUserPolicyOutput{}, nil
+		// }
 		mockIAMClient.CreateAccessKeyFunc = func(ctx context.Context, input *iam.CreateAccessKeyInput, opts ...func(*iam.Options)) (*iam.CreateAccessKeyOutput, error) {
 			return nil, fmt.Errorf("mock failure: unable to create access key") // Simulating failure here.
 		}
