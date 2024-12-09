@@ -19,6 +19,7 @@ import (
 	iamclient "github.com/scality/cosi-driver/pkg/clients/iam"
 	s3client "github.com/scality/cosi-driver/pkg/clients/s3"
 	"github.com/scality/cosi-driver/pkg/driver"
+	mock "github.com/scality/cosi-driver/pkg/mock"
 	"github.com/scality/cosi-driver/pkg/util"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -30,17 +31,6 @@ import (
 	bucketclientset "sigs.k8s.io/container-object-storage-interface-api/client/clientset/versioned/fake"
 	cosiapi "sigs.k8s.io/container-object-storage-interface-spec"
 )
-
-type MockS3Client struct {
-	CreateBucketFunc func(ctx context.Context, input *s3.CreateBucketInput, opts ...func(*s3.Options)) (*s3.CreateBucketOutput, error)
-}
-
-func (m *MockS3Client) CreateBucket(ctx context.Context, input *s3.CreateBucketInput, opts ...func(*s3.Options)) (*s3.CreateBucketOutput, error) {
-	if m.CreateBucketFunc != nil {
-		return m.CreateBucketFunc(ctx, input, opts...)
-	}
-	return &s3.CreateBucketOutput{}, nil
-}
 
 type MockIAMClient struct {
 	CreateUserFunc         func(ctx context.Context, input *iam.CreateUserInput, opts ...func(*iam.Options)) (*iam.CreateUserOutput, error)
@@ -161,7 +151,7 @@ func (m *MockIAMClient) DeleteUser(ctx context.Context, input *iam.DeleteUserInp
 
 var _ = Describe("ProvisionerServer DriverCreateBucket", Ordered, func() {
 	var (
-		mockS3                   *MockS3Client
+		mockS3                   *mock.MockS3Client
 		provisioner              *driver.ProvisionerServer
 		ctx                      context.Context
 		clientset                *fake.Clientset
@@ -173,7 +163,7 @@ var _ = Describe("ProvisionerServer DriverCreateBucket", Ordered, func() {
 
 	BeforeEach(func() {
 		ctx = context.TODO()
-		mockS3 = &MockS3Client{}
+		mockS3 = &mock.MockS3Client{}
 		clientset = fake.NewSimpleClientset()
 		provisioner = &driver.ProvisionerServer{
 			Provisioner: "test-provisioner",
