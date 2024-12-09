@@ -218,11 +218,12 @@ log_and_run kubectl delete -f cosi-examples/bucketaccess.yaml
 
 # Step 12: Verify IAM User Deletion
 log_and_run echo "Verifying IAM user '$IAM_USER_NAME' deletion..."
+log_and_run aws --endpoint-url "$IAM_ENDPOINT" iam get-user --user-name "$IAM_USER_NAME"
 
 # Retry logic for checking user deletion
 
 for ((i=1; i<=$ATTEMPTS; i++)); do
-  USER_EXISTS=$(aws --endpoint-url "$IAM_ENDPOINT" iam get-user --user-name "$IAM_USER_NAME" 2>&1 || true)
+  USER_EXISTS="$(aws --endpoint-url "$IAM_ENDPOINT" iam get-user --user-name "$IAM_USER_NAME" 2>&1 || true)"
 
   if [[ "$USER_EXISTS" == *"NoSuchEntity"* ]]; then
     log_and_run echo "IAM user '$IAM_USER_NAME' successfully deleted."
