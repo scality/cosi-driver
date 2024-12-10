@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"os"
 
-	iamtypes "github.com/aws/aws-sdk-go-v2/service/iam/types"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/aws/aws-sdk-go-v2/service/s3/types"
 	. "github.com/onsi/ginkgo/v2"
@@ -14,35 +13,17 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
-	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/iam"
 	s3client "github.com/scality/cosi-driver/pkg/clients/s3"
 	"github.com/scality/cosi-driver/pkg/driver"
+	"github.com/scality/cosi-driver/pkg/mock"
 	"github.com/scality/cosi-driver/pkg/util"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/fake"
 	cosiapi "sigs.k8s.io/container-object-storage-interface-spec"
-	"github.com/scality/cosi-driver/pkg/mock"
 )
-
-type MockIAMClient struct {
-	CreateBucketAccessFunc func(ctx context.Context, userName, bucketName string) (*iam.CreateAccessKeyOutput, error)
-}
-
-// Mock CreateBucketAccess
-func (m *MockIAMClient) CreateBucketAccess(ctx context.Context, userName, bucketName string) (*iam.CreateAccessKeyOutput, error) {
-	if m.CreateBucketAccessFunc != nil {
-		return m.CreateBucketAccessFunc(ctx, userName, bucketName)
-	}
-	return &iam.CreateAccessKeyOutput{
-		AccessKey: &iamtypes.AccessKey{
-			AccessKeyId:     aws.String("mock-access-key-id"),
-			SecretAccessKey: aws.String("mock-secret-access-key"),
-		},
-	}, nil
-}
 
 var _ = Describe("ProvisionerServer DriverCreateBucket", Ordered, func() {
 	var (
@@ -486,7 +467,7 @@ var _ = Describe("FetchParameters", Ordered, func() {
 
 var _ = Describe("ProvisionerServer DriverGrantBucketAccess", func() {
 	var (
-		mockIAMClient            *MockIAMClient
+		mockIAMClient            *mock.MockIAMClient
 		provisioner              *driver.ProvisionerServer
 		ctx                      context.Context
 		clientset                *fake.Clientset
@@ -520,7 +501,7 @@ var _ = Describe("ProvisionerServer DriverGrantBucketAccess", func() {
 
 		// Mock InitializeClient
 		originalInitializeClient = driver.InitializeClient
-		mockIAMClient = &MockIAMClient{}
+		mockIAMClient = &mock.MockIAMClient{}
 		driver.InitializeClient = func(ctx context.Context, clientset kubernetes.Interface, parameters map[string]string, service string) (interface{}, *util.StorageClientParameters, error) {
 			if service == "IAM" {
 				return mockIAMClient, iamParams, nil
@@ -558,8 +539,8 @@ var _ = Describe("ProvisionerServer DriverGrantBucketAccess", func() {
 	})
 
 	It("should return Internal error when CreateBucketAccess fails", func() {
-		mockIAMClient.CreateBucketAccessFunc = func(ctx context.Context, userName, bucketName string) (*iam.CreateAccessKeyOutput, error) {
-			return nil, fmt.Errorf("mock failure")
+		mockIAMClient.CreateAccessKeyFunc = func(ctx context.Context, input *iam.CreateAccessKeyInput, opts ...func(*iam.Options)) (*iam.CreateAccessKeyOutput, error) {
+			return nil, fmt.Errorf("mock failure: unable to create access key")
 		}
 
 		resp, err := provisioner.DriverGrantBucketAccess(ctx, request)

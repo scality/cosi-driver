@@ -12,36 +12,9 @@ import (
 	. "github.com/onsi/gomega"
 
 	iamclient "github.com/scality/cosi-driver/pkg/clients/iam"
+	"github.com/scality/cosi-driver/pkg/mock"
 	"github.com/scality/cosi-driver/pkg/util"
 )
-
-// MockIAMClient implements the IAMAPI interface for testing
-type MockIAMClient struct {
-	CreateUserFunc      func(ctx context.Context, input *iam.CreateUserInput, opts ...func(*iam.Options)) (*iam.CreateUserOutput, error)
-	PutUserPolicyFunc   func(ctx context.Context, input *iam.PutUserPolicyInput, opts ...func(*iam.Options)) (*iam.PutUserPolicyOutput, error)
-	CreateAccessKeyFunc func(ctx context.Context, input *iam.CreateAccessKeyInput, opts ...func(*iam.Options)) (*iam.CreateAccessKeyOutput, error)
-}
-
-func (m *MockIAMClient) CreateUser(ctx context.Context, input *iam.CreateUserInput, opts ...func(*iam.Options)) (*iam.CreateUserOutput, error) {
-	if m.CreateUserFunc != nil {
-		return m.CreateUserFunc(ctx, input, opts...)
-	}
-	return &iam.CreateUserOutput{}, nil
-}
-
-func (m *MockIAMClient) PutUserPolicy(ctx context.Context, input *iam.PutUserPolicyInput, opts ...func(*iam.Options)) (*iam.PutUserPolicyOutput, error) {
-	if m.PutUserPolicyFunc != nil {
-		return m.PutUserPolicyFunc(ctx, input, opts...)
-	}
-	return &iam.PutUserPolicyOutput{}, nil
-}
-
-func (m *MockIAMClient) CreateAccessKey(ctx context.Context, input *iam.CreateAccessKeyInput, opts ...func(*iam.Options)) (*iam.CreateAccessKeyOutput, error) {
-	if m.CreateAccessKeyFunc != nil {
-		return m.CreateAccessKeyFunc(ctx, input, opts...)
-	}
-	return &iam.CreateAccessKeyOutput{}, nil
-}
 
 func TestIAMClient(t *testing.T) {
 	RegisterFailHandler(Fail)
@@ -64,10 +37,10 @@ var _ = Describe("IAMClient", func() {
 	})
 
 	Describe("IAM Operations", func() {
-		var mockIAM *MockIAMClient
+		var mockIAM *mock.MockIAMClient
 
 		BeforeEach(func() {
-			mockIAM = &MockIAMClient{}
+			mockIAM = &mock.MockIAMClient{}
 		})
 
 		It("should successfully create a user", func(ctx SpecContext) {
@@ -166,10 +139,10 @@ var _ = Describe("IAMClient", func() {
 	})
 
 	Describe("CreateBucketAccess", func() {
-		var mockIAM *MockIAMClient
+		var mockIAM *mock.MockIAMClient
 
 		BeforeEach(func() {
-			mockIAM = &MockIAMClient{}
+			mockIAM = &mock.MockIAMClient{}
 		})
 
 		It("should successfully create a user, attach a policy, and generate an access key", func(ctx SpecContext) {
