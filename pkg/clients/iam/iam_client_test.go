@@ -282,9 +282,6 @@ var _ = Describe("IAMClient", func() {
 		})
 
 		It("should skip deletion if inline policy does not exist", func(ctx SpecContext) {
-			mockIAM.GetUserFunc = func(ctx context.Context, input *iam.GetUserInput, opts ...func(*iam.Options)) (*iam.GetUserOutput, error) {
-				return &iam.GetUserOutput{}, nil
-			}
 			mockIAM.DeleteUserPolicyFunc = func(ctx context.Context, input *iam.DeleteUserPolicyInput, opts ...func(*iam.Options)) (*iam.DeleteUserPolicyOutput, error) {
 				return nil, &types.NoSuchEntityException{}
 			}
@@ -297,9 +294,6 @@ var _ = Describe("IAMClient", func() {
 		})
 
 		It("should return an error if deleting inline policy fails", func(ctx SpecContext) {
-			mockIAM.GetUserFunc = func(ctx context.Context, input *iam.GetUserInput, opts ...func(*iam.Options)) (*iam.GetUserOutput, error) {
-				return &iam.GetUserOutput{}, nil
-			}
 			mockIAM.DeleteUserPolicyFunc = func(ctx context.Context, input *iam.DeleteUserPolicyInput, opts ...func(*iam.Options)) (*iam.DeleteUserPolicyOutput, error) {
 				return nil, fmt.Errorf("simulated DeleteUserPolicy failure")
 			}
@@ -313,21 +307,6 @@ var _ = Describe("IAMClient", func() {
 		})
 
 		It("should successfully delete all access keys for the user", func(ctx SpecContext) {
-			mockIAM.GetUserFunc = func(ctx context.Context, input *iam.GetUserInput, opts ...func(*iam.Options)) (*iam.GetUserOutput, error) {
-				return &iam.GetUserOutput{}, nil
-			}
-			mockIAM.ListAccessKeysFunc = func(ctx context.Context, input *iam.ListAccessKeysInput, opts ...func(*iam.Options)) (*iam.ListAccessKeysOutput, error) {
-				return &iam.ListAccessKeysOutput{
-					AccessKeyMetadata: []types.AccessKeyMetadata{
-						{AccessKeyId: aws.String("key-1")},
-						{AccessKeyId: aws.String("key-2")},
-					},
-				}, nil
-			}
-			mockIAM.DeleteAccessKeyFunc = func(ctx context.Context, input *iam.DeleteAccessKeyInput, opts ...func(*iam.Options)) (*iam.DeleteAccessKeyOutput, error) {
-				return &iam.DeleteAccessKeyOutput{}, nil
-			}
-
 			client, _ := iamclient.InitIAMClient(params)
 			client.IAMService = mockIAM
 
@@ -359,16 +338,6 @@ var _ = Describe("IAMClient", func() {
 		})
 
 		It("should successfully delete the user", func(ctx SpecContext) {
-			mockIAM.GetUserFunc = func(ctx context.Context, input *iam.GetUserInput, opts ...func(*iam.Options)) (*iam.GetUserOutput, error) {
-				return &iam.GetUserOutput{}, nil
-			}
-			mockIAM.ListAccessKeysFunc = func(ctx context.Context, input *iam.ListAccessKeysInput, opts ...func(*iam.Options)) (*iam.ListAccessKeysOutput, error) {
-				return &iam.ListAccessKeysOutput{}, nil
-			}
-			mockIAM.DeleteUserFunc = func(ctx context.Context, input *iam.DeleteUserInput, opts ...func(*iam.Options)) (*iam.DeleteUserOutput, error) {
-				return &iam.DeleteUserOutput{}, nil
-			}
-
 			client, _ := iamclient.InitIAMClient(params)
 			client.IAMService = mockIAM
 
@@ -377,12 +346,6 @@ var _ = Describe("IAMClient", func() {
 		})
 
 		It("should return an error if deleting user fails", func(ctx SpecContext) {
-			mockIAM.GetUserFunc = func(ctx context.Context, input *iam.GetUserInput, opts ...func(*iam.Options)) (*iam.GetUserOutput, error) {
-				return &iam.GetUserOutput{}, nil
-			}
-			mockIAM.ListAccessKeysFunc = func(ctx context.Context, input *iam.ListAccessKeysInput, opts ...func(*iam.Options)) (*iam.ListAccessKeysOutput, error) {
-				return &iam.ListAccessKeysOutput{}, nil
-			}
 			mockIAM.DeleteUserFunc = func(ctx context.Context, input *iam.DeleteUserInput, opts ...func(*iam.Options)) (*iam.DeleteUserOutput, error) {
 				return nil, fmt.Errorf("simulated DeleteUser failure")
 			}
@@ -422,18 +385,6 @@ var _ = Describe("IAMClient", func() {
 		})
 
 		It("should successfully delete all access keys", func(ctx SpecContext) {
-			mockIAM.ListAccessKeysFunc = func(ctx context.Context, input *iam.ListAccessKeysInput, opts ...func(*iam.Options)) (*iam.ListAccessKeysOutput, error) {
-				return &iam.ListAccessKeysOutput{
-					AccessKeyMetadata: []types.AccessKeyMetadata{
-						{AccessKeyId: aws.String("key-1")},
-						{AccessKeyId: aws.String("key-2")},
-					},
-				}, nil
-			}
-			mockIAM.DeleteAccessKeyFunc = func(ctx context.Context, input *iam.DeleteAccessKeyInput, opts ...func(*iam.Options)) (*iam.DeleteAccessKeyOutput, error) {
-				return &iam.DeleteAccessKeyOutput{}, nil
-			}
-
 			client, _ := iamclient.InitIAMClient(params)
 			client.IAMService = mockIAM
 
@@ -442,13 +393,6 @@ var _ = Describe("IAMClient", func() {
 		})
 
 		It("should return an error if deleting any access key fails", func(ctx SpecContext) {
-			mockIAM.ListAccessKeysFunc = func(ctx context.Context, input *iam.ListAccessKeysInput, opts ...func(*iam.Options)) (*iam.ListAccessKeysOutput, error) {
-				return &iam.ListAccessKeysOutput{
-					AccessKeyMetadata: []types.AccessKeyMetadata{
-						{AccessKeyId: aws.String("key-1")},
-					},
-				}, nil
-			}
 			mockIAM.DeleteAccessKeyFunc = func(ctx context.Context, input *iam.DeleteAccessKeyInput, opts ...func(*iam.Options)) (*iam.DeleteAccessKeyOutput, error) {
 				return nil, fmt.Errorf("simulated DeleteAccessKey failure")
 			}
