@@ -51,8 +51,7 @@ for BUCKET_NAME in $BUCKET_NAMES; do
   log_and_run kubectl patch bucket "$BUCKET_NAME" -p '{"metadata":{"finalizers":[]}}' --type=merge || { echo "Finalizers not found for bucket: $BUCKET_NAME" | tee -a "$LOG_FILE"; }
 done
 
-log_and_run echo "Deleting Bucket Access and Bucket Access Class..."
-log_and_run kubectl delete -f cosi-examples/bucketaccess.yaml || { echo "No BucketAccess resources found." | tee -a "$LOG_FILE"; }
+log_and_run echo "Deleting Bucket Access Class..."
 log_and_run kubectl delete -f cosi-examples/bucketaccessclass.yaml --all || { echo "No BucketAccessClass resources found." | tee -a "$LOG_FILE"; }
 
 log_and_run echo "Deleting Bucket Class and Bucket Claim..."
