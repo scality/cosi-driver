@@ -252,7 +252,6 @@ var _ = Describe("ProvisionerServer Unimplemented Methods", Ordered, func() {
 		provisioner *driver.ProvisionerServer
 		clientset   *fake.Clientset
 		bucketName  string
-		accountID   string
 	)
 
 	BeforeEach(func() {
@@ -262,7 +261,6 @@ var _ = Describe("ProvisionerServer Unimplemented Methods", Ordered, func() {
 			Clientset:   clientset,
 		}
 		bucketName = "test-bucket"
-		accountID = "test-account-id"
 	})
 
 	It("DriverDeleteBucket should return Unimplemented error", func(ctx SpecContext) {

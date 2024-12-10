@@ -16,8 +16,6 @@ import (
 )
 
 // postfix for inline policy which is created when COSI receives a BucketAccess (BA) request
-const IAMUserInlinePolicyPostfix = "-cosi-ba"
-
 type IAMAPI interface {
 	CreateUser(ctx context.Context, input *iam.CreateUserInput, opts ...func(*iam.Options)) (*iam.CreateUserOutput, error)
 	PutUserPolicy(ctx context.Context, input *iam.PutUserPolicyInput, opts ...func(*iam.Options)) (*iam.PutUserPolicyOutput, error)
@@ -84,7 +82,6 @@ func (client *IAMClient) CreateUser(ctx context.Context, userName string) error 
 
 // AttachS3WildcardInlinePolicy attaches an inline policy to an IAM user for a specific bucket.
 func (client *IAMClient) AttachS3WildcardInlinePolicy(ctx context.Context, userName, bucketName string) error {
-	policyName := fmt.Sprintf("%s%s", bucketName, IAMUserInlinePolicyPostfix)
 	policyDocument := fmt.Sprintf(`{
 		"Version": "2012-10-17",
 		"Statement": [
@@ -101,7 +98,7 @@ func (client *IAMClient) AttachS3WildcardInlinePolicy(ctx context.Context, userN
 
 	input := &iam.PutUserPolicyInput{
 		UserName:       &userName,
-		PolicyName:     &policyName,
+		PolicyName:     &bucketName,
 		PolicyDocument: &policyDocument,
 	}
 
@@ -110,7 +107,7 @@ func (client *IAMClient) AttachS3WildcardInlinePolicy(ctx context.Context, userN
 		return fmt.Errorf("failed to attach inline policy to IAM user %s: %w", userName, err)
 	}
 
-	klog.InfoS("Inline policy attachment succeeded", "user", userName, "policyName", policyName)
+	klog.InfoS("Inline policy attachment succeeded", "user", userName, "policyName", bucketName)
 	return nil
 }
 
