@@ -247,6 +247,31 @@ var _ = Describe("IAMClient", func() {
 			Expect(err.Error()).To(ContainSubstring("failed to load AWS config: mock LoadAWSConfig failure"))
 			Expect(client).To(BeNil())
 		})
+
+		It("should set up a logger when Debug is enabled", func() {
+			params.Debug = true
+
+			// Mock LoadAWSConfig
+			originalLoadAWSConfig := iamclient.LoadAWSConfig
+			defer func() { iamclient.LoadAWSConfig = originalLoadAWSConfig }()
+
+			var loggerUsed bool
+			iamclient.LoadAWSConfig = func(ctx context.Context, optFns ...func(*config.LoadOptions) error) (aws.Config, error) {
+				// Check if a logger is passed
+				for _, optFn := range optFns {
+					opt := &config.LoadOptions{}
+					optFn(opt)
+					if opt.Logger != nil {
+						loggerUsed = true
+					}
+				}
+				return aws.Config{}, nil // Simulate a successful load
+			}
+
+			_, err := iamclient.InitIAMClient(params)
+			Expect(err).To(BeNil())
+			Expect(loggerUsed).To(BeTrue(), "Expected logger to be used when Debug is enabled")
+		})
 	})
 
 	Describe("RevokeBucketAccess", func() {
