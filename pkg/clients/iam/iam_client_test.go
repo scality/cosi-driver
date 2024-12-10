@@ -485,5 +485,20 @@ var _ = Describe("IAMClient", func() {
 			Expect(err).To(BeNil())
 		})
 
+		It("should return an error if listing access keys fails", func(ctx SpecContext) {
+			mockIAM := &mock.MockIAMClient{}
+			mockIAM.ListAccessKeysFunc = func(ctx context.Context, input *iam.ListAccessKeysInput, opts ...func(*iam.Options)) (*iam.ListAccessKeysOutput, error) {
+				return nil, fmt.Errorf("simulated ListAccessKeys failure")
+			}
+
+			client := &iamclient.IAMClient{
+				IAMService: mockIAM,
+			}
+
+			err := client.DeleteAllAccessKeys(ctx, "test-user")
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("failed to list access keys for IAM user test-user"))
+			Expect(err.Error()).To(ContainSubstring("simulated ListAccessKeys failure"))
+		})
 	})
 })
