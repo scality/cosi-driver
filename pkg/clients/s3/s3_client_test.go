@@ -6,13 +6,14 @@ import (
 	"testing"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/aws/aws-sdk-go-v2/service/s3/types"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	s3client "github.com/scality/cosi-driver/pkg/clients/s3"
-	"github.com/scality/cosi-driver/pkg/util"
 	"github.com/scality/cosi-driver/pkg/mock"
+	"github.com/scality/cosi-driver/pkg/util"
 )
 
 func TestS3Client(t *testing.T) {
@@ -47,8 +48,22 @@ var _ = Describe("S3Client", func() {
 			Expect(err).To(BeNil())
 			Expect(client).NotTo(BeNil())
 			Expect(client.S3Service).NotTo(BeNil())
-			opts := client.S3Service.(*s3.Client).Options() // print the opts to see the region
+			opts := client.S3Service.(*s3.Client).Options()
 			Expect(opts.Region).To(Equal("us-east-1"))
+		})
+
+		It("should return an error if AWS config loading fails", func() {
+			originalLoadAWSConfig := s3client.LoadAWSConfig
+			defer func() { s3client.LoadAWSConfig = originalLoadAWSConfig }()
+
+			s3client.LoadAWSConfig = func(ctx context.Context, optFns ...func(*config.LoadOptions) error) (aws.Config, error) {
+				return aws.Config{}, fmt.Errorf("mock config loading error")
+			}
+
+			client, err := s3client.InitS3Client(params)
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("failed to load AWS config: mock config loading error"))
+			Expect(client).To(BeNil())
 		})
 	})
 

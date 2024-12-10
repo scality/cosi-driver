@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/iam"
 	"github.com/aws/aws-sdk-go-v2/service/iam/types"
 	. "github.com/onsi/ginkgo/v2"
@@ -232,4 +233,19 @@ var _ = Describe("IAMClient", func() {
 		})
 	})
 
+	Describe("InitIAMClient", func() {
+		It("should return an error if AWS config loading fails", func() {
+			originalLoadAWSConfig := iamclient.LoadAWSConfig
+			defer func() { iamclient.LoadAWSConfig = originalLoadAWSConfig }()
+
+			iamclient.LoadAWSConfig = func(ctx context.Context, optFns ...func(*config.LoadOptions) error) (aws.Config, error) {
+				return aws.Config{}, fmt.Errorf("mock LoadAWSConfig failure")
+			}
+
+			client, err := iamclient.InitIAMClient(params)
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("failed to load AWS config: mock LoadAWSConfig failure"))
+			Expect(client).To(BeNil())
+		})
+	})
 })

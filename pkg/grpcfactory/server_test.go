@@ -27,7 +27,7 @@ func generateUniqueAddress() string {
 	return fmt.Sprintf("unix:///tmp/test-%d.sock", time.Now().UnixNano())
 }
 
-var _ = Describe("gRPC Factory Server", func() {
+var _ = Describe("gRPC Factory Server", Ordered, func() {
 	var (
 		address           string
 		identityServer    cosi.IdentityServer
@@ -106,7 +106,7 @@ var _ = Describe("gRPC Factory Server", func() {
 			os.Remove(socketPath)
 		})
 
-		It("should return an error when reusing the same address", func() {
+		It("should return an error when reusing the same address", func(ctx SpecContext) {
 			// Use a fixed address to simulate reuse
 			address := "unix:///tmp/test.sock"
 			socketPath := strings.TrimPrefix(address, "unix://")
@@ -117,7 +117,7 @@ var _ = Describe("gRPC Factory Server", func() {
 			defer listener.Close()
 
 			// Try to start the gRPC server on the same address
-			server2Ctx, server2Cancel := context.WithCancel(context.Background())
+			server2Ctx, server2Cancel := context.WithCancel(ctx)
 			defer server2Cancel()
 
 			server2, err := grpcfactory.NewCOSIProvisionerServer(address, identityServer, provisionerServer, nil)
@@ -140,6 +140,27 @@ var _ = Describe("gRPC Factory Server", func() {
 
 			// Clean up the socket file for future tests
 			os.Remove(socketPath)
+		})
+
+		It("should return an error for unsupported address schemes", func(ctx SpecContext) {
+			invalidAddress := "http://invalid-scheme-address" // Address with an unsupported scheme
+
+			server, err := grpcfactory.NewCOSIProvisionerServer(invalidAddress, identityServer, provisionerServer, nil)
+			Expect(err).NotTo(HaveOccurred()) // Ensure server creation succeeds
+			Expect(server).NotTo(BeNil())
+
+			errChan := make(chan error, 1)
+			go func() {
+				errChan <- server.Run(ctx)
+			}()
+
+			select {
+			case err := <-errChan:
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(ContainSubstring("unsupported scheme: expected 'unix'"))
+			case <-time.After(1 * time.Second):
+				Fail("Expected an error for unsupported scheme, but none was received")
+			}
 		})
 	})
 })

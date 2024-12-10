@@ -9,6 +9,7 @@ import (
 )
 
 // MockIAMClient simulates the behavior of an IAM client for testing purposes.
+// It embeds iamclient.IAMClient to ensure compatibility with the interface or struct.
 type MockIAMClient struct {
 	CreateUserFunc      func(ctx context.Context, input *iam.CreateUserInput, opts ...func(*iam.Options)) (*iam.CreateUserOutput, error)
 	PutUserPolicyFunc   func(ctx context.Context, input *iam.PutUserPolicyInput, opts ...func(*iam.Options)) (*iam.PutUserPolicyOutput, error)
