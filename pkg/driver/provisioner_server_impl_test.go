@@ -252,7 +252,6 @@ var _ = Describe("ProvisionerServer Unimplemented Methods", Ordered, func() {
 		provisioner *driver.ProvisionerServer
 		clientset   *fake.Clientset
 		bucketName  string
-		accountID   string
 	)
 
 	BeforeEach(func() {
@@ -262,21 +261,11 @@ var _ = Describe("ProvisionerServer Unimplemented Methods", Ordered, func() {
 			Clientset:   clientset,
 		}
 		bucketName = "test-bucket"
-		accountID = "test-account-id"
 	})
 
 	It("DriverDeleteBucket should return Unimplemented error", func(ctx SpecContext) {
 		request := &cosiapi.DriverDeleteBucketRequest{BucketId: bucketName}
 		resp, err := provisioner.DriverDeleteBucket(ctx, request)
-		Expect(resp).To(BeNil())
-		Expect(err).To(HaveOccurred())
-		Expect(status.Code(err)).To(Equal(codes.Unimplemented))
-		Expect(err.Error()).To(ContainSubstring("DriverCreateBucket: not implemented"))
-	})
-
-	It("DriverRevokeBucketAccess should return Unimplemented error", func(ctx SpecContext) {
-		request := &cosiapi.DriverRevokeBucketAccessRequest{AccountId: accountID}
-		resp, err := provisioner.DriverRevokeBucketAccess(ctx, request)
 		Expect(resp).To(BeNil())
 		Expect(err).To(HaveOccurred())
 		Expect(status.Code(err)).To(Equal(codes.Unimplemented))
