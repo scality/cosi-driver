@@ -136,7 +136,7 @@ log_and_run echo "IAM user found: $IAM_USER_NAME"
 
 log_and_run echo "Verifying inline policy attached to IAM user..."
 INLINE_POLICY="$(aws --endpoint-url "$IAM_ENDPOINT" iam list-user-policies --user-name "$IAM_USER_NAME" --query "PolicyNames[0]" --output text)"
-EXPECTED_INLINE_POLICY="$BUCKET_FOUND-cosi-ba"
+EXPECTED_INLINE_POLICY="$BUCKET_FOUND"
 
 if [[ "$INLINE_POLICY" != "$EXPECTED_INLINE_POLICY" ]]; then
   log_and_run echo "Inline policy '$INLINE_POLICY' does not match expected bucket name '$EXPECTED_INLINE_POLICY'."
