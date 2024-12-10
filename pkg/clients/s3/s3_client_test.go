@@ -12,19 +12,8 @@ import (
 	. "github.com/onsi/gomega"
 	s3client "github.com/scality/cosi-driver/pkg/clients/s3"
 	"github.com/scality/cosi-driver/pkg/util"
+	"github.com/scality/cosi-driver/pkg/mock"
 )
-
-// MockS3Client implements the S3API interface for testing
-type MockS3Client struct {
-	CreateBucketFunc func(ctx context.Context, input *s3.CreateBucketInput, opts ...func(*s3.Options)) (*s3.CreateBucketOutput, error)
-}
-
-func (m *MockS3Client) CreateBucket(ctx context.Context, input *s3.CreateBucketInput, opts ...func(*s3.Options)) (*s3.CreateBucketOutput, error) {
-	if m.CreateBucketFunc != nil {
-		return m.CreateBucketFunc(ctx, input, opts...)
-	}
-	return &s3.CreateBucketOutput{}, nil
-}
 
 func TestS3Client(t *testing.T) {
 	RegisterFailHandler(Fail)
@@ -64,10 +53,10 @@ var _ = Describe("S3Client", func() {
 	})
 
 	Describe("CreateBucket", func() {
-		var mockS3 *MockS3Client
+		var mockS3 *mock.MockS3Client
 
 		BeforeEach(func() {
-			mockS3 = &MockS3Client{}
+			mockS3 = &mock.MockS3Client{}
 			params.Region = "us-west-2"
 			client, _ := s3client.InitS3Client(params)
 			client.S3Service = mockS3

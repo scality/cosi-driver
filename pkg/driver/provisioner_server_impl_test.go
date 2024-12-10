@@ -24,18 +24,8 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/fake"
 	cosiapi "sigs.k8s.io/container-object-storage-interface-spec"
+	"github.com/scality/cosi-driver/pkg/mock"
 )
-
-type MockS3Client struct {
-	CreateBucketFunc func(ctx context.Context, input *s3.CreateBucketInput, opts ...func(*s3.Options)) (*s3.CreateBucketOutput, error)
-}
-
-func (m *MockS3Client) CreateBucket(ctx context.Context, input *s3.CreateBucketInput, opts ...func(*s3.Options)) (*s3.CreateBucketOutput, error) {
-	if m.CreateBucketFunc != nil {
-		return m.CreateBucketFunc(ctx, input, opts...)
-	}
-	return &s3.CreateBucketOutput{}, nil
-}
 
 type MockIAMClient struct {
 	CreateBucketAccessFunc func(ctx context.Context, userName, bucketName string) (*iam.CreateAccessKeyOutput, error)
@@ -56,7 +46,7 @@ func (m *MockIAMClient) CreateBucketAccess(ctx context.Context, userName, bucket
 
 var _ = Describe("ProvisionerServer DriverCreateBucket", Ordered, func() {
 	var (
-		mockS3                   *MockS3Client
+		mockS3                   *mock.MockS3Client
 		provisioner              *driver.ProvisionerServer
 		ctx                      context.Context
 		clientset                *fake.Clientset
@@ -68,7 +58,7 @@ var _ = Describe("ProvisionerServer DriverCreateBucket", Ordered, func() {
 
 	BeforeEach(func() {
 		ctx = context.TODO()
-		mockS3 = &MockS3Client{}
+		mockS3 = &mock.MockS3Client{}
 		clientset = fake.NewSimpleClientset()
 		provisioner = &driver.ProvisionerServer{
 			Provisioner: "test-provisioner",
