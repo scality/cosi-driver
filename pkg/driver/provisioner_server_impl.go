@@ -45,26 +45,40 @@ type ProvisionerServer struct {
 var _ cosiapi.ProvisionerServer = &ProvisionerServer{}
 
 // helper methods initialized as variables for testing
+var (
+	InClusterConfig     = rest.InClusterConfig
+	NewKubernetesClient = func(c *rest.Config) (kubernetes.Interface, error) {
+		return kubernetes.NewForConfig(c)
+	}
+	NewBucketClient = func(c *rest.Config) (bucketclientset.Interface, error) {
+		return bucketclientset.NewForConfig(c)
+	}
+)
 var InitializeClient = initializeObjectStorageClient
 var FetchSecretInformation = fetchObjectStorageProviderSecretInfo
 var FetchParameters = fetchS3Parameters
 
 func InitProvisionerServer(provisioner string) (cosiapi.ProvisionerServer, error) {
+	if provisioner == "" {
+		err := errors.New("provisioner name cannot be empty")
+		klog.ErrorS(err, "Failed to initialize ProvisionerServer: empty provisioner name")
+		return nil, err
+	}
 	klog.V(3).InfoS("Initializing ProvisionerServer", "provisioner", provisioner)
 
-	kubeConfig, err := rest.InClusterConfig()
+	kubeConfig, err := InClusterConfig()
 	if err != nil {
 		klog.ErrorS(err, "Failed to get in-cluster config")
 		return nil, err
 	}
 
-	clientset, err := kubernetes.NewForConfig(kubeConfig)
+	clientset, err := NewKubernetesClient(kubeConfig)
 	if err != nil {
 		klog.ErrorS(err, "Failed to create Kubernetes clientset")
 		return nil, err
 	}
 
-	bucketClientset, err := bucketclientset.NewForConfig(kubeConfig)
+	bucketClientset, err := NewBucketClient(kubeConfig)
 	if err != nil {
 		klog.ErrorS(err, "Failed to create BucketClientset")
 		return nil, err

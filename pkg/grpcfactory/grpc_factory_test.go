@@ -1,9 +1,7 @@
 package grpcfactory_test
 
 import (
-	"context"
 	"os"
-	"time"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -30,19 +28,13 @@ var _ = Describe("gRPC Factory Provisioner", func() {
 	})
 
 	Describe("NewDefaultCOSIProvisionerClient", func() {
-		It("should initialize a client with debug mode enabled", func() {
-			ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
-			defer cancel()
-
+		It("should initialize a client with debug mode enabled", func(ctx SpecContext) {
 			client, err := grpcfactory.NewDefaultCOSIProvisionerClient(ctx, address, true)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(client).NotTo(BeNil())
 		})
 
-		It("should fail if the address scheme is invalid", func() {
-			ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
-			defer cancel()
-
+		It("should fail if the address scheme is invalid", func(ctx SpecContext) {
 			client, err := grpcfactory.NewDefaultCOSIProvisionerClient(ctx, "http://localhost", false)
 			Expect(err).To(HaveOccurred())
 			Expect(client).To(BeNil())

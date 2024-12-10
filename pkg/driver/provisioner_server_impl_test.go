@@ -6,59 +6,121 @@ import (
 	"fmt"
 	"os"
 
-	iamtypes "github.com/aws/aws-sdk-go-v2/service/iam/types"
+	"github.com/aws/aws-sdk-go-v2/service/iam"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/aws/aws-sdk-go-v2/service/s3/types"
+	"github.com/aws/smithy-go"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
-	"github.com/aws/aws-sdk-go-v2/aws"
-	"github.com/aws/aws-sdk-go-v2/service/iam"
+	iamclient "github.com/scality/cosi-driver/pkg/clients/iam"
 	s3client "github.com/scality/cosi-driver/pkg/clients/s3"
 	"github.com/scality/cosi-driver/pkg/driver"
+	"github.com/scality/cosi-driver/pkg/mock"
 	"github.com/scality/cosi-driver/pkg/util"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/fake"
+	"k8s.io/client-go/rest"
+	bucketclientset "sigs.k8s.io/container-object-storage-interface-api/client/clientset/versioned"
+	bucketclientfake "sigs.k8s.io/container-object-storage-interface-api/client/clientset/versioned/fake"
 	cosiapi "sigs.k8s.io/container-object-storage-interface-spec"
 )
 
-type MockS3Client struct {
-	CreateBucketFunc func(ctx context.Context, input *s3.CreateBucketInput, opts ...func(*s3.Options)) (*s3.CreateBucketOutput, error)
-}
+var _ = Describe("ProvisionerServer InitProvisionerServer", func() {
+	var (
+		provisioner string
+	)
 
-func (m *MockS3Client) CreateBucket(ctx context.Context, input *s3.CreateBucketInput, opts ...func(*s3.Options)) (*s3.CreateBucketOutput, error) {
-	if m.CreateBucketFunc != nil {
-		return m.CreateBucketFunc(ctx, input, opts...)
-	}
-	return &s3.CreateBucketOutput{}, nil
-}
+	BeforeEach(func() {
+		driver.InClusterConfig = func() (*rest.Config, error) {
+			return &rest.Config{}, nil
+		}
 
-type MockIAMClient struct {
-	CreateBucketAccessFunc func(ctx context.Context, userName, bucketName string) (*iam.CreateAccessKeyOutput, error)
-}
+		driver.NewKubernetesClient = func(config *rest.Config) (kubernetes.Interface, error) {
+			return fake.NewSimpleClientset(), nil
+		}
 
-// Mock CreateBucketAccess
-func (m *MockIAMClient) CreateBucketAccess(ctx context.Context, userName, bucketName string) (*iam.CreateAccessKeyOutput, error) {
-	if m.CreateBucketAccessFunc != nil {
-		return m.CreateBucketAccessFunc(ctx, userName, bucketName)
-	}
-	return &iam.CreateAccessKeyOutput{
-		AccessKey: &iamtypes.AccessKey{
-			AccessKeyId:     aws.String("mock-access-key-id"),
-			SecretAccessKey: aws.String("mock-secret-access-key"),
-		},
-	}, nil
-}
+		driver.NewBucketClient = func(config *rest.Config) (bucketclientset.Interface, error) {
+			return bucketclientfake.NewSimpleClientset(), nil
+		}
+
+		provisioner = "test-provisioner"
+	})
+
+	AfterEach(func() {
+		// Restore original functions
+		driver.InClusterConfig = rest.InClusterConfig
+		driver.NewKubernetesClient = func(c *rest.Config) (kubernetes.Interface, error) {
+			return kubernetes.NewForConfig(c)
+		}
+		driver.NewBucketClient = func(c *rest.Config) (bucketclientset.Interface, error) {
+			return bucketclientset.NewForConfig(c)
+		}
+	})
+
+	It("should initialize a ProvisionerServer successfully", func() {
+		server, err := driver.InitProvisionerServer(provisioner)
+		Expect(err).To(BeNil())
+		Expect(server).NotTo(BeNil())
+
+		ps, ok := server.(*driver.ProvisionerServer)
+		Expect(ok).To(BeTrue())
+		Expect(ps.Provisioner).To(Equal(provisioner))
+		Expect(ps.Clientset).NotTo(BeNil())
+		Expect(ps.KubeConfig).NotTo(BeNil())
+		Expect(ps.BucketClientset).NotTo(BeNil())
+	})
+
+	It("should return error if InClusterConfig fails", func() {
+		driver.InClusterConfig = func() (*rest.Config, error) {
+			return nil, errors.New("mock error: failed to get in-cluster config")
+		}
+
+		server, err := driver.InitProvisionerServer(provisioner)
+		Expect(err).To(HaveOccurred())
+		Expect(err.Error()).To(ContainSubstring("mock error: failed to get in-cluster config"))
+		Expect(server).To(BeNil())
+	})
+
+	It("should return error if Kubernetes client creation fails", func() {
+		driver.NewKubernetesClient = func(config *rest.Config) (kubernetes.Interface, error) {
+			return nil, errors.New("mock error: failed to create Kubernetes client")
+		}
+
+		server, err := driver.InitProvisionerServer(provisioner)
+		Expect(err).To(HaveOccurred())
+		Expect(err.Error()).To(ContainSubstring("mock error: failed to create Kubernetes client"))
+		Expect(server).To(BeNil())
+	})
+
+	It("should return error if BucketClientset creation fails", func() {
+		driver.NewBucketClient = func(config *rest.Config) (bucketclientset.Interface, error) {
+			return nil, errors.New("mock error: failed to create BucketClientset")
+		}
+
+		server, err := driver.InitProvisionerServer(provisioner)
+		Expect(err).To(HaveOccurred())
+		Expect(err.Error()).To(ContainSubstring("mock error: failed to create BucketClientset"))
+		Expect(server).To(BeNil())
+	})
+
+	It("should return error if provisioner name is empty", func() {
+		provisioner = ""
+		server, err := driver.InitProvisionerServer(provisioner)
+		Expect(err).To(HaveOccurred())
+		Expect(err.Error()).To(ContainSubstring("provisioner name cannot be empty"))
+		Expect(server).To(BeNil())
+	})
+})
 
 var _ = Describe("ProvisionerServer DriverCreateBucket", Ordered, func() {
 	var (
-		mockS3                   *MockS3Client
+		mockS3                   *mock.MockS3Client
 		provisioner              *driver.ProvisionerServer
-		ctx                      context.Context
 		clientset                *fake.Clientset
 		bucketName               string
 		s3Params                 util.StorageClientParameters
@@ -67,8 +129,7 @@ var _ = Describe("ProvisionerServer DriverCreateBucket", Ordered, func() {
 	)
 
 	BeforeEach(func() {
-		ctx = context.TODO()
-		mockS3 = &MockS3Client{}
+		mockS3 = &mock.MockS3Client{}
 		clientset = fake.NewSimpleClientset()
 		provisioner = &driver.ProvisionerServer{
 			Provisioner: "test-provisioner",
@@ -100,7 +161,7 @@ var _ = Describe("ProvisionerServer DriverCreateBucket", Ordered, func() {
 		driver.InitializeClient = originalInitializeClient
 	})
 
-	It("should successfully create a new bucket", func() {
+	It("should successfully create a new bucket", func(ctx SpecContext) {
 		mockS3.CreateBucketFunc = func(ctx context.Context, input *s3.CreateBucketInput, opts ...func(*s3.Options)) (*s3.CreateBucketOutput, error) {
 			Expect(input.Bucket).To(Equal(&bucketName))
 			return &s3.CreateBucketOutput{}, nil
@@ -112,7 +173,7 @@ var _ = Describe("ProvisionerServer DriverCreateBucket", Ordered, func() {
 		Expect(resp.BucketId).To(Equal(bucketName))
 	})
 
-	It("should return AlreadyExists error if bucket already exists with different parameters", func() {
+	It("should return AlreadyExists error if bucket already exists with different parameters", func(ctx SpecContext) {
 		mockS3.CreateBucketFunc = func(ctx context.Context, input *s3.CreateBucketInput, opts ...func(*s3.Options)) (*s3.CreateBucketOutput, error) {
 			return nil, &types.BucketAlreadyExists{}
 		}
@@ -124,7 +185,7 @@ var _ = Describe("ProvisionerServer DriverCreateBucket", Ordered, func() {
 		Expect(err.Error()).To(ContainSubstring("Bucket already exists: test-bucket"))
 	})
 
-	It("should return success if bucket with same parameters already exists", func() {
+	It("should return success if bucket with same parameters already exists", func(ctx SpecContext) {
 		mockS3.CreateBucketFunc = func(ctx context.Context, input *s3.CreateBucketInput, opts ...func(*s3.Options)) (*s3.CreateBucketOutput, error) {
 			return nil, &types.BucketAlreadyOwnedByYou{}
 		}
@@ -135,7 +196,7 @@ var _ = Describe("ProvisionerServer DriverCreateBucket", Ordered, func() {
 		Expect(resp.BucketId).To(Equal(bucketName))
 	})
 
-	It("should return Internal error for other S3 client errors", func() {
+	It("should return Internal error for other S3 client errors", func(ctx SpecContext) {
 		mockS3.CreateBucketFunc = func(ctx context.Context, input *s3.CreateBucketInput, opts ...func(*s3.Options)) (*s3.CreateBucketOutput, error) {
 			return nil, errors.New("SomeOtherError: Something went wrong")
 		}
@@ -147,8 +208,7 @@ var _ = Describe("ProvisionerServer DriverCreateBucket", Ordered, func() {
 		Expect(err.Error()).To(ContainSubstring("Failed to create bucket"))
 	})
 
-	It("should return Internal error when InitializeClient fails", func() {
-		// Mock InitializeClient to return an error
+	It("should return Internal error when InitializeClient fails", func(ctx SpecContext) {
 		driver.InitializeClient = func(ctx context.Context, clientset kubernetes.Interface, parameters map[string]string, service string) (interface{}, *util.StorageClientParameters, error) {
 			return nil, nil, fmt.Errorf("mock initialization error")
 		}
@@ -160,10 +220,9 @@ var _ = Describe("ProvisionerServer DriverCreateBucket", Ordered, func() {
 		Expect(err.Error()).To(ContainSubstring("failed to initialize object storage provider S3 client"))
 	})
 
-	It("should return InvalidArgument error when client type is unsupported", func() {
-		// Mock InitializeClient to return an unsupported client type
+	It("should return InvalidArgument error when client type is unsupported", func(ctx SpecContext) {
 		driver.InitializeClient = func(ctx context.Context, clientset kubernetes.Interface, parameters map[string]string, service string) (interface{}, *util.StorageClientParameters, error) {
-			return &struct{}{}, &s3Params, nil // Returning a struct instead of *s3client.S3Client
+			return &struct{}{}, &s3Params, nil
 		}
 
 		resp, err := provisioner.DriverCreateBucket(ctx, request)
@@ -172,19 +231,31 @@ var _ = Describe("ProvisionerServer DriverCreateBucket", Ordered, func() {
 		Expect(status.Code(err)).To(Equal(codes.InvalidArgument))
 		Expect(err.Error()).To(ContainSubstring("unsupported client type for bucket creation"))
 	})
+
+	It("should handle AWS operation errors during bucket creation", func(ctx SpecContext) {
+		mockS3.CreateBucketFunc = func(ctx context.Context, input *s3.CreateBucketInput, opts ...func(*s3.Options)) (*s3.CreateBucketOutput, error) {
+			return nil, &smithy.OperationError{
+				Err: errors.New("AccessDenied: Access Denied"),
+			}
+		}
+
+		resp, err := provisioner.DriverCreateBucket(ctx, request)
+		Expect(resp).To(BeNil())
+		Expect(err).To(HaveOccurred())
+		Expect(status.Code(err)).To(Equal(codes.Internal))
+		Expect(err.Error()).To(ContainSubstring("Failed to create bucket"))
+	})
 })
 
 var _ = Describe("ProvisionerServer Unimplemented Methods", Ordered, func() {
 	var (
 		provisioner *driver.ProvisionerServer
-		ctx         context.Context
 		clientset   *fake.Clientset
 		bucketName  string
 		accountID   string
 	)
 
 	BeforeEach(func() {
-		ctx = context.TODO()
 		clientset = fake.NewSimpleClientset()
 		provisioner = &driver.ProvisionerServer{
 			Provisioner: "test-provisioner",
@@ -194,7 +265,7 @@ var _ = Describe("ProvisionerServer Unimplemented Methods", Ordered, func() {
 		accountID = "test-account-id"
 	})
 
-	It("DriverDeleteBucket should return Unimplemented error", func() {
+	It("DriverDeleteBucket should return Unimplemented error", func(ctx SpecContext) {
 		request := &cosiapi.DriverDeleteBucketRequest{BucketId: bucketName}
 		resp, err := provisioner.DriverDeleteBucket(ctx, request)
 		Expect(resp).To(BeNil())
@@ -203,7 +274,7 @@ var _ = Describe("ProvisionerServer Unimplemented Methods", Ordered, func() {
 		Expect(err.Error()).To(ContainSubstring("DriverCreateBucket: not implemented"))
 	})
 
-	It("DriverRevokeBucketAccess should return Unimplemented error", func() {
+	It("DriverRevokeBucketAccess should return Unimplemented error", func(ctx SpecContext) {
 		request := &cosiapi.DriverRevokeBucketAccessRequest{AccountId: accountID}
 		resp, err := provisioner.DriverRevokeBucketAccess(ctx, request)
 		Expect(resp).To(BeNil())
@@ -297,14 +368,12 @@ var _ = Describe("FetchSecretInformation", Ordered, func() {
 
 var _ = Describe("initializeObjectStorageClient", Ordered, func() {
 	var (
-		ctx        context.Context
 		clientset  *fake.Clientset
 		parameters map[string]string
 		secret     *corev1.Secret
 	)
 
 	BeforeEach(func() {
-		ctx = context.TODO()
 		clientset = fake.NewSimpleClientset()
 		parameters = map[string]string{
 			"objectStorageSecretName":      "test-secret",
@@ -325,7 +394,7 @@ var _ = Describe("initializeObjectStorageClient", Ordered, func() {
 		}
 	})
 
-	It("should successfully initialize S3 client and parameters", func() {
+	It("should successfully initialize S3 client and parameters", func(ctx SpecContext) {
 		_, err := clientset.CoreV1().Secrets("test-namespace").Create(ctx, secret, metav1.CreateOptions{})
 		Expect(err).To(BeNil())
 
@@ -339,7 +408,7 @@ var _ = Describe("initializeObjectStorageClient", Ordered, func() {
 		Expect(s3Params.Region).To(Equal("us-west-2"))
 	})
 
-	It("should return InvalidArgument error for unsupported object storage provider service", func() {
+	It("should return InvalidArgument error for unsupported object storage provider service", func(ctx SpecContext) {
 		_, err := clientset.CoreV1().Secrets("test-namespace").Create(ctx, secret, metav1.CreateOptions{})
 		Expect(err).To(BeNil())
 
@@ -352,7 +421,7 @@ var _ = Describe("initializeObjectStorageClient", Ordered, func() {
 		Expect(err.Error()).To(ContainSubstring("unsupported object storage provider service"))
 	})
 
-	It("should return error when FetchSecretInformation fails", func() {
+	It("should return error when FetchSecretInformation fails", func(ctx SpecContext) {
 		delete(parameters, "objectStorageSecretName")
 
 		s3Client, s3Params, err := driver.InitializeClient(ctx, clientset, parameters, "S3")
@@ -363,7 +432,7 @@ var _ = Describe("initializeObjectStorageClient", Ordered, func() {
 		Expect(err.Error()).To(ContainSubstring("Object storage provider secret name and namespace are required"))
 	})
 
-	It("should return error when secret is not found", func() {
+	It("should return error when secret is not found", func(ctx SpecContext) {
 		s3Client, s3Params, err := driver.InitializeClient(ctx, clientset, parameters, "S3")
 		Expect(err).To(HaveOccurred())
 		Expect(s3Client).To(BeNil())
@@ -372,7 +441,7 @@ var _ = Describe("initializeObjectStorageClient", Ordered, func() {
 		Expect(err.Error()).To(ContainSubstring("failed to get object store user secret"))
 	})
 
-	It("should return error when FetchParameters fails", func() {
+	It("should return error when FetchParameters fails", func(ctx SpecContext) {
 		secret.Data = map[string][]byte{}
 		_, err := clientset.CoreV1().Secrets("test-namespace").Create(ctx, secret, metav1.CreateOptions{})
 		Expect(err).To(BeNil())
@@ -385,33 +454,54 @@ var _ = Describe("initializeObjectStorageClient", Ordered, func() {
 		Expect(err.Error()).To(ContainSubstring("accessKeyID is required"))
 	})
 
-	It("should return error when S3 client initialization fails in initializeObjectStorageClient", func() {
-		// Create a mock secret in the fake clientset
-		secret.Data = map[string][]byte{
-			"accessKeyId":     []byte("test-access-key"),
-			"secretAccessKey": []byte("test-secret-key"),
-			"endpoint":        []byte("https://test-endpoint"),
-			"region":          []byte("us-west-2"),
-		}
+	It("should return error when S3 client initialization fails in initializeObjectStorageClient", func(ctx SpecContext) {
 		_, err := clientset.CoreV1().Secrets("test-namespace").Create(ctx, secret, metav1.CreateOptions{})
 		Expect(err).To(BeNil())
 
-		// Store the original InitS3Client function
 		originalInitS3Client := s3client.InitS3Client
 		defer func() { s3client.InitS3Client = originalInitS3Client }()
 
-		// Mock InitS3Client to return an error
 		s3client.InitS3Client = func(params util.StorageClientParameters) (*s3client.S3Client, error) {
 			return nil, fmt.Errorf("mock S3 client initialization error")
 		}
 
-		// Call InitializeClient and check for the expected error
 		client, params, err := driver.InitializeClient(ctx, clientset, parameters, "S3")
 		Expect(client).To(BeNil())
 		Expect(params).To(BeNil())
 		Expect(err).To(HaveOccurred())
 		Expect(status.Code(err)).To(Equal(codes.Internal))
 		Expect(err.Error()).To(ContainSubstring("failed to initialize S3 client"))
+	})
+
+	It("should successfully initialize IAM client", func(ctx SpecContext) {
+		_, err := clientset.CoreV1().Secrets("test-namespace").Create(ctx, secret, metav1.CreateOptions{})
+		Expect(err).To(BeNil())
+
+		iamClient, iamParams, err := driver.InitializeClient(ctx, clientset, parameters, "IAM")
+		Expect(err).To(BeNil())
+		Expect(iamClient).NotTo(BeNil())
+		Expect(iamParams.Endpoint).To(Equal("https://test-endpoint"))
+		Expect(iamParams.AccessKeyID).To(Equal("test-access-key"))
+		Expect(iamParams.SecretAccessKey).To(Equal("test-secret-key"))
+		Expect(iamParams.Region).To(Equal("us-west-2"))
+	})
+
+	It("should return Internal error when IAM client initialization fails", func(ctx SpecContext) {
+		originalInitIAMClient := iamclient.InitIAMClient
+		defer func() { iamclient.InitIAMClient = originalInitIAMClient }()
+
+		iamclient.InitIAMClient = func(params util.StorageClientParameters) (*iamclient.IAMClient, error) {
+			return nil, fmt.Errorf("mock IAM client initialization error")
+		}
+
+		_, err := clientset.CoreV1().Secrets("test-namespace").Create(ctx, secret, metav1.CreateOptions{})
+		Expect(err).To(BeNil())
+
+		iamClient, iamParams, err := driver.InitializeClient(ctx, clientset, parameters, "IAM")
+		Expect(err).To(HaveOccurred())
+		Expect(err).To(MatchError(ContainSubstring("failed to initialize IAM client")))
+		Expect(iamClient).To(BeNil())
+		Expect(iamParams).To(BeNil())
 	})
 })
 
@@ -494,46 +584,43 @@ var _ = Describe("FetchParameters", Ordered, func() {
 	})
 })
 
-var _ = Describe("ProvisionerServer DriverGrantBucketAccess", func() {
+var _ = Describe("ProvisionerServer DriverGrantBucketAccess", Ordered, func() {
 	var (
-		mockIAMClient            *MockIAMClient
+		mockIAMClient            *mock.MockIAMClient
 		provisioner              *driver.ProvisionerServer
-		ctx                      context.Context
 		clientset                *fake.Clientset
 		originalInitializeClient func(ctx context.Context, clientset kubernetes.Interface, parameters map[string]string, service string) (interface{}, *util.StorageClientParameters, error)
 		bucketName, userName     string
-		parameters               map[string]string
 		request                  *cosiapi.DriverGrantBucketAccessRequest
 		iamParams                *util.StorageClientParameters
 	)
 
 	BeforeEach(func() {
-		ctx = context.TODO()
+		mockIAMClient = &mock.MockIAMClient{}
 		clientset = fake.NewSimpleClientset()
 		provisioner = &driver.ProvisionerServer{
-			Clientset: clientset,
+			Provisioner: "test-provisioner",
+			Clientset:   clientset,
 		}
 		bucketName = "test-bucket"
 		userName = "test-user"
-		parameters = map[string]string{
-			"key": "value", // Example parameter; adapt as necessary
+
+		iamParams = &util.StorageClientParameters{
+			AccessKeyID:     "test-access-key",
+			SecretAccessKey: "test-secret-key",
+			Endpoint:        "https://test-endpoint",
+			Region:          "us-west-2",
+			IAMEndpoint:     "https://iam-test-endpoint",
 		}
 		request = &cosiapi.DriverGrantBucketAccessRequest{
-			BucketId:   bucketName,
-			Name:       userName,
-			Parameters: parameters,
+			BucketId: bucketName,
+			Name:     userName,
 		}
-		iamParams = &util.StorageClientParameters{
-			Endpoint: "https://test-endpoint",
-			Region:   "us-west-2",
-		}
-
-		// Mock InitializeClient
 		originalInitializeClient = driver.InitializeClient
-		mockIAMClient = &MockIAMClient{}
+
 		driver.InitializeClient = func(ctx context.Context, clientset kubernetes.Interface, parameters map[string]string, service string) (interface{}, *util.StorageClientParameters, error) {
 			if service == "IAM" {
-				return mockIAMClient, iamParams, nil
+				return &iamclient.IAMClient{IAMService: mockIAMClient}, iamParams, nil
 			}
 			return nil, nil, fmt.Errorf("unsupported service: %s", service)
 		}
@@ -543,7 +630,7 @@ var _ = Describe("ProvisionerServer DriverGrantBucketAccess", func() {
 		driver.InitializeClient = originalInitializeClient
 	})
 
-	It("should return Internal error when IAM client initialization fails", func() {
+	It("should return Internal error when IAM client initialization fails", func(ctx SpecContext) {
 		driver.InitializeClient = func(ctx context.Context, clientset kubernetes.Interface, parameters map[string]string, service string) (interface{}, *util.StorageClientParameters, error) {
 			return nil, nil, fmt.Errorf("mock initialization error")
 		}
@@ -555,9 +642,9 @@ var _ = Describe("ProvisionerServer DriverGrantBucketAccess", func() {
 		Expect(err.Error()).To(ContainSubstring("failed to initialize object storage provider IAM client"))
 	})
 
-	It("should return Internal error for unsupported client type", func() {
+	It("should return Internal error for unsupported client type", func(ctx SpecContext) {
 		driver.InitializeClient = func(ctx context.Context, clientset kubernetes.Interface, parameters map[string]string, service string) (interface{}, *util.StorageClientParameters, error) {
-			return &struct{}{}, iamParams, nil // Return unsupported type
+			return &struct{}{}, iamParams, nil
 		}
 
 		resp, err := provisioner.DriverGrantBucketAccess(ctx, request)
@@ -567,15 +654,26 @@ var _ = Describe("ProvisionerServer DriverGrantBucketAccess", func() {
 		Expect(err.Error()).To(ContainSubstring("failed to initialize object storage provider IAM client"))
 	})
 
-	It("should return Internal error when CreateBucketAccess fails", func() {
-		mockIAMClient.CreateBucketAccessFunc = func(ctx context.Context, userName, bucketName string) (*iam.CreateAccessKeyOutput, error) {
-			return nil, fmt.Errorf("mock failure")
+	It("should successfully grant bucket access", func(ctx SpecContext) {
+		resp, err := provisioner.DriverGrantBucketAccess(ctx, request)
+		Expect(err).To(BeNil())
+		Expect(resp).NotTo(BeNil())
+		Expect(resp.AccountId).To(Equal(userName))
+		Expect(resp.Credentials["s3"].Secrets["accessKeyID"]).To(Equal("mock-access-key-id"))
+		Expect(resp.Credentials["s3"].Secrets["accessSecretKey"]).To(Equal("mock-secret-access-key"))
+		Expect(resp.Credentials["s3"].Secrets["endpoint"]).To(Equal(iamParams.Endpoint))
+		Expect(resp.Credentials["s3"].Secrets["region"]).To(Equal(iamParams.Region))
+	})
+
+	It("should return Internal error when CreateBucketAccess fails", func(ctx SpecContext) {
+		mockIAMClient.CreateAccessKeyFunc = func(ctx context.Context, input *iam.CreateAccessKeyInput, opts ...func(*iam.Options)) (*iam.CreateAccessKeyOutput, error) {
+			return nil, fmt.Errorf("mock failure: unable to create access key")
 		}
 
 		resp, err := provisioner.DriverGrantBucketAccess(ctx, request)
 		Expect(resp).To(BeNil())
 		Expect(err).To(HaveOccurred())
 		Expect(status.Code(err)).To(Equal(codes.Internal))
-		Expect(err.Error()).To(ContainSubstring("failed to initialize object storage provider IAM client"))
+		Expect(err.Error()).To(ContainSubstring("failed to create bucket access"))
 	})
 })

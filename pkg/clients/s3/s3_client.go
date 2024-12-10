@@ -25,6 +25,8 @@ type S3Client struct {
 	S3Service S3API
 }
 
+var LoadAWSConfig = config.LoadDefaultConfig
+
 var InitS3Client = func(params util.StorageClientParameters) (*S3Client, error) {
 	var logger logging.Logger
 	if params.Debug {
@@ -43,7 +45,7 @@ var InitS3Client = func(params util.StorageClientParameters) (*S3Client, error) 
 
 	ctx := context.Background()
 
-	awsCfg, err := config.LoadDefaultConfig(ctx,
+	awsCfg, err := LoadAWSConfig(ctx,
 		config.WithRegion(params.Region),
 		config.WithCredentialsProvider(credentials.NewStaticCredentialsProvider(params.AccessKeyID, params.SecretAccessKey, "")),
 		config.WithHTTPClient(httpClient),

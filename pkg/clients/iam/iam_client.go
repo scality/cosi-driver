@@ -28,7 +28,9 @@ type IAMClient struct {
 	IAMService IAMAPI
 }
 
-func InitIAMClient(params util.StorageClientParameters) (*IAMClient, error) {
+var LoadAWSConfig = config.LoadDefaultConfig
+
+var InitIAMClient = func(params util.StorageClientParameters) (*IAMClient, error) {
 	var logger logging.Logger
 	if params.Debug {
 		logger = logging.NewStandardLogger(os.Stdout)
@@ -46,7 +48,7 @@ func InitIAMClient(params util.StorageClientParameters) (*IAMClient, error) {
 
 	ctx := context.Background()
 
-	awsCfg, err := config.LoadDefaultConfig(ctx,
+	awsCfg, err := LoadAWSConfig(ctx,
 		config.WithRegion(params.Region),
 		config.WithCredentialsProvider(credentials.NewStaticCredentialsProvider(params.AccessKeyID, params.SecretAccessKey, "")),
 		config.WithHTTPClient(httpClient),

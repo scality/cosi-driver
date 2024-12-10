@@ -14,6 +14,8 @@ coverage:
       default:
         target: 40%
         threshold: 40%
+  ignore:
+  - "pkg/mock/*"
 
 github_checks:
   annotations: true
