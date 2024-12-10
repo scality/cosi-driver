@@ -6,7 +6,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/credentials v1.17.47
 	github.com/aws/smithy-go v1.22.1
 	github.com/onsi/ginkgo/v2 v2.22.0
-	github.com/onsi/gomega v1.36.0
+	github.com/onsi/gomega v1.36.1
 	google.golang.org/grpc v1.68.1
 	k8s.io/client-go v0.31.3
 	k8s.io/klog/v2 v2.130.1
