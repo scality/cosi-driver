@@ -13,14 +13,12 @@ import (
 
 var _ = Describe("gRPC Factory Interceptors", func() {
 	var (
-		ctx        context.Context
 		method     string
 		req, reply interface{}
 		cc         *grpc.ClientConn
 	)
 
 	BeforeEach(func() {
-		ctx = context.Background()
 		method = "TestMethod"
 		req = "test request"
 		reply = "test reply"
@@ -28,7 +26,7 @@ var _ = Describe("gRPC Factory Interceptors", func() {
 	})
 
 	Context("ApiLogger", func() {
-		It("should log request and response successfully", func() {
+		It("should log request and response successfully", func(ctx SpecContext) {
 			invoker := func(ctx context.Context, method string, req, reply interface{}, cc *grpc.ClientConn, opts ...grpc.CallOption) error {
 				// Simulate a successful invocation
 				time.Sleep(50 * time.Millisecond)
@@ -39,7 +37,7 @@ var _ = Describe("gRPC Factory Interceptors", func() {
 			Expect(err).NotTo(HaveOccurred())
 		})
 
-		It("should handle invocation error and log it", func() {
+		It("should handle invocation error and log it", func(ctx SpecContext) {
 			invoker := func(ctx context.Context, method string, req, reply interface{}, cc *grpc.ClientConn, opts ...grpc.CallOption) error {
 				// Simulate an invocation error
 				return errors.New("invocation failed")

@@ -117,11 +117,7 @@ var _ = Describe("gRPC Factory Client", func() {
 	})
 
 	Describe("Error Handling", func() {
-		It("should return an error if given an invalid address", func() {
-			ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
-			defer cancel()
-
-			// Attempt to connect using an invalid address format
+		It("should return an error if given an invalid address", func(ctx SpecContext) {
 			_, err := grpcfactory.NewCOSIProvisionerClient(ctx, "invalid-address", nil, nil)
 			Expect(err).To(HaveOccurred())
 			Expect(err.Error()).To(ContainSubstring("unsupported scheme"))
