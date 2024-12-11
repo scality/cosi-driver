@@ -248,32 +248,6 @@ var _ = Describe("ProvisionerServer DriverCreateBucket", Ordered, func() {
 	})
 })
 
-var _ = Describe("ProvisionerServer Unimplemented Methods", Ordered, func() {
-	var (
-		provisioner *driver.ProvisionerServer
-		clientset   *fake.Clientset
-		bucketName  string
-	)
-
-	BeforeEach(func() {
-		clientset = fake.NewSimpleClientset()
-		provisioner = &driver.ProvisionerServer{
-			Provisioner: "test-provisioner",
-			Clientset:   clientset,
-		}
-		bucketName = "test-bucket"
-	})
-
-	It("DriverDeleteBucket should return Unimplemented error", func(ctx SpecContext) {
-		request := &cosiapi.DriverDeleteBucketRequest{BucketId: bucketName}
-		resp, err := provisioner.DriverDeleteBucket(ctx, request)
-		Expect(resp).To(BeNil())
-		Expect(err).To(HaveOccurred())
-		Expect(status.Code(err)).To(Equal(codes.Unimplemented))
-		Expect(err.Error()).To(ContainSubstring("DriverCreateBucket: not implemented"))
-	})
-})
-
 var _ = Describe("FetchSecretInformation", Ordered, func() {
 	var (
 		parameters map[string]string
@@ -806,5 +780,131 @@ var _ = Describe("ProvisionerServer DriverRevokeBucketAccess", Ordered, func() {
 		Expect(err).To(HaveOccurred())
 		Expect(status.Code(err)).To(Equal(codes.Internal))
 		Expect(err.Error()).To(ContainSubstring("unsupported client type for IAM operations"))
+	})
+})
+
+var _ = Describe("ProvisionerServer DriverDeleteBucket", Ordered, func() {
+	var (
+		mockS3Client             *mock.MockS3Client
+		provisioner              *driver.ProvisionerServer
+		clientset                *fake.Clientset
+		bucketName               string
+		request                  *cosiapi.DriverDeleteBucketRequest
+		originalInitializeClient func(ctx context.Context, clientset kubernetes.Interface, parameters map[string]string, service string) (interface{}, *util.StorageClientParameters, error)
+		bucketClientset          *bucketclientfake.Clientset
+		secretName, namespace    string
+		s3Params                 util.StorageClientParameters
+	)
+
+	BeforeEach(func() {
+		mockS3Client = &mock.MockS3Client{}
+		clientset = fake.NewSimpleClientset()
+		bucketClientset = bucketclientfake.NewSimpleClientset()
+
+		provisioner = &driver.ProvisionerServer{
+			Provisioner:     "test-provisioner",
+			Clientset:       clientset,
+			BucketClientset: bucketClientset,
+		}
+
+		s3Params = util.StorageClientParameters{
+			AccessKeyID:     "test-access-key",
+			SecretAccessKey: "test-secret-key",
+			Endpoint:        "https://test-endpoint",
+			Region:          "us-west-2",
+		}
+		secretName = "my-storage-secret"
+		namespace = "test-namespace"
+
+		// Create a fake Bucket object with appropriate parameters
+		_, err := bucketClientset.ObjectstorageV1alpha1().Buckets().Create(context.TODO(), &bucketv1alpha1.Bucket{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: bucketName,
+			},
+			Spec: bucketv1alpha1.BucketSpec{
+				Parameters: map[string]string{
+					"objectStorageSecretName":      secretName,
+					"objectStorageSecretNamespace": namespace,
+				},
+			},
+		}, metav1.CreateOptions{})
+		Expect(err).To(BeNil())
+
+		request = &cosiapi.DriverDeleteBucketRequest{BucketId: bucketName}
+		originalInitializeClient = driver.InitializeClient
+		driver.InitializeClient = func(ctx context.Context, clientset kubernetes.Interface, parameters map[string]string, service string) (interface{}, *util.StorageClientParameters, error) {
+			// Validate parameters
+			Expect(parameters["objectStorageSecretName"]).To(Equal(secretName))
+			Expect(parameters["objectStorageSecretNamespace"]).To(Equal(namespace))
+
+			if service == "S3" {
+				return &s3client.S3Client{S3Service: mockS3Client}, &s3Params, nil
+			}
+			return nil, nil, errors.New("unsupported service")
+		}
+	})
+
+	AfterEach(func() {
+		mockS3Client = nil
+		bucketClientset = nil
+		clientset = nil
+		provisioner = nil
+		driver.InitializeClient = originalInitializeClient
+	})
+
+	It("should successfully delete bucket when bucket exists and parameters are valid", func(ctx SpecContext) {
+		resp, err := provisioner.DriverDeleteBucket(ctx, request)
+
+		Expect(err).To(BeNil())
+		Expect(resp).NotTo(BeNil())
+		Expect(resp).To(BeAssignableToTypeOf(&cosiapi.DriverDeleteBucketResponse{}))
+	})
+
+	It("should return error if the bucket does not exist", func(ctx SpecContext) {
+		err := bucketClientset.ObjectstorageV1alpha1().Buckets().Delete(context.TODO(), bucketName, metav1.DeleteOptions{})
+		Expect(err).To(BeNil())
+
+		resp, err := provisioner.DriverDeleteBucket(ctx, request)
+
+		Expect(resp).To(BeNil())
+		Expect(err).To(HaveOccurred())
+		Expect(status.Code(err)).To(Equal(codes.Internal))
+		Expect(err.Error()).To(ContainSubstring("failed to get bucket object from kubernetes"))
+	})
+
+	It("should return error if S3 client initialization fails", func(ctx SpecContext) {
+		driver.InitializeClient = func(ctx context.Context, clientset kubernetes.Interface, parameters map[string]string, service string) (interface{}, *util.StorageClientParameters, error) {
+			return nil, nil, fmt.Errorf("mock S3 client initialization error")
+		}
+
+		resp, err := provisioner.DriverDeleteBucket(ctx, request)
+		Expect(resp).To(BeNil())
+		Expect(err).To(HaveOccurred())
+		Expect(status.Code(err)).To(Equal(codes.Internal))
+		Expect(err.Error()).To(ContainSubstring("failed to initialize object storage provider S3 client"))
+	})
+
+	It("should return InvalidArgument error for unsupported client type", func(ctx SpecContext) {
+		driver.InitializeClient = func(ctx context.Context, clientset kubernetes.Interface, parameters map[string]string, service string) (interface{}, *util.StorageClientParameters, error) {
+			return &struct{}{}, &s3Params, nil
+		}
+
+		resp, err := provisioner.DriverDeleteBucket(ctx, request)
+		Expect(resp).To(BeNil())
+		Expect(err).To(HaveOccurred())
+		Expect(status.Code(err)).To(Equal(codes.InvalidArgument))
+		Expect(err.Error()).To(ContainSubstring("unsupported client type for bucket deletion"))
+	})
+
+	It("should return error if unable to delete bucket", func(ctx SpecContext) {
+		mockS3Client.DeleteBucketFunc = func(ctx context.Context, input *s3.DeleteBucketInput, opts ...func(*s3.Options)) (*s3.DeleteBucketOutput, error) {
+			return nil, fmt.Errorf("mock failure: unable to delete bucket")
+		}
+
+		resp, err := provisioner.DriverDeleteBucket(ctx, request)
+		Expect(resp).To(BeNil())
+		Expect(err).To(HaveOccurred())
+		Expect(status.Code(err)).To(Equal(codes.Internal))
+		Expect(err.Error()).To(ContainSubstring("failed to delete bucket"))
 	})
 })

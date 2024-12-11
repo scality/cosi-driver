@@ -128,4 +128,31 @@ var _ = Describe("S3Client", func() {
 			Expect(err).NotTo(BeNil())
 		})
 	})
+
+	Describe("DeleteBucket", func() {
+		var mockS3 *mock.MockS3Client
+		var client *s3client.S3Client
+
+		BeforeEach(func() {
+			mockS3 = &mock.MockS3Client{}
+			client = &s3client.S3Client{
+				S3Service: mockS3,
+			}
+		})
+
+		It("should successfully delete a bucket", func(ctx SpecContext) {
+			err := client.DeleteBucket(ctx, "test-bucket")
+			Expect(err).To(BeNil())
+		})
+
+		It("should handle errors when deleting a bucket", func(ctx SpecContext) {
+			mockS3.DeleteBucketFunc = func(ctx context.Context, input *s3.DeleteBucketInput, opts ...func(*s3.Options)) (*s3.DeleteBucketOutput, error) {
+				return nil, fmt.Errorf("mock delete bucket error")
+			}
+
+			err := client.DeleteBucket(ctx, "test-bucket")
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("mock delete bucket error"))
+		})
+	})
 })
