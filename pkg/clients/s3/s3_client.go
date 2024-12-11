@@ -19,6 +19,7 @@ import (
 
 type S3API interface {
 	CreateBucket(ctx context.Context, input *s3.CreateBucketInput, opts ...func(*s3.Options)) (*s3.CreateBucketOutput, error)
+	DeleteBucket(ctx context.Context, input *s3.DeleteBucketInput, opts ...func(*s3.Options)) (*s3.DeleteBucketOutput, error)
 }
 
 type S3Client struct {
@@ -84,4 +85,11 @@ func (client *S3Client) CreateBucket(ctx context.Context, bucketName string, par
 
 	klog.InfoS("Bucket creation operation succeeded", "name", bucketName, "region", params.Region)
 	return nil
+}
+
+func (client *S3Client) DeleteBucket(ctx context.Context, bucketName string) error {
+	_, err := client.S3Service.DeleteBucket(ctx, &s3.DeleteBucketInput{
+		Bucket: &bucketName,
+	})
+	return err
 }

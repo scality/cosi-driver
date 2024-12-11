@@ -256,7 +256,34 @@ func fetchS3Parameters(secretData map[string][]byte) (*util.StorageClientParamet
 func (s *ProvisionerServer) DriverDeleteBucket(ctx context.Context,
 	req *cosiapi.DriverDeleteBucketRequest) (*cosiapi.DriverDeleteBucketResponse, error) {
 
-	return nil, status.Error(codes.Unimplemented, "DriverCreateBucket: not implemented")
+	bucketName := req.GetBucketId()
+
+	klog.V(3).InfoS("Received DriverDeleteBucket request", "bucketName", bucketName)
+	bucket, err := s.BucketClientset.ObjectstorageV1alpha1().Buckets().Get(ctx, bucketName, metav1.GetOptions{})
+	if err != nil {
+		klog.ErrorS(err, "Failed to get bucket object from kubernetes", "bucketName", bucketName)
+		return nil, status.Error(codes.Internal, "failed to get bucket object from kubernetes")
+	}
+	client, _, err := InitializeClient(ctx, s.Clientset, bucket.Spec.Parameters, "S3")
+	if err != nil {
+		klog.ErrorS(err, "Failed to initialize object storage provider S3 client", "bucketName", bucketName)
+		return nil, status.Error(codes.Internal, "failed to initialize object storage provider S3 client")
+	}
+
+	s3Client, ok := client.(*s3client.S3Client)
+	if !ok {
+		klog.ErrorS(nil, "Unsupported client type for bucket deletion", "bucketName", bucketName)
+		return nil, status.Error(codes.InvalidArgument, "unsupported client type for bucket deletion")
+	}
+
+	err = s3Client.DeleteBucket(ctx, bucketName)
+	if err != nil {
+		klog.ErrorS(err, "Failed to delete bucket", "bucketName", bucketName)
+		return nil, status.Error(codes.Internal, "failed to delete bucket")
+	}
+
+	klog.V(3).InfoS("Successfully deleted bucket", "bucketName", bucketName)
+	return &cosiapi.DriverDeleteBucketResponse{}, nil
 }
 
 // DriverCreateBucketAccess is an idempotent method for creating bucket access
