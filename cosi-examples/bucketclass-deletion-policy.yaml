@@ -1,0 +1,9 @@
+kind: BucketClass
+apiVersion: objectstorage.k8s.io/v1alpha1
+metadata:
+  name: delete-bucket-class
+driverName: cosi.scality.com
+deletionPolicy: Delete
+parameters:
+  objectStorageSecretName: s3-secret-for-cosi
+  objectStorageSecretNamespace: default
