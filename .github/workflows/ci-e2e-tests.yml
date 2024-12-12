@@ -128,7 +128,6 @@ jobs:
     - name: Cleanup COSI CRDs, Controller, and Driver
       run: |
         .github/scripts/cleanup_cosi_resources.sh
-      if: always()
 
     - name: Upload logs and data to Scality artifacts
       uses: scality/action-artifacts@v4
