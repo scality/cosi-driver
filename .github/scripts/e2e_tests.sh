@@ -136,7 +136,7 @@ log_and_run echo "IAM user found: $IAM_USER_NAME"
 
 log_and_run echo "Verifying inline policy attached to IAM user..."
 INLINE_POLICY="$(aws --endpoint-url "$IAM_ENDPOINT" iam list-user-policies --user-name "$IAM_USER_NAME" --query "PolicyNames[0]" --output text)"
-EXPECTED_INLINE_POLICY="$BUCKET_FOUND-cosi-ba"
+EXPECTED_INLINE_POLICY="$BUCKET_FOUND"
 
 if [[ "$INLINE_POLICY" != "$EXPECTED_INLINE_POLICY" ]]; then
   log_and_run echo "Inline policy '$INLINE_POLICY' does not match expected bucket name '$EXPECTED_INLINE_POLICY'."
@@ -209,6 +209,33 @@ fi
 EXPECTED_PROTOCOLS='["s3"]'
 if [[ "$ACTUAL_PROTOCOLS" != "$EXPECTED_PROTOCOLS" ]]; then
   log_and_run echo "Protocols mismatch! Expected: $EXPECTED_PROTOCOLS, Found: $ACTUAL_PROTOCOLS"
+  exit 1
+fi
+
+# Step 11: Delete Bucket Access Resource
+log_and_run echo "Deleting Bucket Access Resource..."
+log_and_run kubectl delete -f cosi-examples/bucketaccess.yaml
+
+# Step 12: Verify IAM User Deletion
+log_and_run echo "Verifying IAM user '$IAM_USER_NAME' deletion..."
+log_and_run aws --endpoint-url "$IAM_ENDPOINT" iam get-user --user-name "$IAM_USER_NAME"
+
+# Retry logic for checking user deletion
+
+for ((i=1; i<=$ATTEMPTS; i++)); do
+  USER_EXISTS="$(aws --endpoint-url "$IAM_ENDPOINT" iam get-user --user-name "$IAM_USER_NAME" 2>&1 || true)"
+
+  if [[ "$USER_EXISTS" == *"NoSuchEntity"* ]]; then
+    log_and_run echo "IAM user '$IAM_USER_NAME' successfully deleted."
+    break
+  else
+    log_and_run echo "Attempt $i: IAM user '$IAM_USER_NAME' still exists. Retrying in $DELETE_DELAY seconds..."
+    sleep $DELAY
+  fi
+done
+
+if [[ "$USER_EXISTS" != *"NoSuchEntity"* ]]; then
+  log_and_run echo "IAM user '$IAM_USER_NAME' was not deleted."
   exit 1
 fi
 

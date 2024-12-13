@@ -65,6 +65,31 @@ var _ = Describe("S3Client", func() {
 			Expect(err.Error()).To(ContainSubstring("failed to load AWS config: mock config loading error"))
 			Expect(client).To(BeNil())
 		})
+
+		It("should set up a logger when Debug is enabled", func() {
+			params.Debug = true
+
+			// Mock LoadAWSConfig
+			originalLoadAWSConfig := s3client.LoadAWSConfig
+			defer func() { s3client.LoadAWSConfig = originalLoadAWSConfig }()
+
+			var loggerUsed bool
+			s3client.LoadAWSConfig = func(ctx context.Context, optFns ...func(*config.LoadOptions) error) (aws.Config, error) {
+				// Check if a logger is passed
+				for _, optFn := range optFns {
+					opt := &config.LoadOptions{}
+					optFn(opt)
+					if opt.Logger != nil {
+						loggerUsed = true
+					}
+				}
+				return aws.Config{}, nil // Simulate a successful load
+			}
+
+			_, err := s3client.InitS3Client(params)
+			Expect(err).To(BeNil())
+			Expect(loggerUsed).To(BeTrue(), "Expected logger to be used when Debug is enabled")
+		})
 	})
 
 	Describe("CreateBucket", func() {
