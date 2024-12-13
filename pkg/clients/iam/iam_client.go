@@ -234,7 +234,7 @@ func (client *IAMClient) DeleteUser(ctx context.Context, userName string) error 
 		var noSuchEntityErr *types.NoSuchEntityException
 		if errors.As(err, &noSuchEntityErr) {
 			klog.InfoS("IAM user does not exist, skipping deletion", "user", userName)
-			return nil
+			return nil // User doesn't exist, nothing to delete
 		}
 		return fmt.Errorf("failed to delete IAM user %s: %w", userName, err)
 	}

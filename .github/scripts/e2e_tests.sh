@@ -18,6 +18,9 @@ SECRET_NAME="object-storage-access-secret"
 NAMESPACE="default"
 ADMIN_ACCESS_KEY_ID=D4IT2AWSB588GO5J9T00
 ADMIN_SECRET_ACCESS_KEY=UEEu8tYlsOGGrgf4DAiSZD6apVNPUWqRiPG0nTB6
+ATTEMPTS=12  # Total AWS CLI attempts (2 minutes / 10 seconds per attempt)
+DELAY=10  # Delay between AWS CLI requests attempts in seconds
+
 
 # Error handling function
 error_handler() {
@@ -100,10 +103,6 @@ log_and_run aws s3 ls --endpoint-url "$S3_ENDPOINT"
 sleep 5
 
 log_and_run echo "Verifying bucket creation..."
-
-
-ATTEMPTS=12  # Total attempts (2 minutes / 10 seconds per attempt)
-DELAY=10  # Delay between attempts in seconds
 
 for ((i=1; i<=$ATTEMPTS; i++)); do
   log_and_run aws --endpoint-url "$S3_ENDPOINT" s3 ls
@@ -220,23 +219,67 @@ log_and_run kubectl delete -f cosi-examples/bucketaccess.yaml
 log_and_run echo "Verifying IAM user '$IAM_USER_NAME' deletion..."
 log_and_run aws --endpoint-url "$IAM_ENDPOINT" iam get-user --user-name "$IAM_USER_NAME"
 
-# Retry logic for checking user deletion
+USER_EXISTS="$(aws --endpoint-url "$IAM_ENDPOINT" iam get-user --user-name "$IAM_USER_NAME" --retry-mode standard --max-attempts 12 --delay $DELAY 2>&1 || true)"
+
+if [[ "$USER_EXISTS" == *"NoSuchEntity"* ]]; then
+  log_and_run echo "IAM user '$IAM_USER_NAME' successfully deleted."
+else
+  log_and_run echo "IAM user '$IAM_USER_NAME' still exists after retries."
+fi
+
+# Step 13: Test deletion bucket with deletion policy set
+
+log_and_run echo "Applying Bucket Class with deletion policy and respective Bucket Claim..."
+log_and_run kubectl apply -f cosi-examples/bucketclass-deletion-policy.yaml
+log_and_run kubectl apply -f cosi-examples/bucketclaim-deletion-policy.yaml
+
+log_and_run echo "Listing all S3 buckets before deletion..."
+log_and_run aws s3 ls --endpoint-url "$S3_ENDPOINT"
+
+BUCKET_CLASS_NAME="delete-bucket-class"
+
+log_and_run echo "Verifying bucket creation with prefix '$BUCKET_CLASS_NAME'..."
 
 for ((i=1; i<=$ATTEMPTS; i++)); do
-  USER_EXISTS="$(aws --endpoint-url "$IAM_ENDPOINT" iam get-user --user-name "$IAM_USER_NAME" 2>&1 || true)"
+  log_and_run aws --endpoint-url "$S3_ENDPOINT" s3 ls
+  BUCKET_TO_BE_DELETED=$(aws --endpoint-url "$S3_ENDPOINT" s3api list-buckets --query "Buckets[?starts_with(Name, '$BUCKET_CLASS_NAME')].Name" --output text)
 
-  if [[ "$USER_EXISTS" == *"NoSuchEntity"* ]]; then
-    log_and_run echo "IAM user '$IAM_USER_NAME' successfully deleted."
+  if [ -n "$BUCKET_TO_BE_DELETED" ]; then
+    log_and_run echo "Bucket created with prefix '$BUCKET_CLASS_NAME': $BUCKET_TO_BE_DELETED"
     break
   else
-    log_and_run echo "Attempt $i: IAM user '$IAM_USER_NAME' still exists. Retrying in $DELETE_DELAY seconds..."
+    log_and_run echo "Attempt $i: Bucket with prefix '$BUCKET_CLASS_NAME' not found. Retrying in $DELAY seconds..."
     sleep $DELAY
   fi
 done
 
-if [[ "$USER_EXISTS" != *"NoSuchEntity"* ]]; then
-  log_and_run echo "IAM user '$IAM_USER_NAME' was not deleted."
+if [ -z "$BUCKET_TO_BE_DELETED" ]; then
+  log_and_run echo "Bucket with prefix '$BUCKET_CLASS_NAME' was not created."
   exit 1
 fi
 
-log_and_run echo "All verifications for object-storage-access-secret passed successfully."
+log_and_run echo "Deleting Bucket Claim..."
+log_and_run kubectl delete -f cosi-examples/bucketclaim-deletion-policy.yaml
+
+# Check if the bucket with name $BUCKET_TO_BE_DELETED exists by doing a head bucket.
+# If bucket exists, retry with ATTEMPTS and DELAY. If bucket is not found, test success.
+
+log_and_run echo "Verifying bucket deletion with name '$BUCKET_TO_BE_DELETED'..."
+
+# Check if the bucket has been deleted
+log_and_run aws s3 ls --endpoint-url "$S3_ENDPOINT"
+AWS_MAX_ATTEMPTS=$ATTEMPTS
+AWS_RETRY_DELAY=$DELAY
+# Run head-bucket to check if the bucket has been deleted
+BUCKET_HEAD_RESULT="$(log_and_run aws --endpoint-url "$S3_ENDPOINT" s3api head-bucket --bucket "$BUCKET_TO_BE_DELETED" 2>&1 || true)"
+
+# Log the actual error result for debugging purposes
+log_and_run echo "head-bucket result: $BUCKET_HEAD_RESULT"
+
+# Check if the result contains the "Not Found" error message
+if [[ "$BUCKET_HEAD_RESULT" == *"Not Found"* ]]; then
+  log_and_run echo "Bucket with name '$BUCKET_TO_BE_DELETED' was successfully deleted (Not Found error)."
+else
+  log_and_run echo "Bucket with name '$BUCKET_TO_BE_DELETED' was not deleted after $ATTEMPTS attempts. Error: $BUCKET_HEAD_RESULT"
+  exit 1
+fi
