@@ -209,13 +209,17 @@ func (client *IAMClient) DeleteAllAccessKeys(ctx context.Context, userName strin
 	if err != nil {
 		return fmt.Errorf("failed to list access keys for IAM user %s: %w", userName, err)
 	}
-
+	var noSuchEntityErr *types.NoSuchEntityException
 	for _, key := range listKeysOutput.AccessKeyMetadata {
 		_, err := client.IAMService.DeleteAccessKey(ctx, &iam.DeleteAccessKeyInput{
 			UserName:    &userName,
 			AccessKeyId: key.AccessKeyId,
 		})
 		if err != nil {
+			if errors.As(err, &noSuchEntityErr) {
+				klog.V(5).InfoS("Access key does not exist, skipping deletion", "user", userName, "accessKeyId", *key.AccessKeyId)
+				continue
+			}
 			return fmt.Errorf("failed to delete access key %s for IAM user %s: %w", *key.AccessKeyId, userName, err)
 		}
 		klog.V(5).InfoS("Successfully deleted access key", "user", userName, "accessKeyId", *key.AccessKeyId)
@@ -230,7 +234,7 @@ func (client *IAMClient) DeleteUser(ctx context.Context, userName string) error 
 		var noSuchEntityErr *types.NoSuchEntityException
 		if errors.As(err, &noSuchEntityErr) {
 			klog.InfoS("IAM user does not exist, skipping deletion", "user", userName)
-			return nil // User doesn't exist, nothing to delete
+			return nil
 		}
 		return fmt.Errorf("failed to delete IAM user %s: %w", userName, err)
 	}
