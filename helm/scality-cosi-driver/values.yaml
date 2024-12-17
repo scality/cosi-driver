@@ -8,8 +8,8 @@ replicaCount: 1
 
 
 logLevels:
-  driver: "5"
-  sidecar: "5"
+  driver: "2"
+  sidecar: "2"
 
 
 namespace: scality-object-storage
