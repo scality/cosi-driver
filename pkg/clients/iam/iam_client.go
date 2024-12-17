@@ -13,6 +13,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/iam"
 	"github.com/aws/aws-sdk-go-v2/service/iam/types"
 	"github.com/aws/smithy-go/logging"
+	c "github.com/scality/cosi-driver/pkg/constants"
 	"github.com/scality/cosi-driver/pkg/util"
 	"k8s.io/klog/v2"
 )
@@ -48,7 +49,7 @@ var InitIAMClient = func(params util.StorageClientParameters) (*IAMClient, error
 	}
 
 	if strings.HasPrefix(params.IAMEndpoint, "https://") {
-		klog.V(4).InfoS("Configuring TLS transport for IAM client", "IAMEndpoint", params.IAMEndpoint)
+		klog.V(c.LvlDebug).InfoS("Configuring TLS transport for IAM client", "IAMEndpoint", params.IAMEndpoint)
 		httpClient.Transport = util.ConfigureTLSTransport(params.TLSCert)
 	}
 
@@ -125,19 +126,19 @@ func (client *IAMClient) CreateBucketAccess(ctx context.Context, userName, bucke
 	if err != nil {
 		return nil, err
 	}
-	klog.V(2).InfoS("Successfully created IAM user", "userName", userName)
+	klog.V(c.LvlInfo).InfoS("Successfully created IAM user", "userName", userName)
 
 	err = client.AttachS3WildcardInlinePolicy(ctx, userName, bucketName)
 	if err != nil {
 		return nil, err
 	}
-	klog.V(2).InfoS("Successfully attached inline policy", "userName", userName, "policyName", bucketName)
+	klog.V(c.LvlInfo).InfoS("Successfully attached inline policy", "userName", userName, "policyName", bucketName)
 
 	accessKeyOutput, err := client.CreateAccessKey(ctx, userName)
 	if err != nil {
 		return nil, err
 	}
-	klog.V(2).InfoS("Successfully created access key", "userName", userName)
+	klog.V(c.LvlInfo).InfoS("Successfully created access key", "userName", userName)
 
 	return accessKeyOutput, nil
 }
@@ -148,25 +149,25 @@ func (client *IAMClient) RevokeBucketAccess(ctx context.Context, userName, bucke
 	if err != nil {
 		return err
 	}
-	klog.V(2).InfoS("Verified IAM user exists", "userName", userName)
+	klog.V(c.LvlInfo).InfoS("Verified IAM user exists", "userName", userName)
 
 	err = client.DeleteInlinePolicy(ctx, userName, bucketName)
 	if err != nil {
 		return err
 	}
-	klog.V(2).InfoS("Deleted inline policy if it existed", "userName", userName, "policyName", bucketName)
+	klog.V(c.LvlInfo).InfoS("Deleted inline policy if it existed", "userName", userName, "policyName", bucketName)
 
 	err = client.DeleteAllAccessKeys(ctx, userName)
 	if err != nil {
 		return err
 	}
-	klog.V(2).InfoS("Deleted all access keys if any existed", "userName", userName)
+	klog.V(c.LvlInfo).InfoS("Deleted all access keys if any existed", "userName", userName)
 
 	err = client.DeleteUser(ctx, userName)
 	if err != nil {
 		return err
 	}
-	klog.V(2).InfoS("Deleted IAM user", "userName", userName)
+	klog.V(c.LvlInfo).InfoS("Deleted IAM user", "userName", userName)
 	return nil
 }
 
@@ -183,12 +184,12 @@ func (client *IAMClient) DeleteInlinePolicy(ctx context.Context, userName, bucke
 	if err != nil {
 		var noSuchEntityErr *types.NoSuchEntityException
 		if errors.As(err, &noSuchEntityErr) {
-			klog.V(4).InfoS("Inline policy does not exist, skipping deletion", "user", userName, "policyName", bucketName)
+			klog.V(c.LvlDebug).InfoS("Inline policy does not exist, skipping deletion", "user", userName, "policyName", bucketName)
 			return nil
 		}
 		return err
 	}
-	klog.V(4).InfoS("Successfully deleted inline policy", "userName", userName, "policyName", bucketName)
+	klog.V(c.LvlDebug).InfoS("Successfully deleted inline policy", "userName", userName, "policyName", bucketName)
 	return nil
 }
 
@@ -199,21 +200,21 @@ func (client *IAMClient) DeleteAllAccessKeys(ctx context.Context, userName strin
 	}
 	var noSuchEntityErr *types.NoSuchEntityException
 	for _, key := range listKeysOutput.AccessKeyMetadata {
-		klog.V(5).InfoS("Deleting access key", "userName", userName, "accessKeyId", *key.AccessKeyId)
+		klog.V(c.LvlTrace).InfoS("Deleting access key", "userName", userName, "accessKeyId", *key.AccessKeyId)
 		_, err := client.IAMService.DeleteAccessKey(ctx, &iam.DeleteAccessKeyInput{
 			UserName:    &userName,
 			AccessKeyId: key.AccessKeyId,
 		})
 		if err != nil {
 			if errors.As(err, &noSuchEntityErr) {
-				klog.V(5).InfoS("Access key does not exist, skipping deletion", "userName", userName, "accessKeyId", *key.AccessKeyId)
+				klog.V(c.LvlTrace).InfoS("Access key does not exist, skipping deletion", "userName", userName, "accessKeyId", *key.AccessKeyId)
 				continue
 			}
 			return err
 		}
-		klog.V(5).InfoS("Successfully deleted access key", "userName", userName, "accessKeyId", *key.AccessKeyId)
+		klog.V(c.LvlTrace).InfoS("Successfully deleted access key", "userName", userName, "accessKeyId", *key.AccessKeyId)
 	}
-	klog.V(4).InfoS("Successfully deleted all access keys", "userName", userName)
+	klog.V(c.LvlDebug).InfoS("Successfully deleted all access keys", "userName", userName)
 	return nil
 }
 
