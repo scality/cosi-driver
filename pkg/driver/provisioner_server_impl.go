@@ -21,7 +21,6 @@ import (
 	"os"
 
 	s3types "github.com/aws/aws-sdk-go-v2/service/s3/types"
-	"github.com/aws/smithy-go"
 	iamclient "github.com/scality/cosi-driver/pkg/clients/iam"
 	s3client "github.com/scality/cosi-driver/pkg/clients/s3"
 	"github.com/scality/cosi-driver/pkg/util"
@@ -110,12 +109,11 @@ func (s *ProvisionerServer) DriverCreateBucket(ctx context.Context,
 	parameters := req.GetParameters()
 	service := "S3"
 
-	klog.V(3).InfoS("Received DriverCreateBucket request", "bucketName", bucketName)
-	klog.V(5).InfoS("Processing DriverCreateBucket", "bucketName", bucketName, "parameters", parameters)
+	klog.V(2).InfoS("Processing DriverCreateBucket request", "bucketName", bucketName)
 
 	client, s3Params, err := InitializeClient(ctx, s.Clientset, parameters, service)
 	if err != nil {
-		klog.ErrorS(err, "Failed to initialize object storage provider S3 client", "bucketName", bucketName)
+		klog.ErrorS(err, "Failed to initialize S3 client", "bucketName", bucketName)
 		return nil, status.Error(codes.Internal, "failed to initialize object storage provider S3 client")
 	}
 
@@ -125,29 +123,26 @@ func (s *ProvisionerServer) DriverCreateBucket(ctx context.Context,
 		return nil, status.Error(codes.InvalidArgument, "unsupported client type for bucket creation")
 	}
 
+	klog.V(3).InfoS("Creating bucket", "bucketName", bucketName)
 	err = s3Client.CreateBucket(ctx, bucketName, *s3Params)
 	if err != nil {
 		var bucketAlreadyExists *s3types.BucketAlreadyExists
 		var bucketOwnedByYou *s3types.BucketAlreadyOwnedByYou
 
 		if errors.As(err, &bucketAlreadyExists) {
-			klog.V(3).InfoS("Bucket already exists", "bucketName", bucketName)
+			klog.V(2).InfoS("Bucket already exists", "bucketName", bucketName)
 			return nil, status.Errorf(codes.AlreadyExists, "Bucket already exists: %s", bucketName)
 		} else if errors.As(err, &bucketOwnedByYou) {
-			klog.V(3).InfoS("A bucket with this name exists and is already owned by you: success", "bucketName", bucketName)
+			klog.V(2).InfoS("Bucket already exists and is owned by you", "bucketName", bucketName)
 			return &cosiapi.DriverCreateBucketResponse{
 				BucketId: bucketName,
 			}, nil
 		} else {
-			var opErr *smithy.OperationError
-			if errors.As(err, &opErr) {
-				klog.V(4).InfoS("AWS operation error", "operation", opErr.OperationName, "message", opErr.Err.Error(), "bucketName", bucketName)
-			}
 			klog.ErrorS(err, "Failed to create bucket", "bucketName", bucketName)
 			return nil, status.Error(codes.Internal, "Failed to create bucket")
 		}
 	}
-	klog.V(3).InfoS("Successfully created bucket", "bucketName", bucketName)
+	klog.V(2).InfoS("Successfully created bucket", "bucketName", bucketName)
 	return &cosiapi.DriverCreateBucketResponse{
 		BucketId: bucketName,
 	}, nil
@@ -166,15 +161,17 @@ func (s *ProvisionerServer) DriverDeleteBucket(ctx context.Context,
 
 	bucketName := req.GetBucketId()
 
-	klog.V(3).InfoS("Received DriverDeleteBucket request", "bucketName", bucketName)
+	klog.V(2).InfoS("Processing DriverDeleteBucket request", "bucketName", bucketName)
 	bucket, err := s.BucketClientset.ObjectstorageV1alpha1().Buckets().Get(ctx, bucketName, metav1.GetOptions{})
 	if err != nil {
-		klog.ErrorS(err, "Failed to get bucket object from kubernetes", "bucketName", bucketName)
+		klog.ErrorS(err, "Failed to fetch bucket object", "bucketName", bucketName)
 		return nil, status.Error(codes.Internal, "failed to get bucket object from kubernetes")
 	}
+	klog.V(5).InfoS("Successfully fetched Bucket object", "bucketName", bucket.Name, "parameters", bucket.Spec.Parameters)
+
 	client, _, err := InitializeClient(ctx, s.Clientset, bucket.Spec.Parameters, "S3")
 	if err != nil {
-		klog.ErrorS(err, "Failed to initialize object storage provider S3 client", "bucketName", bucketName)
+		klog.ErrorS(err, "Failed to initialize S3 client for bucket deletion", "bucketName", bucketName)
 		return nil, status.Error(codes.Internal, "failed to initialize object storage provider S3 client")
 	}
 
@@ -190,7 +187,7 @@ func (s *ProvisionerServer) DriverDeleteBucket(ctx context.Context,
 		return nil, status.Error(codes.Internal, "failed to delete bucket")
 	}
 
-	klog.V(3).InfoS("Successfully deleted bucket", "bucketName", bucketName)
+	klog.V(2).InfoS("Successfully deleted bucket", "bucketName", bucketName)
 	return &cosiapi.DriverDeleteBucketResponse{}, nil
 }
 
@@ -207,14 +204,12 @@ func (s *ProvisionerServer) DriverGrantBucketAccess(ctx context.Context,
 	userName := req.GetName()
 	parameters := req.GetParameters()
 
-	klog.V(3).InfoS("Received DriverGrantBucketAccess request", "bucketName", bucketName, "userName", userName)
-	klog.V(4).InfoS("Processing DriverGrantBucketAccess", "parameters", parameters)
-	klog.V(5).InfoS("Request DriverGrantBucketAccess", "req", req)
+	klog.V(2).InfoS("Processing DriverGrantBucketAccess request", "bucketName", bucketName, "userName", userName)
 
 	client, iamParams, err := InitializeClient(ctx, s.Clientset, parameters, "IAM")
 
 	if err != nil {
-		klog.ErrorS(err, "Failed to initialize object storage provider IAM client", "bucketName", bucketName, "userName", userName)
+		klog.ErrorS(err, "Failed to initialize IAM client", "bucketName", bucketName, "userName", userName)
 		return nil, status.Error(codes.Internal, "failed to initialize object storage provider IAM client")
 	}
 
@@ -224,13 +219,14 @@ func (s *ProvisionerServer) DriverGrantBucketAccess(ctx context.Context,
 		return nil, status.Error(codes.Internal, "failed to initialize object storage provider IAM client")
 	}
 
+	klog.V(2).InfoS("Granting bucket access", "bucketName", bucketName, "userName", userName)
 	userInfo, err := iamClient.CreateBucketAccess(ctx, userName, bucketName)
 	if err != nil {
 		klog.ErrorS(err, "Failed to create bucket access", "bucketName", bucketName, "userName", userName)
 		return nil, status.Error(codes.Internal, "failed to create bucket access")
 	}
 
-	klog.V(3).InfoS("Successfully created bucket access", "bucketName", bucketName, "userName", userName)
+	klog.V(2).InfoS("Successfully granted bucket access", "bucketName", bucketName, "userName", userName)
 	return &cosiapi.DriverGrantBucketAccessResponse{
 		AccountId: userName,
 		Credentials: map[string]*cosiapi.CredentialDetails{
@@ -260,14 +256,15 @@ func (s *ProvisionerServer) DriverRevokeBucketAccess(ctx context.Context,
 	bucketName := req.GetBucketId()
 	userName := req.GetAccountId()
 
-	klog.V(3).InfoS("Received DriverRevokeBucketAccess request", "bucketName", bucketName, "userName", userName)
+	klog.V(2).InfoS("Processing DriverRevokeBucketAccess request", "bucketName", bucketName, "userName", userName)
 
 	// Fetch the bucket to retrieve parameters
 	bucket, err := s.BucketClientset.ObjectstorageV1alpha1().Buckets().Get(ctx, bucketName, metav1.GetOptions{})
 	if err != nil {
-		klog.ErrorS(err, "Failed to get bucket object from kubernetes", "bucketName", bucketName)
+		klog.ErrorS(err, "Failed to fetch bucket object", "bucketName", bucketName)
 		return nil, status.Error(codes.Internal, "failed to get bucket object from kubernetes")
 	}
+	klog.V(5).InfoS("Successfully fetched Bucket object", "bucketName", bucket.Name, "parameters", bucket.Spec.Parameters)
 
 	client, _, err := InitializeClient(ctx, s.Clientset, bucket.Spec.Parameters, "IAM")
 	if err != nil {
@@ -277,22 +274,23 @@ func (s *ProvisionerServer) DriverRevokeBucketAccess(ctx context.Context,
 
 	iamClient, ok := client.(*iamclient.IAMClient)
 	if !ok {
-		klog.ErrorS(nil, "Unsupported client type for revoking bucket access", "bucketName", bucketName, "userName", userName)
+		klog.ErrorS(nil, "Unsupported client type for revoking bucket access", "bucketName", bucketName)
 		return nil, status.Error(codes.Internal, "unsupported client type for IAM operations")
 	}
 
+	klog.V(2).InfoS("Revoking bucket access", "bucketName", bucketName, "userName", userName)
 	err = iamClient.RevokeBucketAccess(ctx, userName, bucketName)
 	if err != nil {
 		klog.ErrorS(err, "Failed to revoke bucket access", "bucketName", bucketName, "userName", userName)
 		return nil, status.Error(codes.Internal, "failed to revoke bucket access")
 	}
 
-	klog.V(3).InfoS("Successfully revoked bucket access", "bucketName", bucketName, "userName", userName)
+	klog.V(2).InfoS("Successfully revoked bucket access", "bucketName", bucketName, "userName", userName)
 	return &cosiapi.DriverRevokeBucketAccessResponse{}, nil
 }
 
 func initializeObjectStorageClient(ctx context.Context, clientset kubernetes.Interface, parameters map[string]string, service string) (interface{}, *util.StorageClientParameters, error) {
-	klog.V(3).InfoS("Initializing object storage provider clients", "parameters", parameters)
+	klog.V(4).InfoS("Initializing object storage provider client", "service", service)
 
 	ospSecretName, namespace, err := FetchSecretInformation(parameters)
 	if err != nil {
@@ -300,16 +298,17 @@ func initializeObjectStorageClient(ctx context.Context, clientset kubernetes.Int
 		return nil, nil, err
 	}
 
-	klog.V(4).InfoS("Fetching secret", "secretName", ospSecretName, "namespace", namespace)
+	klog.V(4).InfoS("Fetching secret data", "secretName", ospSecretName, "namespace", namespace)
 	ospSecret, err := clientset.CoreV1().Secrets(namespace).Get(ctx, ospSecretName, metav1.GetOptions{})
 	if err != nil {
-		klog.ErrorS(err, "Failed to get object store user secret", "secretName", ospSecretName)
+		klog.ErrorS(err, "Failed to get object store user secret", "secretName", ospSecretName, "namespace", namespace)
 		return nil, nil, status.Error(codes.Internal, "failed to get object store user secret")
 	}
+	klog.V(4).InfoS("Successfully fetched object storage provider secret", "secretName", ospSecretName, "namespace", namespace)
 
 	storageClientParameters, err := FetchParameters(ospSecret.Data)
 	if err != nil {
-		klog.ErrorS(err, "Failed to fetch S3 parameters from secret", "secretName", ospSecretName)
+		klog.ErrorS(err, "Failed to fetch object storage provider parameters from secret", "secretName", ospSecretName)
 		return nil, nil, err
 	}
 
@@ -321,14 +320,14 @@ func initializeObjectStorageClient(ctx context.Context, clientset kubernetes.Int
 			klog.ErrorS(err, "Failed to initialize S3 client", "endpoint", storageClientParameters.Endpoint)
 			return nil, nil, status.Error(codes.Internal, "failed to initialize S3 client")
 		}
-		klog.V(3).InfoS("Successfully initialized S3 client", "endpoint", storageClientParameters.Endpoint)
+		klog.V(4).InfoS("Successfully initialized S3 client", "endpoint", storageClientParameters.Endpoint)
 	case "IAM":
 		client, err = iamclient.InitIAMClient(*storageClientParameters)
 		if err != nil {
 			klog.ErrorS(err, "Failed to initialize IAM client", "endpoint", storageClientParameters.Endpoint)
 			return nil, nil, status.Error(codes.Internal, "failed to initialize IAM client")
 		}
-		klog.V(3).InfoS("Successfully initialized IAM client", "endpoint", storageClientParameters.Endpoint)
+		klog.V(4).InfoS("Successfully initialized IAM client", "endpoint", storageClientParameters.Endpoint)
 	default:
 		klog.ErrorS(nil, "Unsupported object storage provider service", "service", service)
 		return nil, nil, status.Error(codes.Internal, "unsupported object storage provider service")
@@ -337,7 +336,7 @@ func initializeObjectStorageClient(ctx context.Context, clientset kubernetes.Int
 }
 
 func fetchObjectStorageProviderSecretInfo(parameters map[string]string) (string, string, error) {
-	klog.V(4).InfoS("Fetching object storage provider secret info", "parameters", parameters)
+	klog.V(4).InfoS("Validating object storage provider secret parameters", "parameters", parameters)
 
 	secretName := parameters["objectStorageSecretName"]
 	namespace := os.Getenv("POD_NAMESPACE")
@@ -349,12 +348,12 @@ func fetchObjectStorageProviderSecretInfo(parameters map[string]string) (string,
 		return "", "", status.Error(codes.InvalidArgument, "Object storage provider secret name and namespace are required")
 	}
 
-	klog.V(4).InfoS("Object storage provider secret info fetched", "secretName", secretName, "namespace", namespace)
+	klog.V(4).InfoS("Successfully validated object storage provider secret parameters", "secretName", secretName, "namespace", namespace)
 	return secretName, namespace, nil
 }
 
 func fetchS3Parameters(secretData map[string][]byte) (*util.StorageClientParameters, error) {
-	klog.V(5).InfoS("Fetching S3 parameters from secret")
+	klog.V(5).InfoS("Extracting object storage parameters from secret")
 
 	params := util.NewStorageClientParameters()
 
@@ -366,11 +365,11 @@ func fetchS3Parameters(secretData map[string][]byte) (*util.StorageClientParamet
 	if cert, exists := secretData["tlsCert"]; exists {
 		params.TLSCert = cert
 	} else {
-		klog.V(5).InfoS("TLS certificate is not provided, proceeding without it")
+		klog.V(5).InfoS("TLS certificate not provided, proceeding without it")
 	}
 
 	if err := params.Validate(); err != nil {
-		klog.ErrorS(err, "invalid object storage parameters")
+		klog.ErrorS(err, "Invalid object storage parameters")
 		return nil, err
 	}
 
@@ -379,6 +378,6 @@ func fetchS3Parameters(secretData map[string][]byte) (*util.StorageClientParamet
 		params.IAMEndpoint = string(value)
 		klog.V(5).InfoS("IAM endpoint specified", "iamEndpoint", params.IAMEndpoint)
 	}
-
+	klog.V(5).InfoS("Successfully validated object storage parameters", "endpoint", params.Endpoint, "region", params.Region)
 	return params, nil
 }
