@@ -129,16 +129,10 @@ func (s *ProvisionerServer) DriverCreateBucket(ctx context.Context,
 	err = s3Client.CreateBucket(ctx, bucketName, *s3Params)
 	if err != nil {
 		var bucketAlreadyExists *s3types.BucketAlreadyExists
-		var bucketOwnedByYou *s3types.BucketAlreadyOwnedByYou
 
 		if errors.As(err, &bucketAlreadyExists) {
 			klog.V(c.LvlInfo).InfoS("Bucket already exists", "bucketName", bucketName)
 			return nil, status.Errorf(codes.AlreadyExists, "Bucket already exists: %s", bucketName)
-		} else if errors.As(err, &bucketOwnedByYou) {
-			klog.V(c.LvlInfo).InfoS("Bucket already exists and is owned by you", "bucketName", bucketName)
-			return &cosiapi.DriverCreateBucketResponse{
-				BucketId: bucketName,
-			}, nil
 		} else {
 			klog.ErrorS(err, "Failed to create bucket", "bucketName", bucketName)
 			return nil, status.Error(codes.Internal, "Failed to create bucket")

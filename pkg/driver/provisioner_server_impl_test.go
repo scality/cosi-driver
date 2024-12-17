@@ -271,16 +271,6 @@ var _ = Describe("ProvisionerServer DriverCreateBucket", Ordered, func() {
 		Expect(status.Code(err)).To(Equal(codes.AlreadyExists))
 	})
 
-	It("should return success if bucket already owned by you", func(ctx SpecContext) {
-		mockS3.CreateBucketFunc = func(ctx context.Context, input *s3.CreateBucketInput, _ ...func(*s3.Options)) (*s3.CreateBucketOutput, error) {
-			return nil, &types.BucketAlreadyOwnedByYou{}
-		}
-
-		resp, err := provisioner.DriverCreateBucket(ctx, request)
-		Expect(err).To(BeNil())
-		Expect(resp.BucketId).To(Equal(testBucketName))
-	})
-
 	It("should return Internal error for other S3 errors", func(ctx SpecContext) {
 		mockS3.CreateBucketFunc = func(ctx context.Context, input *s3.CreateBucketInput, _ ...func(*s3.Options)) (*s3.CreateBucketOutput, error) {
 			return nil, errors.New("SomeOtherError")
