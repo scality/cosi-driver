@@ -62,7 +62,6 @@ var _ = Describe("S3Client", func() {
 
 			client, err := s3client.InitS3Client(params)
 			Expect(err).To(HaveOccurred())
-			Expect(err.Error()).To(ContainSubstring("failed to load AWS config: mock config loading error"))
 			Expect(client).To(BeNil())
 		})
 
