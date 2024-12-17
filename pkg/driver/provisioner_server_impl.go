@@ -153,98 +153,6 @@ func (s *ProvisionerServer) DriverCreateBucket(ctx context.Context,
 	}, nil
 }
 
-func initializeObjectStorageClient(ctx context.Context, clientset kubernetes.Interface, parameters map[string]string, service string) (interface{}, *util.StorageClientParameters, error) {
-	klog.V(3).InfoS("Initializing object storage provider clients", "parameters", parameters)
-
-	ospSecretName, namespace, err := FetchSecretInformation(parameters)
-	if err != nil {
-		klog.ErrorS(err, "Failed to fetch object storage provider secret info")
-		return nil, nil, err
-	}
-
-	klog.V(4).InfoS("Fetching secret", "secretName", ospSecretName, "namespace", namespace)
-	ospSecret, err := clientset.CoreV1().Secrets(namespace).Get(ctx, ospSecretName, metav1.GetOptions{})
-	if err != nil {
-		klog.ErrorS(err, "Failed to get object store user secret", "secretName", ospSecretName)
-		return nil, nil, status.Error(codes.Internal, "failed to get object store user secret")
-	}
-
-	storageClientParameters, err := FetchParameters(ospSecret.Data)
-	if err != nil {
-		klog.ErrorS(err, "Failed to fetch S3 parameters from secret", "secretName", ospSecretName)
-		return nil, nil, err
-	}
-
-	var client interface{}
-	switch service {
-	case "S3":
-		client, err = s3client.InitS3Client(*storageClientParameters)
-		if err != nil {
-			klog.ErrorS(err, "Failed to initialize S3 client", "endpoint", storageClientParameters.Endpoint)
-			return nil, nil, status.Error(codes.Internal, "failed to initialize S3 client")
-		}
-		klog.V(3).InfoS("Successfully initialized S3 client", "endpoint", storageClientParameters.Endpoint)
-	case "IAM":
-		client, err = iamclient.InitIAMClient(*storageClientParameters)
-		if err != nil {
-			klog.ErrorS(err, "Failed to initialize IAM client", "endpoint", storageClientParameters.Endpoint)
-			return nil, nil, status.Error(codes.Internal, "failed to initialize IAM client")
-		}
-		klog.V(3).InfoS("Successfully initialized IAM client", "endpoint", storageClientParameters.Endpoint)
-	default:
-		klog.ErrorS(nil, "Unsupported object storage provider service", "service", service)
-		return nil, nil, status.Error(codes.Internal, "unsupported object storage provider service")
-	}
-	return client, storageClientParameters, nil
-}
-
-func fetchObjectStorageProviderSecretInfo(parameters map[string]string) (string, string, error) {
-	klog.V(4).InfoS("Fetching object storage provider secret info", "parameters", parameters)
-
-	secretName := parameters["objectStorageSecretName"]
-	namespace := os.Getenv("POD_NAMESPACE")
-	if parameters["objectStorageSecretNamespace"] != "" {
-		namespace = parameters["objectStorageSecretNamespace"]
-	}
-	if secretName == "" || namespace == "" {
-		klog.ErrorS(nil, "Missing object storage provider secret name or namespace", "secretName", secretName, "namespace", namespace)
-		return "", "", status.Error(codes.InvalidArgument, "Object storage provider secret name and namespace are required")
-	}
-
-	klog.V(4).InfoS("Object storage provider secret info fetched", "secretName", secretName, "namespace", namespace)
-	return secretName, namespace, nil
-}
-
-func fetchS3Parameters(secretData map[string][]byte) (*util.StorageClientParameters, error) {
-	klog.V(5).InfoS("Fetching S3 parameters from secret")
-
-	params := util.NewStorageClientParameters()
-
-	params.AccessKeyID = string(secretData["accessKeyId"])
-	params.SecretAccessKey = string(secretData["secretAccessKey"])
-	params.Endpoint = string(secretData["endpoint"])
-	params.Region = string(secretData["region"])
-
-	if cert, exists := secretData["tlsCert"]; exists {
-		params.TLSCert = cert
-	} else {
-		klog.V(5).InfoS("TLS certificate is not provided, proceeding without it")
-	}
-
-	if err := params.Validate(); err != nil {
-		klog.ErrorS(err, "invalid object storage parameters")
-		return nil, err
-	}
-
-	params.IAMEndpoint = params.Endpoint
-	if value, exists := secretData["iamEndpoint"]; exists && len(value) > 0 {
-		params.IAMEndpoint = string(value)
-		klog.V(5).InfoS("IAM endpoint specified", "iamEndpoint", params.IAMEndpoint)
-	}
-
-	return params, nil
-}
-
 // DriverDeleteBucket is an idempotent method for deleting buckets
 // It is expected to delete the same bucket given a bucketId
 // If the bucket does not exist, then it MUST return no error
@@ -381,4 +289,96 @@ func (s *ProvisionerServer) DriverRevokeBucketAccess(ctx context.Context,
 
 	klog.V(3).InfoS("Successfully revoked bucket access", "bucketName", bucketName, "userName", userName)
 	return &cosiapi.DriverRevokeBucketAccessResponse{}, nil
+}
+
+func initializeObjectStorageClient(ctx context.Context, clientset kubernetes.Interface, parameters map[string]string, service string) (interface{}, *util.StorageClientParameters, error) {
+	klog.V(3).InfoS("Initializing object storage provider clients", "parameters", parameters)
+
+	ospSecretName, namespace, err := FetchSecretInformation(parameters)
+	if err != nil {
+		klog.ErrorS(err, "Failed to fetch object storage provider secret info")
+		return nil, nil, err
+	}
+
+	klog.V(4).InfoS("Fetching secret", "secretName", ospSecretName, "namespace", namespace)
+	ospSecret, err := clientset.CoreV1().Secrets(namespace).Get(ctx, ospSecretName, metav1.GetOptions{})
+	if err != nil {
+		klog.ErrorS(err, "Failed to get object store user secret", "secretName", ospSecretName)
+		return nil, nil, status.Error(codes.Internal, "failed to get object store user secret")
+	}
+
+	storageClientParameters, err := FetchParameters(ospSecret.Data)
+	if err != nil {
+		klog.ErrorS(err, "Failed to fetch S3 parameters from secret", "secretName", ospSecretName)
+		return nil, nil, err
+	}
+
+	var client interface{}
+	switch service {
+	case "S3":
+		client, err = s3client.InitS3Client(*storageClientParameters)
+		if err != nil {
+			klog.ErrorS(err, "Failed to initialize S3 client", "endpoint", storageClientParameters.Endpoint)
+			return nil, nil, status.Error(codes.Internal, "failed to initialize S3 client")
+		}
+		klog.V(3).InfoS("Successfully initialized S3 client", "endpoint", storageClientParameters.Endpoint)
+	case "IAM":
+		client, err = iamclient.InitIAMClient(*storageClientParameters)
+		if err != nil {
+			klog.ErrorS(err, "Failed to initialize IAM client", "endpoint", storageClientParameters.Endpoint)
+			return nil, nil, status.Error(codes.Internal, "failed to initialize IAM client")
+		}
+		klog.V(3).InfoS("Successfully initialized IAM client", "endpoint", storageClientParameters.Endpoint)
+	default:
+		klog.ErrorS(nil, "Unsupported object storage provider service", "service", service)
+		return nil, nil, status.Error(codes.Internal, "unsupported object storage provider service")
+	}
+	return client, storageClientParameters, nil
+}
+
+func fetchObjectStorageProviderSecretInfo(parameters map[string]string) (string, string, error) {
+	klog.V(4).InfoS("Fetching object storage provider secret info", "parameters", parameters)
+
+	secretName := parameters["objectStorageSecretName"]
+	namespace := os.Getenv("POD_NAMESPACE")
+	if parameters["objectStorageSecretNamespace"] != "" {
+		namespace = parameters["objectStorageSecretNamespace"]
+	}
+	if secretName == "" || namespace == "" {
+		klog.ErrorS(nil, "Missing object storage provider secret name or namespace", "secretName", secretName, "namespace", namespace)
+		return "", "", status.Error(codes.InvalidArgument, "Object storage provider secret name and namespace are required")
+	}
+
+	klog.V(4).InfoS("Object storage provider secret info fetched", "secretName", secretName, "namespace", namespace)
+	return secretName, namespace, nil
+}
+
+func fetchS3Parameters(secretData map[string][]byte) (*util.StorageClientParameters, error) {
+	klog.V(5).InfoS("Fetching S3 parameters from secret")
+
+	params := util.NewStorageClientParameters()
+
+	params.AccessKeyID = string(secretData["accessKeyId"])
+	params.SecretAccessKey = string(secretData["secretAccessKey"])
+	params.Endpoint = string(secretData["endpoint"])
+	params.Region = string(secretData["region"])
+
+	if cert, exists := secretData["tlsCert"]; exists {
+		params.TLSCert = cert
+	} else {
+		klog.V(5).InfoS("TLS certificate is not provided, proceeding without it")
+	}
+
+	if err := params.Validate(); err != nil {
+		klog.ErrorS(err, "invalid object storage parameters")
+		return nil, err
+	}
+
+	params.IAMEndpoint = params.Endpoint
+	if value, exists := secretData["iamEndpoint"]; exists && len(value) > 0 {
+		params.IAMEndpoint = string(value)
+		klog.V(5).InfoS("IAM endpoint specified", "iamEndpoint", params.IAMEndpoint)
+	}
+
+	return params, nil
 }
