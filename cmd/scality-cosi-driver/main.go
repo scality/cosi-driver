@@ -47,8 +47,8 @@ func main() {
 		}
 	}()
 
-	// Call the run function (defined in cmd.go)
 	if err := run(ctx); err != nil {
 		klog.ErrorS(err, "Scality COSI driver encountered an error, shutting down")
+		os.Exit(1)
 	}
 }
