@@ -2,7 +2,6 @@ package s3client
 
 import (
 	"context"
-	"fmt"
 	"net/http"
 	"os"
 	"strings"
@@ -14,7 +13,6 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/s3/types"
 	"github.com/aws/smithy-go/logging"
 	"github.com/scality/cosi-driver/pkg/util"
-	"k8s.io/klog/v2"
 )
 
 type S3API interface {
@@ -53,7 +51,7 @@ var InitS3Client = func(params util.StorageClientParameters) (*S3Client, error) 
 		config.WithLogger(logger),
 	)
 	if err != nil {
-		return nil, fmt.Errorf("failed to load AWS config: %w", err)
+		return nil, err
 	}
 
 	s3Client := s3.NewFromConfig(awsCfg, func(o *s3.Options) {
@@ -79,12 +77,7 @@ func (client *S3Client) CreateBucket(ctx context.Context, bucketName string, par
 	}
 
 	_, err := client.S3Service.CreateBucket(ctx, input)
-	if err != nil {
-		return err
-	}
-
-	klog.InfoS("Bucket creation operation succeeded", "name", bucketName, "region", params.Region)
-	return nil
+	return err
 }
 
 func (client *S3Client) DeleteBucket(ctx context.Context, bucketName string) error {

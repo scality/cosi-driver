@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"time"
 
+	c "github.com/scality/cosi-driver/pkg/constants"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"k8s.io/klog/v2"
@@ -62,7 +63,7 @@ func ConfigureTLSTransport(certData []byte) *http.Transport {
 		}
 		tlsSettings.RootCAs = caCertPool
 	} else {
-		klog.V(4).Info("No certificate data provided; skipping TLS verification")
+		klog.V(c.LvlDebug).Info("No certificate data provided; skipping TLS verification")
 		tlsSettings.InsecureSkipVerify = true
 	}
 

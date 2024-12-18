@@ -48,6 +48,10 @@ component_management:
       name: 🔧 Util Package
       paths:
         - pkg/util/**
+    - component_id: constants-package
+      name: 🔖 Constants Package
+      paths:
+        - pkg/constants/**
 
 flag_management:
   default_rules: # the rules that will be followed for any flag added, generally

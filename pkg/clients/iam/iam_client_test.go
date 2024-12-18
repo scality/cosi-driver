@@ -69,7 +69,6 @@ var _ = Describe("IAMClient", func() {
 
 			err := client.CreateUser(ctx, "test-user")
 			Expect(err).NotTo(BeNil())
-			Expect(err.Error()).To(ContainSubstring("failed to create IAM user test-user"))
 			Expect(err.Error()).To(ContainSubstring("simulated CreateUser failure"))
 		})
 
@@ -101,7 +100,6 @@ var _ = Describe("IAMClient", func() {
 
 			err := client.AttachS3WildcardInlinePolicy(ctx, "test-user", "test-bucket")
 			Expect(err).NotTo(BeNil())
-			Expect(err.Error()).To(ContainSubstring("failed to attach inline policy to IAM user test-user"))
 			Expect(err.Error()).To(ContainSubstring("simulated PutUserPolicy failure"))
 		})
 
@@ -136,7 +134,6 @@ var _ = Describe("IAMClient", func() {
 			output, err := client.CreateAccessKey(ctx, "test-user")
 			Expect(err).NotTo(BeNil())
 			Expect(output).To(BeNil())
-			Expect(err.Error()).To(ContainSubstring("failed to create access key for IAM user test-user"))
 			Expect(err.Error()).To(ContainSubstring("simulated CreateAccessKey failure"))
 		})
 	})
@@ -246,7 +243,6 @@ var _ = Describe("IAMClient", func() {
 
 			client, err := iamclient.InitIAMClient(params)
 			Expect(err).To(HaveOccurred())
-			Expect(err.Error()).To(ContainSubstring("failed to load AWS config: mock LoadAWSConfig failure"))
 			Expect(client).To(BeNil())
 		})
 
@@ -299,7 +295,6 @@ var _ = Describe("IAMClient", func() {
 
 			err := client.RevokeBucketAccess(ctx, "non-existent-user", "test-bucket")
 			Expect(err).NotTo(BeNil())
-			Expect(err.Error()).To(ContainSubstring("failed to get IAM user non-existent-user"))
 			Expect(errors.As(err, &noSuchEntityError)).To(BeTrue())
 		})
 

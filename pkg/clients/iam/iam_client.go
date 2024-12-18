@@ -13,6 +13,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/iam"
 	"github.com/aws/aws-sdk-go-v2/service/iam/types"
 	"github.com/aws/smithy-go/logging"
+	c "github.com/scality/cosi-driver/pkg/constants"
 	"github.com/scality/cosi-driver/pkg/util"
 	"k8s.io/klog/v2"
 )
@@ -48,6 +49,7 @@ var InitIAMClient = func(params util.StorageClientParameters) (*IAMClient, error
 	}
 
 	if strings.HasPrefix(params.IAMEndpoint, "https://") {
+		klog.V(c.LvlDebug).InfoS("Configuring TLS transport for IAM client", "IAMEndpoint", params.IAMEndpoint)
 		httpClient.Transport = util.ConfigureTLSTransport(params.TLSCert)
 	}
 
@@ -60,7 +62,7 @@ var InitIAMClient = func(params util.StorageClientParameters) (*IAMClient, error
 		config.WithLogger(logger),
 	)
 	if err != nil {
-		return nil, fmt.Errorf("failed to load AWS config: %w", err)
+		return nil, err
 	}
 
 	iamClient := iam.NewFromConfig(awsCfg, func(o *iam.Options) {
@@ -79,12 +81,7 @@ func (client *IAMClient) CreateUser(ctx context.Context, userName string) error 
 	}
 
 	_, err := client.IAMService.CreateUser(ctx, input)
-	if err != nil {
-		return fmt.Errorf("failed to create IAM user %s: %w", userName, err)
-	}
-
-	klog.InfoS("IAM user creation succeeded", "user", userName)
-	return nil
+	return err
 }
 
 // AttachS3WildcardInlinePolicy attaches an inline policy to an IAM user for a specific bucket.
@@ -110,12 +107,7 @@ func (client *IAMClient) AttachS3WildcardInlinePolicy(ctx context.Context, userN
 	}
 
 	_, err := client.IAMService.PutUserPolicy(ctx, input)
-	if err != nil {
-		return fmt.Errorf("failed to attach inline policy to IAM user %s: %w", userName, err)
-	}
-
-	klog.InfoS("Inline policy attachment succeeded", "user", userName, "policyName", bucketName)
-	return nil
+	return err
 }
 
 // CreateAccessKey generates access keys for an IAM user.
@@ -125,12 +117,7 @@ func (client *IAMClient) CreateAccessKey(ctx context.Context, userName string) (
 	}
 
 	output, err := client.IAMService.CreateAccessKey(ctx, input)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create access key for IAM user %s: %w", userName, err)
-	}
-
-	klog.InfoS("Access key creation succeeded", "user", userName)
-	return output, nil
+	return output, err
 }
 
 // CreateBucketAccess is a helper that combines user creation, policy attachment, and access key generation.
@@ -139,16 +126,19 @@ func (client *IAMClient) CreateBucketAccess(ctx context.Context, userName, bucke
 	if err != nil {
 		return nil, err
 	}
+	klog.V(c.LvlInfo).InfoS("Successfully created IAM user", "userName", userName)
 
 	err = client.AttachS3WildcardInlinePolicy(ctx, userName, bucketName)
 	if err != nil {
 		return nil, err
 	}
+	klog.V(c.LvlInfo).InfoS("Successfully attached inline policy", "userName", userName, "policyName", bucketName)
 
 	accessKeyOutput, err := client.CreateAccessKey(ctx, userName)
 	if err != nil {
 		return nil, err
 	}
+	klog.V(c.LvlInfo).InfoS("Successfully created access key", "userName", userName)
 
 	return accessKeyOutput, nil
 }
@@ -159,32 +149,31 @@ func (client *IAMClient) RevokeBucketAccess(ctx context.Context, userName, bucke
 	if err != nil {
 		return err
 	}
+	klog.V(c.LvlInfo).InfoS("Verified IAM user exists", "userName", userName)
 
 	err = client.DeleteInlinePolicy(ctx, userName, bucketName)
 	if err != nil {
 		return err
 	}
+	klog.V(c.LvlInfo).InfoS("Deleted inline policy if it existed", "userName", userName, "policyName", bucketName)
 
 	err = client.DeleteAllAccessKeys(ctx, userName)
 	if err != nil {
 		return err
 	}
+	klog.V(c.LvlInfo).InfoS("Deleted all access keys if any existed", "userName", userName)
 
 	err = client.DeleteUser(ctx, userName)
 	if err != nil {
 		return err
 	}
-
-	klog.InfoS("Successfully revoked bucket access", "user", userName, "bucket", bucketName)
+	klog.V(c.LvlInfo).InfoS("Deleted IAM user", "userName", userName)
 	return nil
 }
 
 func (client *IAMClient) EnsureUserExists(ctx context.Context, userName string) error {
 	_, err := client.IAMService.GetUser(ctx, &iam.GetUserInput{UserName: &userName})
-	if err != nil {
-		return fmt.Errorf("failed to get IAM user %s: %w", userName, err)
-	}
-	return nil
+	return err
 }
 
 func (client *IAMClient) DeleteInlinePolicy(ctx context.Context, userName, bucketName string) error {
@@ -195,36 +184,37 @@ func (client *IAMClient) DeleteInlinePolicy(ctx context.Context, userName, bucke
 	if err != nil {
 		var noSuchEntityErr *types.NoSuchEntityException
 		if errors.As(err, &noSuchEntityErr) {
-			klog.V(3).InfoS("Inline policy does not exist, skipping deletion", "user", userName, "policyName", bucketName)
+			klog.V(c.LvlDebug).InfoS("Inline policy does not exist, skipping deletion", "user", userName, "policyName", bucketName)
 			return nil
 		}
-		return fmt.Errorf("failed to delete inline policy %s for user %s: %w", bucketName, userName, err)
+		return err
 	}
-	klog.InfoS("Successfully deleted inline policy", "user", userName, "policyName", bucketName)
+	klog.V(c.LvlDebug).InfoS("Successfully deleted inline policy", "userName", userName, "policyName", bucketName)
 	return nil
 }
 
 func (client *IAMClient) DeleteAllAccessKeys(ctx context.Context, userName string) error {
 	listKeysOutput, err := client.IAMService.ListAccessKeys(ctx, &iam.ListAccessKeysInput{UserName: &userName})
 	if err != nil {
-		return fmt.Errorf("failed to list access keys for IAM user %s: %w", userName, err)
+		return err
 	}
 	var noSuchEntityErr *types.NoSuchEntityException
 	for _, key := range listKeysOutput.AccessKeyMetadata {
+		klog.V(c.LvlTrace).InfoS("Deleting access key", "userName", userName, "accessKeyId", *key.AccessKeyId)
 		_, err := client.IAMService.DeleteAccessKey(ctx, &iam.DeleteAccessKeyInput{
 			UserName:    &userName,
 			AccessKeyId: key.AccessKeyId,
 		})
 		if err != nil {
 			if errors.As(err, &noSuchEntityErr) {
-				klog.V(5).InfoS("Access key does not exist, skipping deletion", "user", userName, "accessKeyId", *key.AccessKeyId)
+				klog.V(c.LvlTrace).InfoS("Access key does not exist, skipping deletion", "userName", userName, "accessKeyId", *key.AccessKeyId)
 				continue
 			}
-			return fmt.Errorf("failed to delete access key %s for IAM user %s: %w", *key.AccessKeyId, userName, err)
+			return err
 		}
-		klog.V(5).InfoS("Successfully deleted access key", "user", userName, "accessKeyId", *key.AccessKeyId)
+		klog.V(c.LvlTrace).InfoS("Successfully deleted access key", "userName", userName, "accessKeyId", *key.AccessKeyId)
 	}
-	klog.InfoS("Successfully deleted all access keys", "user", userName)
+	klog.V(c.LvlDebug).InfoS("Successfully deleted all access keys", "userName", userName)
 	return nil
 }
 
@@ -236,8 +226,7 @@ func (client *IAMClient) DeleteUser(ctx context.Context, userName string) error 
 			klog.InfoS("IAM user does not exist, skipping deletion", "user", userName)
 			return nil // User doesn't exist, nothing to delete
 		}
-		return fmt.Errorf("failed to delete IAM user %s: %w", userName, err)
+		return err
 	}
-	klog.InfoS("Successfully deleted IAM user", "user", userName)
 	return nil
 }
