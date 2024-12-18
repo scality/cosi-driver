@@ -2,7 +2,7 @@
 set -e
 
 # Define log file for debugging
-LOG_FILE=".github/e2e_tests/artifacts/logs/e2e_tests/bucket_creation_test.log"
+LOG_FILE=".github/e2e_tests/artifacts/logs/e2e_tests/greenfield.log"
 mkdir -p "$(dirname "$LOG_FILE")"  # Ensure the log directory exists
 
 CONTAINER_NAME=s3_and_iam_deployment-iam-1
