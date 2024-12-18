@@ -106,6 +106,7 @@ func InitProvisionerServer(provisioner string) (cosiapi.ProvisionerServer, error
 //	non-nil err -           Internal error                                [requeue'd with exponential backoff]
 func (s *ProvisionerServer) DriverCreateBucket(ctx context.Context,
 	req *cosiapi.DriverCreateBucketRequest) (*cosiapi.DriverCreateBucketResponse, error) {
+	klog.V(c.LvlTrace).InfoS("DriverCreateBucket request received", "request", req)
 	bucketName := req.GetName()
 	parameters := req.GetParameters()
 	service := "S3"
@@ -159,6 +160,7 @@ func (s *ProvisionerServer) DriverCreateBucket(ctx context.Context,
 //	non-nil err -           Internal error                                [requeue'd with exponential backoff]
 func (s *ProvisionerServer) DriverDeleteBucket(ctx context.Context,
 	req *cosiapi.DriverDeleteBucketRequest) (*cosiapi.DriverDeleteBucketResponse, error) {
+	klog.V(c.LvlTrace).InfoS("DriverDeleteBucket request received", "request", req)
 
 	bucketName := req.GetBucketId()
 
@@ -201,6 +203,8 @@ func (s *ProvisionerServer) DriverDeleteBucket(ctx context.Context,
 //	non-nil err -           Internal error                                [requeue'd with exponential backoff]
 func (s *ProvisionerServer) DriverGrantBucketAccess(ctx context.Context,
 	req *cosiapi.DriverGrantBucketAccessRequest) (*cosiapi.DriverGrantBucketAccessResponse, error) {
+	klog.V(c.LvlTrace).InfoS("DriverGrantBucketAccess request received", "request", req)
+
 	bucketName := req.GetBucketId()
 	userName := req.GetName()
 	parameters := req.GetParameters()
@@ -253,6 +257,7 @@ func (s *ProvisionerServer) DriverGrantBucketAccess(ctx context.Context,
 //	non-nil err -           Internal error                                [requeue'd with exponential backoff]
 func (s *ProvisionerServer) DriverRevokeBucketAccess(ctx context.Context,
 	req *cosiapi.DriverRevokeBucketAccessRequest) (*cosiapi.DriverRevokeBucketAccessResponse, error) {
+	klog.V(c.LvlTrace).InfoS("DriverRevokeBucketAccess request received", "request", req)
 
 	bucketName := req.GetBucketId()
 	userName := req.GetAccountId()
