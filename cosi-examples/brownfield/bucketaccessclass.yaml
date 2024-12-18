@@ -1,0 +1,10 @@
+kind: BucketAccessClass
+apiVersion: objectstorage.k8s.io/v1alpha1
+metadata:
+  name: brownfield-bucket-access-class
+  namespace: scality-object-storage
+driverName: cosi.scality.com
+authenticationType: KEY
+parameters:
+  objectStorageSecretName: s3-secret-for-cosi
+  objectStorageSecretNamespace: default
