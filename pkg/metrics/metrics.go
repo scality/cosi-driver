@@ -8,7 +8,6 @@ import (
 	"k8s.io/klog/v2"
 )
 
-// Define custom metrics if needed
 var (
 	RequestsTotal = prometheus.NewCounterVec(
 		prometheus.CounterOpts{
