@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/credentials"
@@ -14,6 +15,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/iam/types"
 	"github.com/aws/smithy-go/logging"
 	c "github.com/scality/cosi-driver/pkg/constants"
+	"github.com/scality/cosi-driver/pkg/metrics"
 	"github.com/scality/cosi-driver/pkg/util"
 	"k8s.io/klog/v2"
 )
@@ -76,16 +78,29 @@ var InitIAMClient = func(params util.StorageClientParameters) (*IAMClient, error
 
 // CreateUser creates an IAM user with the specified name.
 func (client *IAMClient) CreateUser(ctx context.Context, userName string) error {
+	method := "CreateUser"
+	start := time.Now()
+
 	input := &iam.CreateUserInput{
 		UserName: &userName,
 	}
-
 	_, err := client.IAMService.CreateUser(ctx, input)
+	duration := time.Since(start).Seconds()
+	status := c.StatusSuccess
+	if err != nil {
+		status = c.StatusError
+	}
+
+	metrics.IAMRequestsTotal.WithLabelValues(method, status).Inc()
+	metrics.IAMRequestDuration.WithLabelValues(method, status).Observe(duration)
 	return err
 }
 
 // AttachS3WildcardInlinePolicy attaches an inline policy to an IAM user for a specific bucket.
 func (client *IAMClient) AttachS3WildcardInlinePolicy(ctx context.Context, userName, bucketName string) error {
+	method := "PutUserPolicy"
+	start := time.Now()
+
 	policyDocument := fmt.Sprintf(`{
 		"Version": "2012-10-17",
 		"Statement": [
@@ -107,16 +122,35 @@ func (client *IAMClient) AttachS3WildcardInlinePolicy(ctx context.Context, userN
 	}
 
 	_, err := client.IAMService.PutUserPolicy(ctx, input)
+	duration := time.Since(start).Seconds()
+	status := c.StatusSuccess
+	if err != nil {
+		status = c.StatusError
+	}
+
+	metrics.IAMRequestsTotal.WithLabelValues(method, status).Inc()
+	metrics.IAMRequestDuration.WithLabelValues(method, status).Observe(duration)
 	return err
 }
 
 // CreateAccessKey generates access keys for an IAM user.
 func (client *IAMClient) CreateAccessKey(ctx context.Context, userName string) (*iam.CreateAccessKeyOutput, error) {
+	method := "CreateAccessKey"
+	start := time.Now()
+
 	input := &iam.CreateAccessKeyInput{
 		UserName: &userName,
 	}
 
 	output, err := client.IAMService.CreateAccessKey(ctx, input)
+	duration := time.Since(start).Seconds()
+	status := c.StatusSuccess
+	if err != nil {
+		status = c.StatusError
+	}
+
+	metrics.IAMRequestsTotal.WithLabelValues(method, status).Inc()
+	metrics.IAMRequestDuration.WithLabelValues(method, status).Observe(duration)
 	return output, err
 }
 
@@ -172,16 +206,36 @@ func (client *IAMClient) RevokeBucketAccess(ctx context.Context, userName, bucke
 }
 
 func (client *IAMClient) EnsureUserExists(ctx context.Context, userName string) error {
+	method := "GetUser"
+	start := time.Now()
+
 	_, err := client.IAMService.GetUser(ctx, &iam.GetUserInput{UserName: &userName})
+	duration := time.Since(start).Seconds()
+	status := c.StatusSuccess
+	if err != nil {
+		status = c.StatusError
+	}
+
+	metrics.IAMRequestsTotal.WithLabelValues(method, status).Inc()
+	metrics.IAMRequestDuration.WithLabelValues(method, status).Observe(duration)
 	return err
 }
 
 func (client *IAMClient) DeleteInlinePolicy(ctx context.Context, userName, bucketName string) error {
+	method := "DeleteInlinePolicy"
+	start := time.Now()
+
 	_, err := client.IAMService.DeleteUserPolicy(ctx, &iam.DeleteUserPolicyInput{
 		UserName:   &userName,
 		PolicyName: &bucketName,
 	})
+	duration := time.Since(start).Seconds()
+
+	status := c.StatusSuccess
 	if err != nil {
+		status = c.StatusError
+		metrics.IAMRequestsTotal.WithLabelValues(method, status).Inc()
+		metrics.IAMRequestDuration.WithLabelValues(method, status).Observe(duration)
 		var noSuchEntityErr *types.NoSuchEntityException
 		if errors.As(err, &noSuchEntityErr) {
 			klog.V(c.LvlDebug).InfoS("Inline policy does not exist, skipping deletion", "user", userName, "policyName", bucketName)
@@ -189,29 +243,53 @@ func (client *IAMClient) DeleteInlinePolicy(ctx context.Context, userName, bucke
 		}
 		return err
 	}
+
+	metrics.IAMRequestsTotal.WithLabelValues(method, status).Inc()
+	metrics.IAMRequestDuration.WithLabelValues(method, status).Observe(duration)
 	klog.V(c.LvlDebug).InfoS("Successfully deleted inline policy", "userName", userName, "policyName", bucketName)
 	return nil
 }
 
 func (client *IAMClient) DeleteAllAccessKeys(ctx context.Context, userName string) error {
+	listMethod := "ListAccessKeys"
+	listStart := time.Now()
 	listKeysOutput, err := client.IAMService.ListAccessKeys(ctx, &iam.ListAccessKeysInput{UserName: &userName})
+	listDuration := time.Since(listStart).Seconds()
+
+	listStatus := c.StatusSuccess
 	if err != nil {
+		listStatus = c.StatusError
+		metrics.IAMRequestsTotal.WithLabelValues(listMethod, listStatus).Inc()
+		metrics.IAMRequestDuration.WithLabelValues(listMethod, listStatus).Observe(listDuration)
 		return err
 	}
+	metrics.IAMRequestsTotal.WithLabelValues(listMethod, listStatus).Inc()
+	metrics.IAMRequestDuration.WithLabelValues(listMethod, listStatus).Observe(listDuration)
+
+	deleteKeyMethod := "DeleteAccessKey"
 	var noSuchEntityErr *types.NoSuchEntityException
 	for _, key := range listKeysOutput.AccessKeyMetadata {
 		klog.V(c.LvlTrace).InfoS("Deleting access key", "userName", userName, "accessKeyId", *key.AccessKeyId)
+		deleteStart := time.Now()
 		_, err := client.IAMService.DeleteAccessKey(ctx, &iam.DeleteAccessKeyInput{
 			UserName:    &userName,
 			AccessKeyId: key.AccessKeyId,
 		})
+		deleteDuration := time.Since(deleteStart).Seconds()
+
+		deleteStatus := c.StatusSuccess
 		if err != nil {
+			deleteStatus = c.StatusError
+			metrics.IAMRequestsTotal.WithLabelValues(deleteKeyMethod, deleteStatus).Inc()
+			metrics.IAMRequestDuration.WithLabelValues(deleteKeyMethod, deleteStatus).Observe(deleteDuration)
 			if errors.As(err, &noSuchEntityErr) {
 				klog.V(c.LvlTrace).InfoS("Access key does not exist, skipping deletion", "userName", userName, "accessKeyId", *key.AccessKeyId)
 				continue
 			}
 			return err
 		}
+		metrics.IAMRequestsTotal.WithLabelValues(deleteKeyMethod, deleteStatus).Inc()
+		metrics.IAMRequestDuration.WithLabelValues(deleteKeyMethod, deleteStatus).Observe(deleteDuration)
 		klog.V(c.LvlTrace).InfoS("Successfully deleted access key", "userName", userName, "accessKeyId", *key.AccessKeyId)
 	}
 	klog.V(c.LvlDebug).InfoS("Successfully deleted all access keys", "userName", userName)
@@ -219,14 +297,30 @@ func (client *IAMClient) DeleteAllAccessKeys(ctx context.Context, userName strin
 }
 
 func (client *IAMClient) DeleteUser(ctx context.Context, userName string) error {
+	method := "DeleteUser"
+	start := time.Now()
+
 	_, err := client.IAMService.DeleteUser(ctx, &iam.DeleteUserInput{UserName: &userName})
+	duration := time.Since(start).Seconds()
+
+	status := c.StatusSuccess
 	if err != nil {
+		status = c.StatusError
+		metrics.IAMRequestsTotal.WithLabelValues(method, status).Inc()
+		metrics.IAMRequestDuration.WithLabelValues(method, status).Observe(duration)
+
 		var noSuchEntityErr *types.NoSuchEntityException
 		if errors.As(err, &noSuchEntityErr) {
+			// For scenarios where the user has been manually deleted between the GetUser and DeleteUser requests.
+			// Since the IAM endpoint and existence check were correct earlier, it is safe to skip deletion
+			// and treat this as a non-critical error.
 			klog.InfoS("IAM user does not exist, skipping deletion", "user", userName)
-			return nil // User doesn't exist, nothing to delete
+			return nil
 		}
 		return err
 	}
+
+	metrics.IAMRequestsTotal.WithLabelValues(method, status).Inc()
+	metrics.IAMRequestDuration.WithLabelValues(method, status).Observe(duration)
 	return nil
 }

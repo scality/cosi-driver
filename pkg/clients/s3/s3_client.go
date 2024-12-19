@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
@@ -12,6 +13,8 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/aws/aws-sdk-go-v2/service/s3/types"
 	"github.com/aws/smithy-go/logging"
+	c "github.com/scality/cosi-driver/pkg/constants"
+	"github.com/scality/cosi-driver/pkg/metrics"
 	"github.com/scality/cosi-driver/pkg/util"
 )
 
@@ -65,6 +68,8 @@ var InitS3Client = func(params util.StorageClientParameters) (*S3Client, error) 
 }
 
 func (client *S3Client) CreateBucket(ctx context.Context, bucketName string, params util.StorageClientParameters) error {
+	method := "CreateBucket"
+	start := time.Now()
 
 	input := &s3.CreateBucketInput{
 		Bucket: &bucketName,
@@ -77,12 +82,33 @@ func (client *S3Client) CreateBucket(ctx context.Context, bucketName string, par
 	}
 
 	_, err := client.S3Service.CreateBucket(ctx, input)
+
+	duration := time.Since(start).Seconds()
+	status := c.StatusSuccess
+	if err != nil {
+		status = c.StatusError
+	}
+
+	metrics.S3RequestsTotal.WithLabelValues(method, status).Inc()
+	metrics.S3RequestDuration.WithLabelValues(method, status).Observe(duration)
 	return err
 }
 
 func (client *S3Client) DeleteBucket(ctx context.Context, bucketName string) error {
+	method := "DeleteBucket"
+	start := time.Now()
+
 	_, err := client.S3Service.DeleteBucket(ctx, &s3.DeleteBucketInput{
 		Bucket: &bucketName,
 	})
+	duration := time.Since(start).Seconds()
+
+	status := c.StatusSuccess
+	if err != nil {
+		status = c.StatusError
+	}
+
+	metrics.S3RequestsTotal.WithLabelValues(method, status).Inc()
+	metrics.S3RequestDuration.WithLabelValues(method, status).Observe(duration)
 	return err
 }

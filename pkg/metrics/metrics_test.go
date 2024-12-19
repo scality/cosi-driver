@@ -253,3 +253,94 @@ var _ = Describe("Metrics Server Functions", func() {
 		})
 	})
 })
+
+var _ = Describe("S3 and IAM metrics", func() {
+	var (
+		server   *http.Server
+		listener net.Listener
+		addr     string
+	)
+
+	BeforeEach(func() {
+		var err error
+		listener, err = net.Listen("tcp", "127.0.0.1:0")
+		Expect(err).NotTo(HaveOccurred())
+
+		server, err = metrics.StartMetricsServerWithListener(listener)
+		Expect(err).NotTo(HaveOccurred())
+
+		addr = listener.Addr().String()
+	})
+
+	AfterEach(func() {
+		if server != nil {
+			_ = server.Close()
+		}
+		if listener != nil {
+			_ = listener.Close()
+		}
+	})
+
+	It("should correctly increment S3 metrics", func() {
+		metrics.S3RequestsTotal.WithLabelValues("CreateBucket", "success").Inc()
+		metrics.S3RequestsTotal.WithLabelValues("CreateBucket", "error").Add(2)
+
+		resp, err := http.Get(fmt.Sprintf("http://%s%s", addr, constants.MetricsPath))
+		Expect(err).NotTo(HaveOccurred())
+		Expect(resp.StatusCode).To(Equal(http.StatusOK))
+
+		body, err := io.ReadAll(resp.Body)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(resp.Body.Close()).To(Succeed())
+		Expect(string(body)).To(ContainSubstring(`s3_requests_total{method="CreateBucket",status="success"} 1`))
+		Expect(string(body)).To(ContainSubstring(`s3_requests_total{method="CreateBucket",status="error"} 2`))
+	})
+
+	It("should correctly record IAM request durations", func() {
+		timer := prometheus.NewTimer(metrics.IAMRequestDuration.WithLabelValues("CreateUser", "success"))
+		time.Sleep(50 * time.Millisecond)
+		timer.ObserveDuration()
+
+		resp, err := http.Get(fmt.Sprintf("http://%s%s", addr, constants.MetricsPath))
+		Expect(err).NotTo(HaveOccurred())
+		Expect(resp.StatusCode).To(Equal(http.StatusOK))
+
+		body, err := io.ReadAll(resp.Body)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(resp.Body.Close()).To(Succeed())
+		Expect(string(body)).To(ContainSubstring("iam_request_duration_seconds_bucket"))
+		Expect(string(body)).To(ContainSubstring("iam_request_duration_seconds_sum"))
+	})
+
+	It("should handle invalid metric labels gracefully", func() {
+		Expect(func() {
+			metrics.S3RequestsTotal.WithLabelValues("InvalidMethod", "").Inc()
+		}).NotTo(Panic())
+	})
+
+	It("should return 404 for invalid metrics paths", func() {
+		resp, err := http.Get(fmt.Sprintf("http://%s/invalid-path", addr))
+		Expect(err).NotTo(HaveOccurred())
+		Expect(resp.StatusCode).To(Equal(http.StatusNotFound))
+		Expect(resp.Body.Close()).To(Succeed())
+	})
+
+	It("should support concurrent requests to the metrics endpoint", func() {
+		const numRequests = 10
+		done := make(chan bool, numRequests)
+
+		for i := 0; i < numRequests; i++ {
+			go func() {
+				resp, err := http.Get(fmt.Sprintf("http://%s%s", addr, constants.MetricsPath))
+				Expect(err).NotTo(HaveOccurred())
+				Expect(resp.StatusCode).To(Equal(http.StatusOK))
+				Expect(resp.Body.Close()).To(Succeed())
+				done <- true
+			}()
+		}
+
+		for i := 0; i < numRequests; i++ {
+			<-done
+		}
+	})
+})
