@@ -13,6 +13,12 @@ const (
 
 // Service initialization constants
 const (
-	MetricsPath = "/metrics"
-	MetricsAddress = ":8080"
+	MetricsPath    = "/metrics" // Path to expose Prometheus metrics
+	MetricsAddress = ":8080"    // Default address to bind the metrics server
+)
+
+// Prometheus metrics status values
+const (
+	StatusSuccess = "success" // Status value for successful requests
+	StatusError   = "error"   // Status value for failed requests
 )
