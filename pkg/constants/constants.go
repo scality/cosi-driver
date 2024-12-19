@@ -14,4 +14,5 @@ const (
 // Service initialization constants
 const (
 	MetricsPath = "/metrics"
+	MetricsAddress = ":8080"
 )
