@@ -104,6 +104,10 @@ jobs:
       run: |
         .github/scripts/e2e_tests_brownfield_use_case.sh
 
+    - name: E2E tests for brownfield use case using kustomize
+      run: |
+        .github/scripts/e2e_tests_metrics_service.sh
+
     - name: "Delay completion"
       if: ${{ github.event_name == 'workflow_dispatch' && inputs.debug_enabled }}
       uses: scality/actions/action-delay-job-completion@1.11.0
