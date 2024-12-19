@@ -15,6 +15,7 @@ resources:
   - ../../base/namespace.yaml
   - ../../base/serviceaccount.yaml
   - ../../base/rbac.yaml
+  - ../../metrics-service.yaml
 
 commonLabels:
   app.kubernetes.io/version: main

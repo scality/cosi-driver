@@ -8,3 +8,4 @@ resources:
   - serviceaccount.yaml
   - rbac.yaml
   - deployment.yaml
+  - metrics-service.yaml
