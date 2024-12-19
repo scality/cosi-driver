@@ -20,6 +20,7 @@ import (
 	"net"
 	"net/url"
 
+	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
 	"google.golang.org/grpc"
 	"k8s.io/klog/v2"
 	cosi "sigs.k8s.io/container-object-storage-interface-spec"
@@ -49,9 +50,20 @@ func (s *COSIProvisionerServer) Run(ctx context.Context) error {
 		return fmt.Errorf("failed to start server: %w", err)
 	}
 	defer listener.Close()
+
+	// Add Prometheus gRPC interceptors for unary and streaming RPCs
+	s.listenOpts = append(s.listenOpts,
+		grpc.UnaryInterceptor(grpc_prometheus.UnaryServerInterceptor),
+		grpc.StreamInterceptor(grpc_prometheus.StreamServerInterceptor),
+	)
+
 	server := grpc.NewServer(s.listenOpts...)
 	cosi.RegisterIdentityServer(server, s.identityServer)
 	cosi.RegisterProvisionerServer(server, s.provisionerServer)
+
+	grpc_prometheus.Register(server)
+	grpc_prometheus.EnableHandlingTimeHistogram()
+
 	errChan := make(chan error, 1)
 	go func() {
 		errChan <- server.Serve(listener)
