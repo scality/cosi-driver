@@ -113,3 +113,7 @@ log_and_run kubectl delete -f cosi-examples/brownfield/bucketaccessclass.yaml
 log_and_run kubectl delete -f cosi-examples/brownfield/bucketclaim.yaml
 log_and_run kubectl delete -f cosi-examples/brownfield/bucketclass.yaml
 
+# Check if the bucket is not deleted and Retain policy is respected
+log_and_run echo "Checking if bucket $BUCKET_NAME exists"
+aws --endpoint-url "$S3_ENDPOINT" s3api head-bucket --bucket "$BUCKET_NAME"
+log_and_run echo "Bucket $BUCKET_NAME has been retained!"
