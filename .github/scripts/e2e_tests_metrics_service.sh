@@ -24,7 +24,9 @@ log_and_run() {
   "$@" 2>&1 | tee -a "$LOG_FILE"
 }
 
-kubectl port-forward svc/$SERVICE -n $NAMESPACE $LOCAL_PORT:$TARGET_PORT &
+log_and_run kubectl describe svc scality-cosi-driver-metrics -n scality-object-storage
+
+log_and_run kubectl port-forward svc/scality-cosi-driver-metrics -n scality-object-storage 8080:8080 &
 PORT_FORWARD_PID=$!
 
 if ps -p $PORT_FORWARD_PID > /dev/null; then
