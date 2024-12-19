@@ -7,6 +7,10 @@ metadata:
     app.kubernetes.io/instance: {{ .Release.Name }}
     app.kubernetes.io/part-of: container-object-storage-interface
     app.kubernetes.io/managed-by: {{ .Release.Service }}
+  annotations:
+      prometheus.io/scrape: "true"
+      prometheus.io/port: "8080"
+      prometheus.io/path: "/metrics"
 
 spec:
   replicas: {{ .Values.replicaCount }}
@@ -27,6 +31,7 @@ spec:
           args:
             - "--driver-prefix=cosi"
             - "--v={{ .Values.logLevels.driver }}"
+            - "--metrics-address=0.0.0.0:8080"
           resources:
             limits:
               cpu: {{ .Values.resources.limits.cpu }}
