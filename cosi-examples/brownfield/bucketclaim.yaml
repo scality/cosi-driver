@@ -1,0 +1,10 @@
+apiVersion: objectstorage.k8s.io/v1alpha1
+kind: BucketClaim
+metadata:
+  name: brownfield-bucket-claim
+  namespace: scality-object-storage
+spec:
+  bucketClassName: brownfield-bucket-class
+  existingBucketName: brownfield-bucket # name of Bucket object
+  protocols:
+    - S3

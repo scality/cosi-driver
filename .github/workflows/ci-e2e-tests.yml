@@ -96,10 +96,13 @@ jobs:
         docker save "$CLOUDSERVER_IMAGE" -o /tmp/.docker_cache/cloudserver_image.tar
       shell: bash
 
-    - name: E2E tests for COSI driver using kustomize
+    - name: E2E tests for greenfield use case using kustomize
       run: |
-        pwd
-        .github/scripts/e2e_tests.sh
+        .github/scripts/e2e_tests_greenfield_use_case.sh
+
+    - name: E2E tests for brownfield use case using kustomize
+      run: |
+        .github/scripts/e2e_tests_brownfield_use_case.sh
 
     - name: "Delay completion"
       if: ${{ github.event_name == 'workflow_dispatch' && inputs.debug_enabled }}
