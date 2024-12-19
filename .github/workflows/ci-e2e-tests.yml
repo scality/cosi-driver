@@ -104,7 +104,7 @@ jobs:
       run: |
         .github/scripts/e2e_tests_brownfield_use_case.sh
 
-    - name: E2E tests for brownfield use case using kustomize
+    - name: E2E tests for metrics service using kustomize
       run: |
         .github/scripts/e2e_tests_metrics_service.sh
 
