@@ -15,6 +15,10 @@ spec:
         app.kubernetes.io/component: driver
         app.kubernetes.io/version: main
         app.kubernetes.io/managed-by: kustomize
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8080"
+        prometheus.io/path: "/metrics"
     spec:
       serviceAccountName: scality-object-storage-provisioner
       containers:
@@ -24,6 +28,7 @@ spec:
           args:
             - "--driver-prefix=cosi"
             - "--v=$(COSI_DRIVER_LOG_LEVEL)"
+            - "--metrics-address=0.0.0.0:8080"
           volumeMounts:
             - mountPath: /var/lib/cosi
               name: socket
