@@ -2,7 +2,7 @@
 set -e
 
 # Define log file for debugging
-LOG_FILE=".github/e2e_tests/artifacts/logs/e2e_tests/bucket_creation_test.log"
+LOG_FILE=".github/e2e_tests/artifacts/logs/e2e_tests/greenfield.log"
 mkdir -p "$(dirname "$LOG_FILE")"  # Ensure the log directory exists
 
 CONTAINER_NAME=s3_and_iam_deployment-iam-1
@@ -83,19 +83,19 @@ EOF
 
 # Step 4: Apply Bucket Class
 log_and_run echo "Applying Bucket Class..."
-log_and_run kubectl apply -f cosi-examples/bucketclass.yaml
+log_and_run kubectl apply -f cosi-examples/greenfield/bucketclass.yaml
 
 # Step 5: Apply Bucket Claim
 log_and_run echo "Applying Bucket Claim..."
-log_and_run kubectl apply -f cosi-examples/bucketclaim.yaml
+log_and_run kubectl apply -f cosi-examples/greenfield/bucketclaim.yaml
 
 # Step 6: Apply Bucket Access Class
 log_and_run echo "Applying Bucket Access Class..."
-log_and_run kubectl apply -f cosi-examples/bucketaccessclass.yaml
+log_and_run kubectl apply -f cosi-examples/greenfield/bucketaccessclass.yaml
 
 # Step 7: Apply Bucket Access
 log_and_run echo "Applying Bucket Access..."
-log_and_run kubectl apply -f cosi-examples/bucketaccess.yaml
+log_and_run kubectl apply -f cosi-examples/greenfield/bucketaccess.yaml
 
 # Step 8: Verify Bucket Creation with Retry
 log_and_run echo "Listing all S3 buckets before verification..."
@@ -213,7 +213,7 @@ fi
 
 # Step 11: Delete Bucket Access Resource
 log_and_run echo "Deleting Bucket Access Resource..."
-log_and_run kubectl delete -f cosi-examples/bucketaccess.yaml
+log_and_run kubectl delete -f cosi-examples/greenfield/bucketaccess.yaml
 
 # Step 12: Verify IAM User Deletion
 log_and_run echo "Verifying IAM user '$IAM_USER_NAME' deletion..."
@@ -230,8 +230,8 @@ fi
 # Step 13: Test deletion bucket with deletion policy set
 
 log_and_run echo "Applying Bucket Class with deletion policy and respective Bucket Claim..."
-log_and_run kubectl apply -f cosi-examples/bucketclass-deletion-policy.yaml
-log_and_run kubectl apply -f cosi-examples/bucketclaim-deletion-policy.yaml
+log_and_run kubectl apply -f cosi-examples/greenfield/bucketclass-deletion-policy.yaml
+log_and_run kubectl apply -f cosi-examples/greenfield/bucketclaim-deletion-policy.yaml
 
 log_and_run echo "Listing all S3 buckets before deletion..."
 log_and_run aws s3 ls --endpoint-url "$S3_ENDPOINT"
@@ -259,7 +259,7 @@ if [ -z "$BUCKET_TO_BE_DELETED" ]; then
 fi
 
 log_and_run echo "Deleting Bucket Claim..."
-log_and_run kubectl delete -f cosi-examples/bucketclaim-deletion-policy.yaml
+log_and_run kubectl delete -f cosi-examples/greenfield/bucketclaim-deletion-policy.yaml
 
 # Check if the bucket with name $BUCKET_TO_BE_DELETED exists by doing a head bucket.
 # If bucket exists, retry with ATTEMPTS and DELAY. If bucket is not found, test success.

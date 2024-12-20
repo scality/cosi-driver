@@ -9,7 +9,7 @@ The table below details the configuration parameters for BucketClass, which dete
 | `objectStorageSecretName`         | The name of the Kubernetes secret containing S3 credentials and configuration. | `string`                   | Yes          |
 | `objectStorageSecretNamespace`    | The namespace in which the secret is located (e.g., `default`).                | `string` (e.g., `default`) | Yes          |
 
-[Example](../cosi-examples/bucketclass.yaml)
+[Example](../cosi-examples/greenfield/bucketclass.yaml)
 
 ## Configuration Parameters for Kubernetes secret containing S3 credentials and configuration
 

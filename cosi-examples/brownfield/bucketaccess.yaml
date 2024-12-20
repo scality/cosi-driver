@@ -1,0 +1,10 @@
+apiVersion: objectstorage.k8s.io/v1alpha1
+kind: BucketAccess
+metadata:
+  name: brownfield-bucket-access
+  namespace: scality-object-storage
+spec:
+  bucketAccessClassName: brownfield-bucket-access-class
+  bucketClaimName: brownfield-bucket-claim
+  credentialsSecretName: brownfield-bucket-secret
+  protocol: s3

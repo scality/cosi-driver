@@ -1,0 +1,16 @@
+apiVersion: objectstorage.k8s.io/v1alpha1
+kind: Bucket
+metadata:
+  name: brownfield-bucket # should be same as bucket name
+  namespace: scality-object-storage
+spec:
+  bucketClaim: {}
+  bucketClassName: brownfield-bucket-class
+  driverName: cosi.scality.com
+  deletionPolicy: Retain
+  existingBucketID: brownfield-bucket # name of pre-existing bucket in S3
+  parameters:
+    objectStorageSecretName: s3-secret-for-cosi
+    objectStorageSecretNamespace: default
+  protocols:
+    - S3
