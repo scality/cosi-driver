@@ -20,7 +20,8 @@ import (
 	"net"
 	"net/url"
 
-	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
+	grpcprom "github.com/grpc-ecosystem/go-grpc-middleware/providers/prometheus"
+	"github.com/prometheus/client_golang/prometheus"
 	"google.golang.org/grpc"
 	"k8s.io/klog/v2"
 	cosi "sigs.k8s.io/container-object-storage-interface-spec"
@@ -34,6 +35,9 @@ type COSIProvisionerServer struct {
 }
 
 func (s *COSIProvisionerServer) Run(ctx context.Context) error {
+	srvMetrics := grpcprom.NewServerMetrics()
+	prometheus.MustRegister(srvMetrics)
+
 	addr, err := url.Parse(s.address)
 	if err != nil {
 		return err
@@ -51,18 +55,16 @@ func (s *COSIProvisionerServer) Run(ctx context.Context) error {
 	}
 	defer listener.Close()
 
-	// Add Prometheus gRPC interceptors for unary and streaming RPCs
 	s.listenOpts = append(s.listenOpts,
-		grpc.UnaryInterceptor(grpc_prometheus.UnaryServerInterceptor),
-		grpc.StreamInterceptor(grpc_prometheus.StreamServerInterceptor),
+		grpc.ChainUnaryInterceptor(srvMetrics.UnaryServerInterceptor()),
+		grpc.ChainStreamInterceptor(srvMetrics.StreamServerInterceptor()),
 	)
 
 	server := grpc.NewServer(s.listenOpts...)
 	cosi.RegisterIdentityServer(server, s.identityServer)
 	cosi.RegisterProvisionerServer(server, s.provisionerServer)
 
-	grpc_prometheus.Register(server)
-	grpc_prometheus.EnableHandlingTimeHistogram()
+	srvMetrics.InitializeMetrics(server)
 
 	errChan := make(chan error, 1)
 	go func() {
