@@ -52,10 +52,13 @@ func (s *COSIProvisionerServer) Run(ctx context.Context, registry prometheus.Reg
 	listenConfig := net.ListenConfig{}
 	listener, err := listenConfig.Listen(ctx, "unix", addr.Path)
 	if err != nil {
-		klog.ErrorS(err, "Failed to start server")
-		return fmt.Errorf("failed to start server: %w", err)
+		klog.ErrorS(err, "Failed to start listener")
+		return fmt.Errorf("failed to start listener: %w", err)
 	}
-	defer listener.Close()
+	defer func() {
+		klog.Info("Closing listener...")
+		listener.Close()
+	}()
 
 	s.listenOpts = append(s.listenOpts,
 		grpc.ChainUnaryInterceptor(srvMetrics.UnaryServerInterceptor()),
@@ -74,9 +77,11 @@ func (s *COSIProvisionerServer) Run(ctx context.Context, registry prometheus.Reg
 	}()
 	select {
 	case <-ctx.Done():
+		klog.Info("Context canceled, stopping gRPC server...")
 		server.GracefulStop()
 		return ctx.Err()
 	case err := <-errChan:
+		klog.ErrorS(err, "gRPC server exited with error")
 		return err
 	}
 }
