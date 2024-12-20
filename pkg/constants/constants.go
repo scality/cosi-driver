@@ -10,3 +10,9 @@ const (
 	LvlDebug              // 4 - Debug-level logs, tricky logic areas
 	LvlTrace              // 5 - Trace-level logs, detailed troubleshooting context
 )
+
+// Service initialization constants
+const (
+	MetricsPath = "/metrics"
+	MetricsAddress = ":8080"
+)

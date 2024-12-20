@@ -2,7 +2,6 @@ package grpcfactory_test
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"net"
 	"os"
@@ -11,6 +10,7 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/scality/cosi-driver/pkg/grpcfactory"
 	cosi "sigs.k8s.io/container-object-storage-interface-spec"
 )
@@ -34,6 +34,7 @@ var _ = Describe("gRPC Factory Server", Ordered, func() {
 		identityServer    cosi.IdentityServer
 		provisionerServer cosi.ProvisionerServer
 		server            *grpcfactory.COSIProvisionerServer
+		registry          *prometheus.Registry
 	)
 
 	BeforeEach(func() {
@@ -42,9 +43,13 @@ var _ = Describe("gRPC Factory Server", Ordered, func() {
 
 		identityServer = &mockIdentityServer{}
 		provisionerServer = &mockProvisionerServer{}
+
+		// Create a custom Prometheus registry for this test
+		registry = prometheus.NewRegistry()
 	})
 
 	AfterEach(func() {
+		// Clean up the Unix socket file
 		socketPath := strings.TrimPrefix(address, "unix://")
 		if err := os.Remove(socketPath); err != nil && !os.IsNotExist(err) {
 			fmt.Printf("Warning: failed to remove socket file %s: %v\n", socketPath, err)
@@ -58,43 +63,53 @@ var _ = Describe("gRPC Factory Server", Ordered, func() {
 			Expect(err).NotTo(HaveOccurred())
 			Expect(server).NotTo(BeNil())
 
+			runErrChan := make(chan error)
 			go func() {
-				err := server.Run(ctx)
-				if errors.Is(err, context.Canceled) {
-					return // Expected when the context is canceled
-				}
-				Expect(err).NotTo(HaveOccurred())
+				defer GinkgoRecover()
+				runErrChan <- server.Run(ctx, registry) // Pass registry here for metrics registration
 			}()
 
-			// Allow time for the server to start
 			time.Sleep(100 * time.Millisecond)
-		}, SpecTimeout(1*time.Second))
+
+			ctxCancel, cancel := context.WithTimeout(ctx, 50*time.Millisecond)
+			defer cancel()
+			<-ctxCancel.Done()
+
+			Expect(<-runErrChan).To(SatisfyAny(BeNil(), Equal(context.Canceled)))
+		}, SpecTimeout(2*time.Second))
 
 		It("should return an error when reusing the same address", func(ctx SpecContext) {
+			// Manually create a listener to occupy the socket
 			socketPath := strings.TrimPrefix(address, "unix://")
 			listener, err := net.Listen("unix", socketPath)
 			Expect(err).NotTo(HaveOccurred())
 			defer listener.Close()
 
-			server2, err := grpcfactory.NewCOSIProvisionerServer(address, identityServer, provisionerServer, nil)
+			// Pass nil instead of registry for the ServerOptions parameter
+			server, err = grpcfactory.NewCOSIProvisionerServer(address, identityServer, provisionerServer, nil)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(server2).NotTo(BeNil())
+			Expect(server).NotTo(BeNil())
 
-			// Run the second server and expect it to fail
-			err = server2.Run(ctx)
+			// Run the server with the registry
+			err = server.Run(ctx, registry)
 			Expect(err).To(HaveOccurred())
 			Expect(err.Error()).To(ContainSubstring("address already in use"))
 		}, SpecTimeout(1*time.Second))
 
 		It("should return an error for unsupported address schemes", func(ctx SpecContext) {
-			invalidAddress := "http://invalid-scheme-address" // Address with an unsupported scheme
+			var (
+				server *grpcfactory.COSIProvisionerServer
+				err    error
+			)
 
-			server, err := grpcfactory.NewCOSIProvisionerServer(invalidAddress, identityServer, provisionerServer, nil)
+			invalidAddress := "http://invalid-scheme-address"
+
+			server, err = grpcfactory.NewCOSIProvisionerServer(invalidAddress, identityServer, provisionerServer, nil)
 			Expect(err).NotTo(HaveOccurred()) // Ensure server creation succeeds
 			Expect(server).NotTo(BeNil())
 
-			// Wait for server.Run to return an error
-			err = server.Run(ctx)
+			// Attempt to run the server with the registry
+			err = server.Run(ctx, prometheus.NewRegistry()) // Pass a custom registry here
 			Expect(err).To(HaveOccurred())
 			Expect(err.Error()).To(ContainSubstring("unsupported scheme: expected 'unix'"))
 		}, SpecTimeout(1*time.Second))

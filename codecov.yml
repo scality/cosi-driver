@@ -48,6 +48,10 @@ component_management:
       name: 🔧 Util Package
       paths:
         - pkg/util/**
+    - component_id: metrics-package
+      name: 📊 Metrics Package
+      paths:
+        - pkg/metrics/**
     - component_id: constants-package
       name: 🔖 Constants Package
       paths:

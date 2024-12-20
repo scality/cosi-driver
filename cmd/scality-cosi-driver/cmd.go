@@ -20,11 +20,15 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"time"
 
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/scality/cosi-driver/pkg/driver"
 	"k8s.io/klog/v2"
 
+	c "github.com/scality/cosi-driver/pkg/constants"
 	"github.com/scality/cosi-driver/pkg/grpcfactory"
+	"github.com/scality/cosi-driver/pkg/metrics"
 )
 
 const (
@@ -33,8 +37,9 @@ const (
 )
 
 var (
-	driverAddress = flag.String("driver-address", "unix:///var/lib/cosi/cosi.sock", "driver address for the socket")
-	driverPrefix  = flag.String("driver-prefix", "", "prefix for COSI driver, e.g. <prefix>.scality.com")
+	driverAddress  = flag.String("driver-address", "unix:///var/lib/cosi/cosi.sock", "driver address for the socket")
+	driverPrefix   = flag.String("driver-prefix", "", "prefix for COSI driver, e.g. <prefix>.scality.com")
+	metricsAddress = flag.String("metrics-address", c.MetricsAddress, "The address to expose Prometheus metrics.")
 )
 
 func init() {
@@ -53,6 +58,18 @@ func init() {
 }
 
 func run(ctx context.Context) error {
+	registry := prometheus.NewRegistry()
+
+	if err := registry.Register(metrics.RequestsTotal); err != nil {
+		return fmt.Errorf("failed to register custom metrics: %w", err)
+	}
+
+	// Start the Prometheus metrics server with the shared registry
+	metricsServer, err := metrics.StartMetricsServerWithRegistry(*metricsAddress, registry)
+	if err != nil {
+		return fmt.Errorf("failed to start metrics server: %w", err)
+	}
+
 	driverName := *driverPrefix + "." + provisionerName
 
 	identityServer, bucketProvisioner, err := driver.CreateDriver(ctx, driverName)
@@ -65,5 +82,12 @@ func run(ctx context.Context) error {
 		return fmt.Errorf("failed to start the provisioner server: %w", err)
 	}
 
-	return server.Run(ctx)
+	err = server.Run(ctx, registry)
+	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer shutdownCancel()
+	if shutdownErr := metricsServer.Shutdown(shutdownCtx); shutdownErr != nil {
+		klog.ErrorS(shutdownErr, "Failed to gracefully shutdown metrics server")
+	}
+
+	return err
 }
