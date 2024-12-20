@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/scality/cosi-driver/pkg/driver"
 	"k8s.io/klog/v2"
 
@@ -57,7 +58,14 @@ func init() {
 }
 
 func run(ctx context.Context) error {
-	metricsServer, err := metrics.StartMetricsServer(*metricsAddress)
+	registry := prometheus.NewRegistry()
+
+	if err := registry.Register(metrics.RequestsTotal); err != nil {
+		return fmt.Errorf("failed to register custom metrics: %w", err)
+	}
+
+	// Start the Prometheus metrics server with the shared registry
+	metricsServer, err := metrics.StartMetricsServerWithRegistry(*metricsAddress, registry)
 	if err != nil {
 		return fmt.Errorf("failed to start metrics server: %w", err)
 	}
@@ -74,7 +82,7 @@ func run(ctx context.Context) error {
 		return fmt.Errorf("failed to start the provisioner server: %w", err)
 	}
 
-	err = server.Run(ctx)
+	err = server.Run(ctx, registry)
 	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer shutdownCancel()
 	if shutdownErr := metricsServer.Shutdown(shutdownCtx); shutdownErr != nil {

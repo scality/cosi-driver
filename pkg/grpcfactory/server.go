@@ -34,9 +34,11 @@ type COSIProvisionerServer struct {
 	listenOpts        []grpc.ServerOption
 }
 
-func (s *COSIProvisionerServer) Run(ctx context.Context) error {
+func (s *COSIProvisionerServer) Run(ctx context.Context, registry prometheus.Registerer) error {
 	srvMetrics := grpcprom.NewServerMetrics()
-	prometheus.MustRegister(srvMetrics)
+	if err := registry.Register(srvMetrics); err != nil {
+		return fmt.Errorf("failed to register gRPC metrics: %w", err)
+	}
 
 	addr, err := url.Parse(s.address)
 	if err != nil {

@@ -21,21 +21,22 @@ var (
 	)
 )
 
-func init() {
-	prometheus.MustRegister(RequestsTotal)
-}
-
-func StartMetricsServer(addr string) (*http.Server, error) {
+// StartMetricsServerWithRegistry starts an HTTP metrics server with a custom Prometheus registry.
+func StartMetricsServerWithRegistry(addr string, registry prometheus.Gatherer) (*http.Server, error) {
 	listener, err := net.Listen("tcp", addr)
 	if err != nil {
 		return nil, err
 	}
-	return StartMetricsServerWithListener(listener)
+	return StartMetricsServerWithListenerAndRegistry(listener, registry)
 }
 
-func StartMetricsServerWithListener(listener net.Listener) (*http.Server, error) {
+// StartMetricsServerWithListenerAndRegistry starts an HTTP server with a custom registry and listener.
+func StartMetricsServerWithListenerAndRegistry(listener net.Listener, registry prometheus.Gatherer) (*http.Server, error) {
 	mux := http.NewServeMux()
-	mux.Handle(c.MetricsPath, promhttp.Handler())
+
+	mux.Handle(c.MetricsPath, promhttp.HandlerFor(registry, promhttp.HandlerOpts{
+		EnableOpenMetrics: true,
+	}))
 
 	srv := &http.Server{
 		Handler: mux,
