@@ -36,13 +36,16 @@ func main() {
 	go func() {
 		sig := <-sigs
 		klog.InfoS("Signal received", "type", sig)
-		cancel() // Trigger context cancellation
+		cancel()
+
+		klog.InfoS("Initiating graceful shutdown, repeat signal to force shutdown")
 
 		select {
-		case <-ctx.Done():
-			klog.InfoS("Scality COSI driver shutdown initiated successfully, context canceled")
+		case sig = <-sigs:
+			klog.ErrorS(nil, "Force shutdown due to repeated signal", "type", sig)
+			os.Exit(1)
 		case <-time.After(30 * time.Second):
-			klog.ErrorS(nil, "Scality COSI driver graceful shutdown timed out, forcing application exit after 30 seconds")
+			klog.ErrorS(nil, "Force shutdown due to timeout", "timeout", 30*time.Second)
 			os.Exit(1)
 		}
 	}()
@@ -50,5 +53,6 @@ func main() {
 	// Call the run function (defined in cmd.go)
 	if err := run(ctx); err != nil {
 		klog.ErrorS(err, "Scality COSI driver encountered an error, shutting down")
+		os.Exit(1)
 	}
 }
