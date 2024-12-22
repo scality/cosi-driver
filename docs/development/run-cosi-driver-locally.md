@@ -145,6 +145,23 @@ grpcurl -plaintext -proto cosi.proto -import-path ./proto -unix -d '{
 }' ./cosi.sock cosi.v1alpha1.Provisioner.DriverGrantBucketAccess
 ```
 
+## Metrics
+
+Query metrics using localhost:8080/metrics endpoint
+
+Example:
+
+```sh
+ curl -s localhost:8080/metrics | grep grpc_server_msg_sent_total
+# HELP grpc_server_msg_sent_total Total number of gRPC stream messages sent by the server.
+# TYPE grpc_server_msg_sent_total counter
+grpc_server_msg_sent_total{grpc_method="DriverCreateBucket",grpc_service="cosi.v1alpha1.Provisioner",grpc_type="unary"} 0
+grpc_server_msg_sent_total{grpc_method="DriverDeleteBucket",grpc_service="cosi.v1alpha1.Provisioner",grpc_type="unary"} 0
+grpc_server_msg_sent_total{grpc_method="DriverGetInfo",grpc_service="cosi.v1alpha1.Identity",grpc_type="unary"} 3
+grpc_server_msg_sent_total{grpc_method="DriverGrantBucketAccess",grpc_service="cosi.v1alpha1.Provisioner",grpc_type="unary"} 0
+grpc_server_msg_sent_total{grpc_method="DriverRevokeBucketAccess",grpc_service="cosi.v1alpha1.Provisioner",grpc_type="unary"} 0
+```
+
 ## Troubleshooting
 
 - Socket Not Found: If /var/lib/cosi/cosi.sock is not created, ensure the COSI driver started correctly by checking its logs.
