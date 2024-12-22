@@ -20,6 +20,8 @@ import (
 	"net"
 	"net/url"
 
+	grpcprom "github.com/grpc-ecosystem/go-grpc-middleware/providers/prometheus"
+	"github.com/prometheus/client_golang/prometheus"
 	"google.golang.org/grpc"
 	"k8s.io/klog/v2"
 	cosi "sigs.k8s.io/container-object-storage-interface-spec"
@@ -32,7 +34,17 @@ type COSIProvisionerServer struct {
 	listenOpts        []grpc.ServerOption
 }
 
-func (s *COSIProvisionerServer) Run(ctx context.Context) error {
+func (s *COSIProvisionerServer) Run(ctx context.Context, registry prometheus.Registerer) error {
+
+	srvMetrics := grpcprom.NewServerMetrics(
+		grpcprom.WithServerHandlingTimeHistogram(
+			grpcprom.WithHistogramBuckets([]float64{0.001, 0.01, 0.1, 0.3, 0.6, 1, 3, 6, 9, 20, 30, 60, 90, 120}),
+		),
+	)
+	if err := registry.Register(srvMetrics); err != nil {
+		return fmt.Errorf("failed to register gRPC metrics: %w", err)
+	}
+
 	addr, err := url.Parse(s.address)
 	if err != nil {
 		return err
@@ -45,22 +57,37 @@ func (s *COSIProvisionerServer) Run(ctx context.Context) error {
 	listenConfig := net.ListenConfig{}
 	listener, err := listenConfig.Listen(ctx, "unix", addr.Path)
 	if err != nil {
-		klog.ErrorS(err, "Failed to start server")
-		return fmt.Errorf("failed to start server: %w", err)
+		klog.ErrorS(err, "Failed to start listener")
+		return fmt.Errorf("failed to start listener: %w", err)
 	}
-	defer listener.Close()
+
+	defer func() {
+		klog.Info("Closing listener...")
+		listener.Close()
+	}()
+
+	s.listenOpts = append(s.listenOpts,
+		grpc.ChainUnaryInterceptor(srvMetrics.UnaryServerInterceptor()),
+		grpc.ChainStreamInterceptor(srvMetrics.StreamServerInterceptor()),
+	)
+
 	server := grpc.NewServer(s.listenOpts...)
 	cosi.RegisterIdentityServer(server, s.identityServer)
 	cosi.RegisterProvisionerServer(server, s.provisionerServer)
+
+	srvMetrics.InitializeMetrics(server)
+
 	errChan := make(chan error, 1)
 	go func() {
 		errChan <- server.Serve(listener)
 	}()
 	select {
 	case <-ctx.Done():
+		klog.Info("Context canceled, stopping gRPC server...")
 		server.GracefulStop()
 		return ctx.Err()
 	case err := <-errChan:
+		klog.ErrorS(err, "gRPC server exited with error")
 		return err
 	}
 }
