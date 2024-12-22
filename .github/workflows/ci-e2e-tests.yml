@@ -48,11 +48,6 @@ jobs:
       timeout-minutes: 10
       continue-on-error: true
 
-    - name: Setup COSI Controller, CRDs and Driver
-      run: |
-        pwd
-        .github/scripts/setup_cosi_resources.sh
-
     - name: Login to Registry
       uses: docker/login-action@v3
       with:
@@ -69,12 +64,23 @@ jobs:
         restore-keys: |
           docker-${{ runner.os }}-
 
-    - name: Load Cached Images
+
+    - name: Parallelize COSI Setup and Loading Cached Images
       run: |
-        for image in /tmp/.docker_cache/*.tar; do
-          docker load -i "$image" || true
-        done
-      continue-on-error: true
+        # Start COSI setup and ensure it stops the workflow on failure
+        (
+          echo "Starting COSI setup..."
+          pwd
+          .github/scripts/setup_cosi_resources.sh
+        ) || exit 1 &  # Stop workflow if this fails
+        # Start loading cached Docker images and allow failure
+          (
+          echo "Loading cached Docker images..."
+          for image in /tmp/.docker_cache/*.tar; do
+            docker load -i "$image" || true  # Continue on failure
+          done
+        ) &
+        wait  # Wait for both tasks to complete
 
     - name: Setup IAM and S3 Services
       run: |-
