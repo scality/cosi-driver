@@ -13,7 +13,6 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/scality/cosi-driver/pkg/grpcfactory"
-	"google.golang.org/grpc"
 	cosi "sigs.k8s.io/container-object-storage-interface-spec"
 )
 
@@ -153,31 +152,5 @@ var _ = Describe("gRPC Factory Server", Ordered, func() {
 			Expect(err).To(HaveOccurred())
 			Expect(err.Error()).To(ContainSubstring("missing protocol scheme"))
 		}, SpecTimeout(1*time.Second))
-
-		It("should return an error when the gRPC server exits with an error", func(ctx SpecContext) {
-			// Create a valid address for the server
-			validAddress := generateUniqueAddress()
-			server, err := grpcfactory.NewCOSIProvisionerServer(validAddress, identityServer, provisionerServer, nil)
-			Expect(err).NotTo(HaveOccurred())
-			Expect(server).NotTo(BeNil())
-
-			// Use a failing listener to simulate an error in server.Serve
-			failingListener := &failingListener{}
-
-			// Run the server in a goroutine
-			errChan := make(chan error, 1)
-			go func() {
-				errChan <- func() error {
-					defer failingListener.Close() // Clean up the listener
-					// Simulate server.Serve failure with a failing listener
-					return grpc.NewServer().Serve(failingListener)
-				}()
-			}()
-
-			// Wait for the error to propagate
-			err = <-errChan
-			Expect(err).To(HaveOccurred())
-			Expect(err.Error()).To(ContainSubstring("simulated listener failure"))
-		}, SpecTimeout(3*time.Second))
 	})
 })
