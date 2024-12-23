@@ -22,8 +22,8 @@ error_handler() {
 # Trap errors and call the error handler
 trap 'error_handler' ERR
 
-# Log command execution to the log file for debugging
 log_and_run() {
+  echo "Running: $*" | tee -a "$LOG_FILE"
   "$@" 2>&1 | tee -a "$LOG_FILE"
 }
 

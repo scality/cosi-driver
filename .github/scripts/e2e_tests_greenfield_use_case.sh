@@ -32,9 +32,12 @@ error_handler() {
 # Trap errors and call the error handler
 trap 'error_handler' ERR
 
-# Log command execution to the log file for debugging
 log_and_run() {
-  "$@" 2>&1 | tee -a "$LOG_FILE"
+  echo "Running: $*" | tee -a "$LOG_FILE"
+  if ! "$@" 2>&1 | tee -a "$LOG_FILE"; then
+    echo "Error: Command failed - $*" | tee -a "$LOG_FILE"
+    exit 1
+  fi
 }
 
 # Step 1: Create Account in Vault

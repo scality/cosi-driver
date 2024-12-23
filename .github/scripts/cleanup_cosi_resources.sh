@@ -13,6 +13,7 @@ error_handler() {
 trap 'error_handler' ERR
 
 log_and_run() {
+  echo "Running: $*" | tee -a "$LOG_FILE"
   "$@" 2>&1 | tee -a "$LOG_FILE"
 }
 
