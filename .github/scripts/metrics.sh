@@ -1,11 +1,11 @@
 #!/bin/bash
 
 # Declare expected values for each metric as environment variables
-EXPECTED_CREATE_BUCKET=0
-EXPECTED_DELETE_BUCKET=0
-EXPECTED_GET_INFO=3
-EXPECTED_GRANT_ACCESS=0
-EXPECTED_REVOKE_ACCESS=0
+EXPECTED_CREATE_BUCKET=2
+EXPECTED_DELETE_BUCKET=1
+EXPECTED_GET_INFO=1
+EXPECTED_GRANT_ACCESS=2
+EXPECTED_REVOKE_ACCESS=2
 GRPC_METHOD_TO_TEST="grpc_server_msg_sent_total"
 
 # Fetch metrics and filter for grpc_server_msg_sent_total
