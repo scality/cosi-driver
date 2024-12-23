@@ -456,7 +456,7 @@ var _ = Describe("initializeObjectStorageClient", Ordered, func() {
 		originalInitIAMClient := iamclient.InitIAMClient
 		defer func() { iamclient.InitIAMClient = originalInitIAMClient }()
 
-		iamclient.InitIAMClient = func(params util.StorageClientParameters) (*iamclient.IAMClient, error) {
+		iamclient.InitIAMClient = func(ctx context.Context, params util.StorageClientParameters) (*iamclient.IAMClient, error) {
 			return nil, fmt.Errorf("mock IAM error")
 		}
 
