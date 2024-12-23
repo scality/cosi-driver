@@ -13,6 +13,7 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/scality/cosi-driver/pkg/grpcfactory"
+	"google.golang.org/grpc"
 	cosi "sigs.k8s.io/container-object-storage-interface-spec"
 )
 
@@ -41,6 +42,20 @@ func (m *mockRegisterer) MustRegister(...prometheus.Collector) {
 
 func (m *mockRegisterer) Unregister(prometheus.Collector) bool {
 	return false
+}
+
+type failingListener struct{}
+
+func (f *failingListener) Accept() (net.Conn, error) {
+	return nil, fmt.Errorf("simulated listener failure")
+}
+
+func (f *failingListener) Close() error {
+	return nil
+}
+
+func (f *failingListener) Addr() net.Addr {
+	return &net.UnixAddr{Name: "mock", Net: "unix"}
 }
 
 var _ = Describe("gRPC Factory Server", Ordered, func() {
@@ -140,30 +155,29 @@ var _ = Describe("gRPC Factory Server", Ordered, func() {
 		}, SpecTimeout(1*time.Second))
 
 		It("should return an error when the gRPC server exits with an error", func(ctx SpecContext) {
+			// Create a valid address for the server
 			validAddress := generateUniqueAddress()
 			server, err := grpcfactory.NewCOSIProvisionerServer(validAddress, identityServer, provisionerServer, nil)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(server).NotTo(BeNil())
 
-			// Use a context with a cancel function to control the server lifecycle
-			cancelCtx, cancel := context.WithCancel(ctx)
-			defer cancel()
+			// Use a failing listener to simulate an error in server.Serve
+			failingListener := &failingListener{}
 
+			// Run the server in a goroutine
 			errChan := make(chan error, 1)
 			go func() {
-				errChan <- server.Run(cancelCtx, prometheus.NewRegistry())
+				errChan <- func() error {
+					defer failingListener.Close() // Clean up the listener
+					// Simulate server.Serve failure with a failing listener
+					return grpc.NewServer().Serve(failingListener)
+				}()
 			}()
 
-			// Allow some time for the server to start
-			time.Sleep(100 * time.Millisecond)
-
-			// Cancel the context to simulate a shutdown
-			cancel()
-
-			// Wait for the server to exit and validate the error
+			// Wait for the error to propagate
 			err = <-errChan
 			Expect(err).To(HaveOccurred())
-			Expect(err.Error()).To(ContainSubstring("context canceled"))
+			Expect(err.Error()).To(ContainSubstring("simulated listener failure"))
 		}, SpecTimeout(3*time.Second))
 	})
 })
