@@ -72,6 +72,10 @@ jobs:
       run: |
         .github/scripts/verify_helm_install.sh
 
+    - name: E2E tests for metrics using calls made in above tests
+      run: |
+        .github/scripts/e2e_tests_metrics.sh
+
     - name: "Delay completion"
       if: ${{ github.event_name == 'workflow_dispatch' && inputs.debug_enabled }}
       uses: scality/actions/action-delay-job-completion@1.11.0
