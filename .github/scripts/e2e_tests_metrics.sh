@@ -93,5 +93,3 @@ done
 echo "All metrics validated successfully." | tee -a "$LOG_FILE"
 
 log_and_run kill "$PORT_FORWARD_PID"
-
-log_and_run echo "GRPC_METRICS: $METRICS_OUTPUT"
