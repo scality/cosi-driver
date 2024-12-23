@@ -63,8 +63,7 @@ log_and_run echo "Deleting s3-secret-for-cosi secret..."
 log_and_run kubectl delete secret s3-secret-for-cosi --namespace=default || { echo "Secret s3-secret-for-cosi not found." | tee -a "$LOG_FILE"; }
 
 log_and_run echo "Deleting COSI CRDs..."
-log_and_run kubectl delete -k github.com/kubernetes-sigs/container-object-storage-interface/client || { echo "COSI API CRDs not found." | tee -a "$LOG_FILE"; }
-log_and_run kubectl delete -k github.com/kubernetes-sigs/container-object-storage-interface/controller || { echo "COSI Controller CRDs not found." | tee -a "$LOG_FILE"; }
+log_and_run kubectl delete -k github.com/kubernetes-sigs/container-object-storage-interface || { echo "COSI API CRDs or controller not found." | tee -a "$LOG_FILE"; }
 
 log_and_run echo "Verifying COSI CRDs deletion..."
 if kubectl get crd | grep 'container-object-storage-interface' &>/dev/null; then

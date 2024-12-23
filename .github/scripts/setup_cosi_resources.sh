@@ -26,8 +26,7 @@ log_and_run() {
 
 # Step 1: Install COSI CRDs
 log_and_run echo "Installing COSI CRDs..."
-log_and_run kubectl create -k github.com/kubernetes-sigs/container-object-storage-interface/client
-log_and_run kubectl create -k github.com/kubernetes-sigs/container-object-storage-interface/controller
+log_and_run kubectl create -k github.com/kubernetes-sigs/container-object-storage-interface
 
 # Step 2: Verify COSI Controller Pod Status
 log_and_run echo "Verifying COSI Controller Pod status..."
