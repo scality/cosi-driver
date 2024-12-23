@@ -92,9 +92,6 @@ done
 
 echo "All metrics validated successfully." | tee -a "$LOG_FILE"
 
-# Clean up port-forwarding
 log_and_run kill "$PORT_FORWARD_PID"
 
-# Echo the metrics environment variable for reference
-export GRPC_METRICS="$METRICS_OUTPUT"
-log_and_run echo "GRPC_METRICS: $GRPC_METRICS"
+log_and_run echo "GRPC_METRICS: $METRICS_OUTPUT"
