@@ -45,7 +45,7 @@ var (
 	driverPrefix         = flag.String("driver-prefix", defaultDriverPrefix, "prefix for COSI driver, e.g. <prefix>.scality.com, default cosi.scality.com")
 	driverMetricsAddress = flag.String("driver-metrics-address", defaultMetricsAddress, "The address to expose Prometheus metrics, default: :8080")
 	driverMetricsPath    = flag.String("driver-metrics-path", defaultMetricsPath, "path for the metrics endpoint, default: /metrics")
-	driverMetricsPrefix  = flag.String("driver-metrics-prefix", defaultMetricsPrefix, "prefix for the metrics, default: scality_cosi_driver_")
+	driverMetricsPrefix  = flag.String("driver-custom-metrics-prefix", defaultMetricsPrefix, "prefix for the metrics, default: scality_cosi_driver_")
 )
 
 func init() {
