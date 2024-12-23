@@ -32,6 +32,7 @@ jobs:
       - name: Upload test coverage to codecov
         uses: codecov/codecov-action@v5
         with:
+          files: coverage.txt
           token: ${{ secrets.CODECOV_TOKEN }}
           slug: scality/cosi-driver
 
