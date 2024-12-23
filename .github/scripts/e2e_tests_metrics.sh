@@ -9,6 +9,7 @@ SERVICE="scality-cosi-driver-metrics"
 LOCAL_PORT=8080
 TARGET_PORT=8080
 
+# Declare expected values for each metric as environment variables
 EXPECTED_CREATE_BUCKET=2
 EXPECTED_DELETE_BUCKET=1
 EXPECTED_GET_INFO=1
@@ -18,7 +19,7 @@ GRPC_METHOD_TO_TEST="grpc_server_msg_sent_total"
 
 # Error handling function
 error_handler() {
-  echo "An error occurred during bucket creation tests. Check the log file for details." | tee -a "$LOG_FILE"
+  echo "An error occurred during the metrics test. Check the log file for details." | tee -a "$LOG_FILE"
   echo "Failed command: $BASH_COMMAND" | tee -a "$LOG_FILE"
   exit 1
 }
@@ -26,24 +27,25 @@ error_handler() {
 # Trap errors and call the error handler
 trap 'error_handler' ERR
 
-
+# Logging and command execution function
 log_and_run() {
   echo "Running: $*" | tee -a "$LOG_FILE"
   "$@" 2>&1 | tee -a "$LOG_FILE"
 }
 
+# Fetch services and validate the target service exists
 log_and_run kubectl get svc --all-namespaces
 
-echo "Starting port-forwarding for service $SERVICE in namespace $NAMESPACE" | tee -a "$LOG_FILE"
-kubectl port-forward -n "$NAMESPACE" svc/"$SERVICE" "$LOCAL_PORT":"$TARGET_PORT" > /dev/null 2>&1 &
+# Port-forward the metrics service
+log_and_run kubectl port-forward -n "$NAMESPACE" svc/"$SERVICE" "$LOCAL_PORT":"$TARGET_PORT" &
 PORT_FORWARD_PID=$!
 
 # Wait a few seconds to ensure port-forward is established
-sleep 5
+log_and_run sleep 5
 
 # Fetch metrics
-echo "Fetching metrics from localhost:$LOCAL_PORT/metrics" | tee -a "$LOG_FILE"
-METRICS_OUTPUT=$(curl -s http://localhost:$LOCAL_PORT/metrics | grep $GRPC_METHOD_TO_TEST)
+log_and_run curl -s http://localhost:$LOCAL_PORT/metrics | grep $GRPC_METHOD_TO_TEST > /tmp/metrics_output.log
+METRICS_OUTPUT=$(cat /tmp/metrics_output.log)
 echo "Metrics fetched successfully:" | tee -a "$LOG_FILE"
 echo "$METRICS_OUTPUT" | tee -a "$LOG_FILE"
 
@@ -83,7 +85,7 @@ echo "$METRICS_OUTPUT" | while read -r line; do
   # Perform validation
   if [[ "$value" -ne "$expected_value" ]]; then
     echo "Error: $method has an unexpected value ($value). Expected: $expected_value" | tee -a "$LOG_FILE"
-    kill "$PORT_FORWARD_PID" # Clean up port-forwarding before exiting
+    log_and_run kill "$PORT_FORWARD_PID" # Clean up port-forwarding before exiting
     exit 1
   fi
 done
@@ -91,9 +93,8 @@ done
 echo "All metrics validated successfully." | tee -a "$LOG_FILE"
 
 # Clean up port-forwarding
-echo "Cleaning up port-forwarding (PID: $PORT_FORWARD_PID)" | tee -a "$LOG_FILE"
-kill "$PORT_FORWARD_PID"
+log_and_run kill "$PORT_FORWARD_PID"
 
 # Echo the metrics environment variable for reference
 export GRPC_METRICS="$METRICS_OUTPUT"
-echo "GRPC_METRICS: $GRPC_METRICS" | tee -a "$LOG_FILE"
+log_and_run echo "GRPC_METRICS: $GRPC_METRICS"
