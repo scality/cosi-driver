@@ -31,7 +31,7 @@ log_and_run kubectl create -k github.com/kubernetes-sigs/container-object-storag
 
 # Step 2: Verify COSI Controller Pod Status
 log_and_run echo "Verifying COSI Controller Pod status..."
-if ! kubectl wait --namespace default --for=condition=ready pod -l app.kubernetes.io/name=container-object-storage-interface-controller --timeout=10s; then
+if ! kubectl wait --namespace default --for=condition=ready pod -l app.kubernetes.io/name=container-object-storage-interface-controller --timeout=60s; then
   echo "Error: COSI Controller pod did not reach ready state." | tee -a "$LOG_FILE"
   exit 1
 fi
