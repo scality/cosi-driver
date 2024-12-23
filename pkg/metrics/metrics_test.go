@@ -105,4 +105,12 @@ var _ = Describe("Metrics Server", func() {
 		Expect(metricsOutput).To(ContainSubstring(`grpc_server_started_total{grpc_method="DriverGrantBucketAccess",grpc_service="cosi.v1alpha1.Provisioner",grpc_type="unary"} 2`))
 		Expect(metricsOutput).To(ContainSubstring(`grpc_server_started_total{grpc_method="DriverRevokeBucketAccess",grpc_service="cosi.v1alpha1.Provisioner",grpc_type="unary"} 1`))
 	})
+
+	It("should return 404 for invalid metrics paths", func() {
+		addr := listener.Addr().String()
+		resp, err := http.Get(fmt.Sprintf("http://%s/invalid-path", addr))
+		Expect(err).NotTo(HaveOccurred())
+		Expect(resp.StatusCode).To(Equal(http.StatusNotFound))
+		Expect(resp.Body.Close()).To(Succeed())
+	})
 })
