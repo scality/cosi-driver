@@ -28,6 +28,8 @@ log_and_run() {
 log_and_run echo "Installing COSI CRDs..."
 log_and_run kubectl create -k github.com/kubernetes-sigs/container-object-storage-interface
 
+log_and_run kubectl get all --namespace default
+
 # Step 2: Verify COSI Controller Pod Status
 log_and_run echo "Verifying COSI Controller Pod status..."
 if ! kubectl wait --namespace default --for=condition=ready pod -l app.kubernetes.io/name=container-object-storage-interface-controller --timeout=60s; then
