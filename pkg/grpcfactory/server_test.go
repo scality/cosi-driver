@@ -138,5 +138,32 @@ var _ = Describe("gRPC Factory Server", Ordered, func() {
 			Expect(err).To(HaveOccurred())
 			Expect(err.Error()).To(ContainSubstring("missing protocol scheme"))
 		}, SpecTimeout(1*time.Second))
+
+		It("should return an error when the gRPC server exits with an error", func(ctx SpecContext) {
+			validAddress := generateUniqueAddress()
+			server, err := grpcfactory.NewCOSIProvisionerServer(validAddress, identityServer, provisionerServer, nil)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(server).NotTo(BeNil())
+
+			// Use a context with a cancel function to control the server lifecycle
+			cancelCtx, cancel := context.WithCancel(ctx)
+			defer cancel()
+
+			errChan := make(chan error, 1)
+			go func() {
+				errChan <- server.Run(cancelCtx, prometheus.NewRegistry())
+			}()
+
+			// Allow some time for the server to start
+			time.Sleep(100 * time.Millisecond)
+
+			// Cancel the context to simulate a shutdown
+			cancel()
+
+			// Wait for the server to exit and validate the error
+			err = <-errChan
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("context canceled"))
+		}, SpecTimeout(3*time.Second))
 	})
 })
