@@ -26,6 +26,13 @@ serviceAccount:
   name: scality-object-storage-provisioner
   create: true
 
+metrics:
+  enabled: true
+  port: 8080
+  prefix: "scality_cosi_driver_"
+  address: "0.0.0.0:8080"
+  path: "/metrics"
+
 
 resources:
   limits:
