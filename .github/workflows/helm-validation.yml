@@ -76,7 +76,7 @@ jobs:
     # GRANT_ACCESS and REVOKE_ACCESS in order
     # Example below we we are testing for 0 CREATE_BUCKET, 0 DELETE_BUCKET,
     # 1 GET_INFO, 0 GRANT_ACCESS and 0 REVOKE_ACCESS API counts
-    - name: E2E tests for metrics using calls made in above tests
+    - name: Smoke tests for metrics healthcheck
       run: |
         .github/scripts/e2e_tests_metrics.sh 0 0 1 0 0
 
