@@ -28,15 +28,14 @@ log_and_run() {
 log_and_run echo "Installing COSI CRDs..."
 log_and_run kubectl create -k github.com/kubernetes-sigs/container-object-storage-interface
 
-log_and_run kubectl get all --namespace default
+# Step 2: Verify COSI Controller Pod Status
+log_and_run echo "Verifying COSI Controller Pod status..."
+if ! kubectl wait --namespace container-object-storage-system --for=condition=ready pod -l app.kubernetes.io/name=container-object-storage-interface-controller --timeout=60s; then
+  echo "Error: COSI Controller pod did not reach ready state." | tee -a "$LOG_FILE"
+  exit 1
+fi
 
-# # Step 2: Verify COSI Controller Pod Status
-# log_and_run echo "Verifying COSI Controller Pod status..."
-# if ! kubectl wait --namespace default --for=condition=ready pod -l app.kubernetes.io/name=container-object-storage-interface-controller --timeout=60s; then
-#   echo "Error: COSI Controller pod did not reach ready state." | tee -a "$LOG_FILE"
-#   exit 1
-# fi
-log_and_run kubectl get pods --namespace default
+log_and_run kubectl get pods --namespace container-object-storage-system
 
 # Step 3: Build COSI driver Docker image
 log_and_run echo "Building COSI driver image..."
