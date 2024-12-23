@@ -29,6 +29,20 @@ func generateUniqueAddress() string {
 	return fmt.Sprintf("unix:///tmp/test-%d.sock", time.Now().UnixNano())
 }
 
+type mockRegisterer struct{}
+
+func (m *mockRegisterer) Register(prometheus.Collector) error {
+	return fmt.Errorf("mock registration failure")
+}
+
+func (m *mockRegisterer) MustRegister(...prometheus.Collector) {
+	panic("mock registration failure")
+}
+
+func (m *mockRegisterer) Unregister(prometheus.Collector) bool {
+	return false
+}
+
 var _ = Describe("gRPC Factory Server", Ordered, func() {
 	var (
 		address           string
@@ -99,5 +113,17 @@ var _ = Describe("gRPC Factory Server", Ordered, func() {
 			Expect(err).To(HaveOccurred())
 			Expect(err.Error()).To(ContainSubstring("unsupported scheme: expected 'unix'"))
 		}, SpecTimeout(1*time.Second))
+
+		It("should return an error when gRPC metrics registration fails", func(ctx SpecContext) {
+			mockRegistry := &mockRegisterer{}
+
+			server, err := grpcfactory.NewCOSIProvisionerServer(address, identityServer, provisionerServer, nil)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(server).NotTo(BeNil())
+
+			err = server.Run(ctx, mockRegistry)
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("failed to register gRPC metrics"))
+		}, SpecTimeout(3*time.Second))
 	})
 })
