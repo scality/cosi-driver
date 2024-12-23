@@ -86,7 +86,7 @@ var _ = Describe("IAMClient", func() {
 			client, _ := iamclient.InitIAMClient(ctx, params)
 			client.IAMService = mockIAM
 
-			err := client.AttachS3WildcardInlinePolicy(ctx, "test-user", bucketName)
+			err := client.CreateS3WildcardInlinePolicy(ctx, "test-user", bucketName)
 			Expect(err).To(BeNil())
 		})
 
@@ -98,7 +98,7 @@ var _ = Describe("IAMClient", func() {
 			client, _ := iamclient.InitIAMClient(ctx, params)
 			client.IAMService = mockIAM
 
-			err := client.AttachS3WildcardInlinePolicy(ctx, "test-user", "test-bucket")
+			err := client.CreateS3WildcardInlinePolicy(ctx, "test-user", "test-bucket")
 			Expect(err).NotTo(BeNil())
 			Expect(err.Error()).To(ContainSubstring("simulated PutUserPolicy failure"))
 		})
@@ -191,13 +191,13 @@ var _ = Describe("IAMClient", func() {
 			Expect(err.Error()).To(ContainSubstring("simulated CreateUser failure"))
 		})
 
-		It("should return an error if AttachS3WildcardInlinePolicy fails", func(ctx SpecContext) {
+		It("should return an error if CreateS3WildcardInlinePolicy fails", func(ctx SpecContext) {
 			mockIAM.CreateUserFunc = func(ctx context.Context, input *iam.CreateUserInput, opts ...func(*iam.Options)) (*iam.CreateUserOutput, error) {
 				return &iam.CreateUserOutput{}, nil
 			}
 
 			mockIAM.PutUserPolicyFunc = func(ctx context.Context, input *iam.PutUserPolicyInput, opts ...func(*iam.Options)) (*iam.PutUserPolicyOutput, error) {
-				return nil, fmt.Errorf("simulated AttachS3WildcardInlinePolicy failure")
+				return nil, fmt.Errorf("simulated CreateS3WildcardInlinePolicy failure")
 			}
 
 			client, _ := iamclient.InitIAMClient(ctx, params)
@@ -206,7 +206,7 @@ var _ = Describe("IAMClient", func() {
 			output, err := client.CreateBucketAccess(ctx, "test-user", "test-bucket")
 			Expect(err).NotTo(BeNil())
 			Expect(output).To(BeNil())
-			Expect(err.Error()).To(ContainSubstring("simulated AttachS3WildcardInlinePolicy failure"))
+			Expect(err.Error()).To(ContainSubstring("simulated CreateS3WildcardInlinePolicy failure"))
 		})
 
 		It("should return an error if CreateAccessKey fails", func(ctx SpecContext) {
