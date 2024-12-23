@@ -125,5 +125,18 @@ var _ = Describe("gRPC Factory Server", Ordered, func() {
 			Expect(err).To(HaveOccurred())
 			Expect(err.Error()).To(ContainSubstring("failed to register gRPC metrics"))
 		}, SpecTimeout(3*time.Second))
+
+		It("should return an error when the address is invalid", func(ctx SpecContext) {
+			// produce missing protocol scheme error
+			invalidAddress := "::/invalid-address"
+
+			server, err := grpcfactory.NewCOSIProvisionerServer(invalidAddress, identityServer, provisionerServer, nil)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(server).NotTo(BeNil())
+
+			err = server.Run(ctx, prometheus.NewRegistry())
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("missing protocol scheme"))
+		}, SpecTimeout(1*time.Second))
 	})
 })
