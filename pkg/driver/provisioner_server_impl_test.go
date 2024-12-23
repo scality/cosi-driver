@@ -431,7 +431,7 @@ var _ = Describe("initializeObjectStorageClient", Ordered, func() {
 		originalInitS3Client := s3client.InitS3Client
 		defer func() { s3client.InitS3Client = originalInitS3Client }()
 
-		s3client.InitS3Client = func(params util.StorageClientParameters) (*s3client.S3Client, error) {
+		s3client.InitS3Client = func(ctx context.Context, params util.StorageClientParameters) (*s3client.S3Client, error) {
 			return nil, fmt.Errorf("mock S3 client error")
 		}
 
