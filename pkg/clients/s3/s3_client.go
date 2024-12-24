@@ -13,10 +13,8 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/s3/types"
 	"github.com/aws/smithy-go/logging"
 	"github.com/aws/smithy-go/middleware"
-	"github.com/prometheus/client_golang/prometheus"
 	"github.com/scality/cosi-driver/pkg/metrics"
 	"github.com/scality/cosi-driver/pkg/util"
-	"k8s.io/klog/v2"
 )
 
 // S3API defines the methods the S3 client must implement.
@@ -28,35 +26,6 @@ type S3API interface {
 // S3Client wraps the S3 service client for custom operations and middleware integration.
 type S3Client struct {
 	S3Service S3API
-}
-
-// AttachPrometheusMiddleware attaches middleware to track metrics using Prometheus.
-func AttachPrometheusMiddleware(stack *middleware.Stack) error {
-	// Define the middleware logic
-	middlewareFunc := middleware.FinalizeMiddlewareFunc("PrometheusMetrics", func(
-		ctx context.Context, in middleware.FinalizeInput, next middleware.FinalizeHandler,
-	) (out middleware.FinalizeOutput, metadata middleware.Metadata, err error) {
-		operationName := middleware.GetOperationName(ctx)
-
-		timer := prometheus.NewTimer(prometheus.ObserverFunc(func(duration float64) {
-			status := "success"
-			if err != nil {
-				status = "error"
-			}
-			metrics.S3RequestDuration.WithLabelValues(operationName, status).Observe(duration)
-			metrics.S3RequestsTotal.WithLabelValues(operationName, status).Inc()
-		}))
-		defer timer.ObserveDuration()
-
-		out, metadata, err = next.HandleFinalize(ctx, in)
-		if err != nil {
-			klog.ErrorS(err, "AWS SDK operation failed", "operation", operationName)
-		}
-		return out, metadata, err
-	})
-
-	// Add the middleware to the Finalize step
-	return stack.Finalize.Add(middlewareFunc, middleware.After)
 }
 
 // LoadAWSConfig is a wrapper for AWS SDK's default configuration loader.
@@ -87,7 +56,9 @@ var InitS3Client = func(ctx context.Context, params util.StorageClientParameters
 		config.WithHTTPClient(httpClient),
 		config.WithLogger(logger),
 		config.WithAPIOptions([]func(*middleware.Stack) error{
-			AttachPrometheusMiddleware,
+			func(stack *middleware.Stack) error {
+				return util.AttachPrometheusMiddleware(stack, metrics.S3RequestDuration, metrics.S3RequestsTotal)
+			},
 		}),
 	)
 	if err != nil {
