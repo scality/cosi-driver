@@ -5,7 +5,6 @@ import (
 	"net/http"
 	"os"
 	"strings"
-	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
@@ -90,16 +89,16 @@ func (client *S3Client) CreateBucket(ctx context.Context, bucketName string, par
 }
 
 func (client *S3Client) DeleteBucket(ctx context.Context, bucketName string) error {
-	start := time.Now()
+	metricStatus := "success"
+	timer := prometheus.NewTimer(prometheus.ObserverFunc(func(duration float64) {
+		metrics.S3RequestDuration.WithLabelValues("DeleteBucket", metricStatus).Observe(duration)
+	}))
+	defer timer.ObserveDuration()
+
 	_, err := client.S3Service.DeleteBucket(ctx, &s3.DeleteBucketInput{Bucket: &bucketName})
-	duration := time.Since(start).Seconds()
-
-	status := "success"
 	if err != nil {
-		status = "error"
+		metricStatus = "error"
 	}
-	metrics.S3RequestsTotal.WithLabelValues("DeleteBucket", status).Inc()
-	metrics.S3RequestDuration.WithLabelValues("DeleteBucket", status).Observe(duration)
-
+	metrics.S3RequestsTotal.WithLabelValues("DeleteBucket", metricStatus).Inc()
 	return err
 }
