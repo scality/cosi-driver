@@ -80,8 +80,8 @@ var _ = Describe("Identity Server DriverGetInfo", func() {
 			Expect(err).ToNot(HaveOccurred())
 		})
 
-		It("should handle nil request gracefully", func() {
-			resp, err := server.DriverGetInfo(context.Background(), nil)
+		It("should handle nil request gracefully", func(ctx SpecContext) {
+			resp, err := server.DriverGetInfo(ctx, nil)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(resp).ToNot(BeNil())
 			Expect(resp.Name).To(Equal("scality-cosi-driver"))
