@@ -30,9 +30,6 @@ type S3Client struct {
 	S3Service S3API
 }
 
-// LoadAWSConfig is a wrapper for AWS SDK's default configuration loader.
-var LoadAWSConfig = config.LoadDefaultConfig
-
 // AttachPrometheusMiddleware attaches middleware to track metrics using Prometheus.
 func AttachPrometheusMiddleware(stack *middleware.Stack) error {
 	// Define the middleware logic
@@ -61,6 +58,9 @@ func AttachPrometheusMiddleware(stack *middleware.Stack) error {
 	// Add the middleware to the Finalize step
 	return stack.Finalize.Add(middlewareFunc, middleware.After)
 }
+
+// LoadAWSConfig is a wrapper for AWS SDK's default configuration loader.
+var LoadAWSConfig = config.LoadDefaultConfig
 
 // InitS3Client initializes the S3 client with Prometheus middleware and custom configuration.
 var InitS3Client = func(ctx context.Context, params util.StorageClientParameters) (*S3Client, error) {

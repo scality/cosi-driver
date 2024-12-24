@@ -13,7 +13,10 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/iam"
 	"github.com/aws/aws-sdk-go-v2/service/iam/types"
 	"github.com/aws/smithy-go/logging"
+	"github.com/aws/smithy-go/middleware"
+	"github.com/prometheus/client_golang/prometheus"
 	c "github.com/scality/cosi-driver/pkg/constants"
+	"github.com/scality/cosi-driver/pkg/metrics"
 	"github.com/scality/cosi-driver/pkg/util"
 	"k8s.io/klog/v2"
 )
@@ -32,6 +35,35 @@ type IAMAPI interface {
 
 type IAMClient struct {
 	IAMService IAMAPI
+}
+
+// AttachPrometheusMiddleware attaches middleware to track metrics using Prometheus.
+func AttachPrometheusMiddleware(stack *middleware.Stack) error {
+	// Define the middleware logic
+	middlewareFunc := middleware.FinalizeMiddlewareFunc("PrometheusMetrics", func(
+		ctx context.Context, in middleware.FinalizeInput, next middleware.FinalizeHandler,
+	) (out middleware.FinalizeOutput, metadata middleware.Metadata, err error) {
+		operationName := middleware.GetOperationName(ctx)
+
+		timer := prometheus.NewTimer(prometheus.ObserverFunc(func(duration float64) {
+			status := "success"
+			if err != nil {
+				status = "error"
+			}
+			metrics.IAMRequestDuration.WithLabelValues(operationName, status).Observe(duration)
+			metrics.IAMRequestsTotal.WithLabelValues(operationName, status).Inc()
+		}))
+		defer timer.ObserveDuration()
+
+		out, metadata, err = next.HandleFinalize(ctx, in)
+		if err != nil {
+			klog.ErrorS(err, "AWS SDK operation failed", "operation", operationName)
+		}
+		return out, metadata, err
+	})
+
+	// Add the middleware to the Finalize step
+	return stack.Finalize.Add(middlewareFunc, middleware.After)
 }
 
 var LoadAWSConfig = config.LoadDefaultConfig
@@ -58,6 +90,9 @@ var InitIAMClient = func(ctx context.Context, params util.StorageClientParameter
 		config.WithCredentialsProvider(credentials.NewStaticCredentialsProvider(params.AccessKeyID, params.SecretAccessKey, "")),
 		config.WithHTTPClient(httpClient),
 		config.WithLogger(logger),
+		config.WithAPIOptions([]func(*middleware.Stack) error{
+			AttachPrometheusMiddleware,
+		}),
 	)
 	if err != nil {
 		return nil, err
