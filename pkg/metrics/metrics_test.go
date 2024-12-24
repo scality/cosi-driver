@@ -64,60 +64,19 @@ var _ = Describe("Metrics", func() {
 			Expect(err).To(HaveOccurred())
 			Expect(server).To(BeNil())
 		})
+
+		It("should log an error when the listener fails", func() {
+			listener := &failingListener{}
+			server := &http.Server{
+				Handler: http.NewServeMux(),
+			}
+
+			go func() {
+				err := server.Serve(listener)
+				Expect(err).To(HaveOccurred())
+			}()
+		})
 	})
-
-	// Describe("StartMetricsServerWithListenerAndRegistry", func() {
-	// 	It("should start a metrics server successfully with a custom listener", func() {
-	// 		listener, err := net.Listen("tcp", addr)
-	// 		Expect(err).NotTo(HaveOccurred())
-	// 		Expect(listener).NotTo(BeNil())
-
-	// 		server, err := metrics.StartMetricsServerWithListenerAndRegistry(listener, registry, driverMetricsPath)
-	// 		Expect(err).NotTo(HaveOccurred())
-	// 		Expect(server).NotTo(BeNil())
-
-	// 		resp, err := http.Get("http://" + server.Addr + driverMetricsPath)
-	// 		Expect(err).NotTo(HaveOccurred())
-	// 		Expect(resp.StatusCode).To(Equal(http.StatusOK))
-
-	// 		err = server.Close()
-	// 		Expect(err).NotTo(HaveOccurred())
-	// 	})
-
-	// 	It("should serve metrics on the specified path", func() {
-	// 		listener, err := net.Listen("tcp", addr)
-	// 		Expect(err).NotTo(HaveOccurred())
-	// 		Expect(listener).NotTo(BeNil())
-
-	// 		server, err := metrics.StartMetricsServerWithListenerAndRegistry(listener, registry, driverMetricsPath)
-	// 		Expect(err).NotTo(HaveOccurred())
-	// 		Expect(server).NotTo(BeNil())
-
-	// 		resp, err := http.Get("http://" + server.Addr + driverMetricsPath)
-	// 		Expect(err).NotTo(HaveOccurred())
-	// 		Expect(resp.StatusCode).To(Equal(http.StatusOK))
-
-	// 		resp, err = http.Get("http://" + server.Addr + "/invalid-path")
-	// 		Expect(err).NotTo(HaveOccurred())
-	// 		Expect(resp.StatusCode).To(Equal(http.StatusNotFound))
-
-	// 		err = server.Close()
-	// 		Expect(err).NotTo(HaveOccurred())
-	// 	})
-
-	// 	It("should log an error when the listener fails", func() {
-	// 		listener := &failingListener{}
-
-	// 		server, err := metrics.StartMetricsServerWithListenerAndRegistry(listener, registry, driverMetricsPath)
-	// 		Expect(err).NotTo(HaveOccurred())
-	// 		Expect(server).NotTo(BeNil())
-
-	// 		time.Sleep(100 * time.Millisecond)
-
-	// 		err = server.Close()
-	// 		Expect(err).NotTo(HaveOccurred())
-	// 	})
-	// })
 })
 
 var _ = Describe("InitializeMetrics", func() {
