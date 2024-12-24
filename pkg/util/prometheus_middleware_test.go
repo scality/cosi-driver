@@ -8,6 +8,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/testutil"
 	u "github.com/scality/cosi-driver/pkg/util"
 	"k8s.io/klog/v2"
 )
@@ -114,6 +115,50 @@ var _ = Describe("AttachPrometheusMiddleware", func() {
 		Expect(err).NotTo(HaveOccurred())
 	})
 
+	It("should record metrics with error status when next handler fails", func(ctx SpecContext) {
+		// Attach Prometheus middleware
+		err := u.AttachPrometheusMiddleware(stack, requestDuration, requestsTotal)
+		Expect(err).NotTo(HaveOccurred())
+
+		// Add mock middleware to simulate behavior
+		mockMiddleware := MockFinalizeMiddleware{
+			HandleFunc: func(ctx context.Context, in middleware.FinalizeInput, next middleware.FinalizeHandler) (middleware.FinalizeOutput, middleware.Metadata, error) {
+				klog.InfoS("Mock middleware executed", "operation", middleware.GetOperationName(ctx))
+				return next.HandleFinalize(ctx, in)
+			},
+			IDValue: "MockMiddleware",
+		}
+		err = stack.Finalize.Add(mockMiddleware, middleware.Before)
+		Expect(err).NotTo(HaveOccurred())
+
+		// Add a failing handler as the final handler
+		failingHandler := middleware.FinalizeHandlerFunc(func(ctx context.Context, in middleware.FinalizeInput) (middleware.FinalizeOutput, middleware.Metadata, error) {
+			return middleware.FinalizeOutput{}, middleware.Metadata{}, errors.New("simulated error")
+		})
+
+		var handler middleware.FinalizeHandler = failingHandler
+		for i := len(stack.Finalize.List()) - 1; i >= 0; i-- {
+			middlewareID := stack.Finalize.List()[i]
+			m, _ := stack.Finalize.Get(middlewareID)
+
+			previousHandler := handler
+			handler = middleware.FinalizeHandlerFunc(func(ctx context.Context, in middleware.FinalizeInput) (middleware.FinalizeOutput, middleware.Metadata, error) {
+				return m.HandleFinalize(ctx, in, previousHandler)
+			})
+		}
+
+		// Execute the middleware chain
+		_, _, err = handler.HandleFinalize(ctx, middleware.FinalizeInput{})
+		Expect(err).To(HaveOccurred())
+		Expect(err.Error()).To(Equal("simulated error"))
+
+		// Validate Prometheus metrics
+		// Ensure requestDuration and requestsTotal are incremented with "error" status
+		metrics := testutil.CollectAndCount(requestDuration)
+		Expect(metrics).To(BeNumerically(">", 0)) // Ensure metrics are collected
+		Expect(requestDuration.WithLabelValues("TestOperation", "error")).NotTo(BeNil())
+		Expect(requestsTotal.WithLabelValues("TestOperation", "error")).NotTo(BeNil())
+	})
 	// It("should record metrics with status 'success'", func() {
 	// 	// Attach the Prometheus middleware
 	// 	err := u.AttachPrometheusMiddleware(stack, requestDuration, requestsTotal)
