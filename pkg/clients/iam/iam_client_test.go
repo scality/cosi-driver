@@ -12,9 +12,11 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/iam/types"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"github.com/prometheus/client_golang/prometheus"
 
 	"github.com/aws/smithy-go"
 	iamclient "github.com/scality/cosi-driver/pkg/clients/iam"
+	"github.com/scality/cosi-driver/pkg/metrics"
 	"github.com/scality/cosi-driver/pkg/mock"
 	"github.com/scality/cosi-driver/pkg/util"
 )
@@ -473,5 +475,36 @@ var _ = Describe("IAMClient", func() {
 			Expect(err).NotTo(BeNil())
 			Expect(errors.As(err, &accessDeniedError)).To(BeTrue())
 		})
+	})
+})
+
+var _ = Describe("AnuragMetrics", func() {
+	var (
+		mockRegistry *prometheus.Registry
+	)
+
+	BeforeEach(func() {
+		// Initialize a new Prometheus registry for testing
+		mockRegistry = prometheus.NewRegistry()
+	})
+
+	It("should increment and observe metrics", func() {
+		metrics.InitializeMetrics("test_prefix", mockRegistry)
+
+		metrics.S3RequestsTotal.WithLabelValues("GET", "200").Inc()
+		metrics.S3RequestDuration.WithLabelValues("GET", "200").Observe(0.123)
+
+		metricFamilies, err := mockRegistry.Gather()
+		Expect(err).NotTo(HaveOccurred())
+
+		for _, mf := range metricFamilies {
+			if mf.GetName() == "test_prefix_s3_requests_total" {
+				Expect(mf.Metric[0].GetCounter().GetValue()).To(Equal(1.0))
+			}
+
+			if mf.GetName() == "test_prefix_s3_request_duration_seconds" {
+				Expect(mf.Metric[0].GetHistogram().GetSampleCount()).To(Equal(uint64(1)))
+			}
+		}
 	})
 })
