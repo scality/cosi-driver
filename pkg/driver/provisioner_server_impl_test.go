@@ -18,6 +18,7 @@ import (
 	iamclient "github.com/scality/cosi-driver/pkg/clients/iam"
 	s3client "github.com/scality/cosi-driver/pkg/clients/s3"
 	"github.com/scality/cosi-driver/pkg/driver"
+	"github.com/scality/cosi-driver/pkg/metrics"
 	"github.com/scality/cosi-driver/pkg/mock"
 	"github.com/scality/cosi-driver/pkg/util"
 	corev1 "k8s.io/api/core/v1"
@@ -154,6 +155,11 @@ func restoreInitializeClient() {
 }
 
 // Tests
+
+var _ = BeforeSuite(func() {
+	// Initialize metrics globally before all tests
+	metrics.InitializeMetrics("test_driver_prefix")
+})
 
 var _ = Describe("ProvisionerServer InitProvisionerServer", func() {
 	var provisioner string

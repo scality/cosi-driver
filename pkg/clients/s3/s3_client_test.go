@@ -12,6 +12,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	s3client "github.com/scality/cosi-driver/pkg/clients/s3"
+	"github.com/scality/cosi-driver/pkg/metrics"
 	"github.com/scality/cosi-driver/pkg/mock"
 	"github.com/scality/cosi-driver/pkg/util"
 )
@@ -21,13 +22,16 @@ func TestS3Client(t *testing.T) {
 	RunSpecs(t, "S3Client Test Suite")
 }
 
-var _ = Describe("S3Client", func() {
+var _ = BeforeSuite(func() {
+	// Initialize metrics globally before all tests
+	metrics.InitializeMetrics("test_driver_prefix")
+})
 
+var _ = Describe("S3Client", func() {
 	var params util.StorageClientParameters
 
 	BeforeEach(func() {
 		params = *util.NewStorageClientParameters()
-		// Override fields as needed for the test
 		params.AccessKeyID = "test-access-key"
 		params.SecretAccessKey = "test-secret-key"
 		params.Endpoint = "https://s3.mock.endpoint"
@@ -113,6 +117,9 @@ var _ = Describe("S3Client", func() {
 
 			err := client.CreateBucket(ctx, "new-bucket", params)
 			Expect(err).To(BeNil())
+			// metric := &prometheus.Counter{}
+			// Expect(metrics.S3RequestsTotal.WithLabelValues("CreateBucket", "error").Write(metric)).To(Succeed())
+			// Expect(metric.GetCounter().GetValue()).To(BeNumerically(">", 0))
 		})
 
 		It("should handle other errors correctly", func(ctx SpecContext) {
