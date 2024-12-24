@@ -90,7 +90,6 @@ echo "$METRICS_OUTPUT" | while read -r line; do
   # Perform validation
   if [[ "$value" -ne "$expected_value" ]]; then
     echo "Error: $method has an unexpected value ($value). Expected: $expected_value" | tee -a "$LOG_FILE"
-    log_and_run kill "$PORT_FORWARD_PID" # Clean up port-forwarding before exiting
     exit 1
   fi
 done
@@ -98,45 +97,67 @@ done
 log_and_run echo "Verifying S3 and IAM metrics..."
 # only verify metrics if EXPECTED_CREATE_BUCKET is more than 0
 
-if [[ "$EXPECTED_CREATE_BUCKET" -gt 0 ]]; then
-  S3_IAM_METRICS_OUTPUT=$(cat  /tmp/metrics_output.log | grep 'scality_cosi_driver')
-  echo "Metrics fetched successfully:" | tee -a "$LOG_FILE"
-  echo "$S3_IAM_METRICS_OUTPUT" | tee -a "$LOG_FILE"
+S3_IAM_METRICS_OUTPUT=$(cat  /tmp/metrics_output.log | grep 'scality_cosi_driver')
+echo "Metrics fetched successfully:" | tee -a "$LOG_FILE"
+echo "$S3_IAM_METRICS_OUTPUT" | tee -a "$LOG_FILE"
+CREATE_BUCKET_COUNT="$(echo "$S3_IAM_METRICS_OUTPUT" | grep 'scality_cosi_driver_s3_requests_total' | grep 'method="CreateBucket"' | grep 'status="success"' | awk '{print $NF}')"
+DELETE_BUCKET_COUNT="$(echo "$S3_IAM_METRICS_OUTPUT" | grep 'scality_cosi_driver_s3_requests_total' | grep 'method="DeleteBucket"' | grep 'status="success"' | awk '{print $NF}')"
+CREATE_USER_COUNT="$(echo "$S3_IAM_METRICS_OUTPUT" | grep 'scality_cosi_driver_iam_requests_total' | grep 'method="CreateUser"' | grep 'status="success"' | awk '{print $NF}')"
+DELETE_USER_COUNT="$(echo "$S3_IAM_METRICS_OUTPUT" | grep 'scality_cosi_driver_iam_requests_total' | grep 'method="DeleteUser"' | grep 'status="success"' | awk '{print $NF}')"
 
-  CREATE_BUCKET_COUNT="$(echo "$S3_IAM_METRICS_OUTPUT" | grep 'scality_cosi_driver_s3_requests_total' | grep 'method="CreateBucket"' | grep 'status="success"' | awk '{print $NF}')"
-  DELETE_BUCKET_COUNT="$(echo "$S3_IAM_METRICS_OUTPUT" | grep 'scality_cosi_driver_s3_requests_total' | grep 'method="DeleteBucket"' | grep 'status="success"' | awk '{print $NF}')"
+CREATE_BUCKET_DURATION="$(echo "$S3_IAM_METRICS_OUTPUT" | grep 'scality_cosi_driver_s3_request_duration_seconds_sum' | grep 'method="CreateBucket"' | awk '{print $NF}')"
+DELETE_BUCKET_DURATION="$(echo "$S3_IAM_METRICS_OUTPUT" | grep 'scality_cosi_driver_s3_request_duration_seconds_sum' | grep 'method="DeleteBucket"' | awk '{print $NF}')"
+CREATE_USER_DURATION="$(echo "$S3_IAM_METRICS_OUTPUT" | grep 'scality_cosi_driver_iam_request_duration_seconds_sum' | grep 'method="CreateUser"' | awk '{print $NF}')"
+DELETE_USER_DURATION="$(echo "$S3_IAM_METRICS_OUTPUT" | grep 'scality_cosi_driver_iam_request_duration_seconds_sum' | grep 'method="DeleteUser"' | awk '{print $NF}')"
 
-  CREATE_BUCKET_DURATION="$(echo "$S3_IAM_METRICS_OUTPUT" | grep 'scality_cosi_driver_s3_request_duration_seconds_sum' | grep 'method="CreateBucket"' | awk '{print $NF}')"
-  DELETE_BUCKET_DURATION="$(echo "$S3_IAM_METRICS_OUTPUT" | grep 'scality_cosi_driver_s3_request_duration_seconds_sum' | grep 'method="DeleteBucket"' | awk '{print $NF}')"
+echo "CreateBucket Count: $CREATE_BUCKET_COUNT, Expected: $EXPECTED_CREATE_BUCKET" | tee -a "$LOG_FILE"
+echo "DeleteBucket Count: $DELETE_BUCKET_COUNT, Expected: $EXPECTED_DELETE_BUCKET" | tee -a "$LOG_FILE"
+echo "CreateUser Count: $CREATE_USER_COUNT, Expected: $EXPECTED_GRANT_ACCESS" | tee -a "$LOG_FILE"
+echo "DeleteUser Count: $DELETE_USER_COUNT, Expected: $EXPECTED_REVOKE_ACCESS" | tee -a "$LOG_FILE"
 
-  echo "CreateBucket Count: $CREATE_BUCKET_COUNT, Expected: $EXPECTED_CREATE_BUCKET" | tee -a "$LOG_FILE"
-  echo "DeleteBucket Count: $DELETE_BUCKET_COUNT, Expected: $EXPECTED_DELETE_BUCKET" | tee -a "$LOG_FILE"
-  echo "CreateBucket Duration: $CREATE_BUCKET_DURATION" | tee -a "$LOG_FILE"
-  echo "DeleteBucket Duration: $DELETE_BUCKET_DURATION" | tee -a "$LOG_FILE"
+echo "CreateBucket Duration: $CREATE_BUCKET_DURATION" | tee -a "$LOG_FILE"
+echo "DeleteBucket Duration: $DELETE_BUCKET_DURATION" | tee -a "$LOG_FILE"
+echo "CreateUser Duration: $CREATE_USER_DURATION" | tee -a "$LOG_FILE"
+echo "DeleteUser Duration: $DELETE_USER_DURATION" | tee -a "$LOG_FILE"
 
-  # Validate counts
-  if [[ "$CREATE_BUCKET_COUNT" -ne "$EXPECTED_CREATE_BUCKET" ]]; then
-    echo "Error: CreateBucket count mismatch. Found: $CREATE_BUCKET_COUNT, Expected: $EXPECTED_CREATE_BUCKET" | tee -a "$LOG_FILE"
-    exit 1
-  fi
-
-  if [[ "$DELETE_BUCKET_COUNT" -ne "$EXPECTED_DELETE_BUCKET" ]]; then
-    echo "Error: DeleteBucket count mismatch. Found: $DELETE_BUCKET_COUNT, Expected: $EXPECTED_DELETE_BUCKET" | tee -a "$LOG_FILE"
-    exit 1
-  fi
-
-  # Validate durations are greater than 0
-  if (( $(echo "$CREATE_BUCKET_DURATION <= 0" | bc -l) )); then
-    echo "Error: CreateBucket duration is not greater than 0. Duration: $CREATE_BUCKET_DURATION" | tee -a "$LOG_FILE"
-    exit 1
-  fi
-
-  if (( $(echo "$DELETE_BUCKET_DURATION <= 0" | bc -l) )); then
-    echo "Error: DeleteBucket duration is not greater than 0. Duration: $DELETE_BUCKET_DURATION" | tee -a "$LOG_FILE"
-    exit 1
-  fi
-
-
+# Validate counts
+if [[ "$CREATE_BUCKET_COUNT" -ne "$EXPECTED_CREATE_BUCKET" ]]; then
+  echo "Error: CreateBucket count mismatch. Found: $CREATE_BUCKET_COUNT, Expected: $EXPECTED_CREATE_BUCKET" | tee -a "$LOG_FILE"
+  exit 1
 fi
+if [[ "$DELETE_BUCKET_COUNT" -ne "$EXPECTED_DELETE_BUCKET" ]]; then
+  echo "Error: DeleteBucket count mismatch. Found: $DELETE_BUCKET_COUNT, Expected: $EXPECTED_DELETE_BUCKET" | tee -a "$LOG_FILE"
+  exit 1
+fi
+if [[ "$CREATE_USER_COUNT" -ne "$EXPECTED_GRANT_ACCESS" ]]; then
+  echo "Error: CreateUser count mismatch. Found: $CREATE_USER_COUNT, Expected: $EXPECTED_GRANT_ACCESS" | tee -a "$LOG_FILE"
+  exit 1
+fi
+
+if [[ "$DELETE_USER_COUNT" -ne "$EXPECTED_REVOKE_ACCESS" ]]; then
+  echo "Error: DeleteUser count mismatch. Found: $DELETE_USER_COUNT, Expected: $EXPECTED_REVOKE_ACCESS" | tee -a "$LOG_FILE"
+  exit 1
+fi
+
+# Validate durations are greater than 0
+if (( $(echo "$CREATE_BUCKET_DURATION <= 0" | bc -l) )); then
+  echo "Error: CreateBucket duration is not greater than 0. Duration: $CREATE_BUCKET_DURATION" | tee -a "$LOG_FILE"
+  exit 1
+fi
+if (( $(echo "$DELETE_BUCKET_DURATION <= 0" | bc -l) )); then
+  echo "Error: DeleteBucket duration is not greater than 0. Duration: $DELETE_BUCKET_DURATION" | tee -a "$LOG_FILE"
+  exit 1
+fi
+
+if (( $(echo "$CREATE_USER_DURATION <= 0" | bc -l) )); then
+  echo "Error: CreateUser duration is not greater than 0. Duration: $CREATE_USER_DURATION" | tee -a "$LOG_FILE"
+  exit 1
+fi
+
+if (( $(echo "$DELETE_USER_DURATION <= 0" | bc -l) )); then
+  echo "Error: DeleteUser duration is not greater than 0. Duration: $DELETE_USER_DURATION" | tee -a "$LOG_FILE"
+  exit 1
+fi
+
 
 echo "Metrics validation successful!" | tee -a "$LOG_FILE"

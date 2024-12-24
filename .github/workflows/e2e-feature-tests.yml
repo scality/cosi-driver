@@ -101,11 +101,11 @@ jobs:
         docker save "$CLOUDSERVER_IMAGE" -o /tmp/.docker_cache/cloudserver_image.tar
       shell: bash
 
-    - name: E2E tests for greenfield use case using kustomize
+    - name: E2E tests for greenfield use case
       run: |
         .github/scripts/e2e_tests_greenfield_use_case.sh
 
-    - name: E2E tests for brownfield use case using kustomize
+    - name: E2E tests for brownfield use case
       run: |
         .github/scripts/e2e_tests_brownfield_use_case.sh
 
