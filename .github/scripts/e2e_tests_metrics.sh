@@ -44,9 +44,14 @@ PORT_FORWARD_PID=$!
 log_and_run sleep 5
 
 # Fetch metrics
-log_and_run curl -s http://localhost:$LOCAL_PORT/metrics | grep $GRPC_METHOD_TO_TEST > /tmp/metrics_output.log
-METRICS_OUTPUT=$(cat /tmp/metrics_output.log)
-echo "Metrics fetched successfully:" | tee -a "$LOG_FILE"
+log_and_run curl -s http://localhost:$LOCAL_PORT/metrics > /tmp/metrics_output.log
+log_and_run cat /tmp/metrics_output.log
+
+log_and_run kill "$PORT_FORWARD_PID"
+
+
+METRICS_OUTPUT=$(cat /tmp/metrics_output.log | grep $GRPC_METHOD_TO_TEST)
+echo "gRPC Metrics fetched successfully:" | tee -a "$LOG_FILE"
 echo "$METRICS_OUTPUT" | tee -a "$LOG_FILE"
 
 # Validate metrics
@@ -94,15 +99,11 @@ log_and_run echo "Verifying S3 and IAM metrics..."
 # only verify metrics if EXPECTED_CREATE_BUCKET is more than 0
 
 if [[ "$EXPECTED_CREATE_BUCKET" -gt 0 ]]; then
-log_and_run curl -s http://localhost:$LOCAL_PORT/metrics | grep 'scality_cosi_driver' > /tmp/s3_iam_metrics_output.log
-  S3_IAM_METRICS_OUTPUT=$(cat /tmp/s3_iam_metrics_output.log)
+  S3_IAM_METRICS_OUTPUT=$(cat /tmp/s3_iam_metrics_output.log | grep 'scality_cosi_driver')
   echo "Metrics fetched successfully:" | tee -a "$LOG_FILE"
   echo "$S3_IAM_METRICS_OUTPUT" | tee -a "$LOG_FILE"
 
   log_and_run cat /tmp/s3_iam_metrics_output.log
 fi
-
-
-log_and_run kill "$PORT_FORWARD_PID"
 
 echo "Metrics validation successful!" | tee -a "$LOG_FILE"
