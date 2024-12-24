@@ -36,7 +36,7 @@ const (
 	defaultDriverAddress  = "unix:///var/lib/cosi/cosi.sock"
 	defaultDriverPrefix   = "cosi"
 	defaultMetricsPath    = "/metrics"
-	defaultMetricsPrefix  = "scality_cosi_driver_"
+	defaultMetricsPrefix  = "scality_cosi_driver"
 	defaultMetricsAddress = ":8080"
 )
 
@@ -58,11 +58,6 @@ func init() {
 	// check if driverMetricsPath starts with / if nor add it and chekc id it is path prood
 	if !strings.HasPrefix(*driverMetricsPath, "/") {
 		*driverMetricsPath = "/" + *driverMetricsPath
-	}
-
-	// check if driver metrics prefix ends with _ if not add it
-	if !strings.HasSuffix(*driverMetricsPrefix, "_") {
-		*driverMetricsPrefix = *driverMetricsPrefix + "_"
 	}
 
 	klog.InfoS("COSI driver startup configuration",

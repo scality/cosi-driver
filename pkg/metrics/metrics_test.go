@@ -36,14 +36,12 @@ var _ = Describe("Metrics", func() {
 		addr              string
 		registry          *prometheus.Registry
 		driverMetricsPath string
-		// driverMetricsPrefix string
 	)
 
 	BeforeEach(func() {
 		addr = "127.0.0.1:0" // Use a random available port
 		registry = prometheus.NewRegistry()
 		driverMetricsPath = "/metrics"
-		// driverMetricsPrefix = "scality_cosi_driver_"
 	})
 
 	Describe("StartMetricsServerWithRegistry", func() {

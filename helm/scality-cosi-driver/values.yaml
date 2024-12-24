@@ -29,7 +29,7 @@ serviceAccount:
 metrics:
   enabled: true
   port: 8080
-  prefix: "scality_cosi_driver_"
+  prefix: "scality_cosi_driver"
   address: "0.0.0.0:8080"
   path: "/metrics"
 

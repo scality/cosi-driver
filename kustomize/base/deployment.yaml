@@ -26,7 +26,7 @@ spec:
             - "--v=$(COSI_DRIVER_LOG_LEVEL)"
             - "--driver-metrics-address=:8080"
             - "--driver-metrics-path=/metrics"
-            - "--driver-custom-metrics-prefix=scality_cosi_driver_"
+            - "--driver-custom-metrics-prefix=scality_cosi_driver"
           volumeMounts:
             - mountPath: /var/lib/cosi
               name: socket
