@@ -26,14 +26,13 @@ jobs:
       - name: Install dependencies
         run: go mod tidy
 
-      - name: Set GOCOVERDIR
-        run: echo "GOCOVERDIR=/home/runner/work/cosi-driver/cosi-driver" >> $GITHUB_ENV
-
       - name: Run tests
         run: make test
 
       - name: Upload test coverage to codecov
         uses: codecov/codecov-action@v5
+        env:
+          GOCOVERDIR: "/home/runner/work/cosi-driver/cosi-driver"
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           slug: scality/cosi-driver
