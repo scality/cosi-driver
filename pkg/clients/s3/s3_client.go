@@ -65,18 +65,14 @@ var InitS3Client = func(ctx context.Context, params util.StorageClientParameters
 }
 
 func (client *S3Client) CreateBucket(ctx context.Context, bucketName string, params util.StorageClientParameters) error {
-	method := "CreateBucket"
-
-	input := &s3.CreateBucketInput{
-		Bucket: &bucketName,
-	}
-
+	start := time.Now()
+	input := &s3.CreateBucketInput{Bucket: &bucketName}
 	if params.Region != util.DefaultRegion {
 		input.CreateBucketConfiguration = &types.CreateBucketConfiguration{
 			LocationConstraint: types.BucketLocationConstraint(params.Region),
 		}
 	}
-	start := time.Now()
+
 	_, err := client.S3Service.CreateBucket(ctx, input)
 	duration := time.Since(start).Seconds()
 
@@ -84,26 +80,23 @@ func (client *S3Client) CreateBucket(ctx context.Context, bucketName string, par
 	if err != nil {
 		status = "error"
 	}
-	metrics.S3RequestsTotal.WithLabelValues(method, status).Inc()
-	metrics.S3RequestDuration.WithLabelValues(method, status).Observe(duration)
+	metrics.S3RequestsTotal.WithLabelValues("CreateBucket", status).Inc()
+	metrics.S3RequestDuration.WithLabelValues("CreateBucket", status).Observe(duration)
+
 	return err
 }
 
 func (client *S3Client) DeleteBucket(ctx context.Context, bucketName string) error {
-
-	method := "DeleteBucket"
 	start := time.Now()
-	_, err := client.S3Service.DeleteBucket(ctx, &s3.DeleteBucketInput{
-		Bucket: &bucketName,
-	})
+	_, err := client.S3Service.DeleteBucket(ctx, &s3.DeleteBucketInput{Bucket: &bucketName})
 	duration := time.Since(start).Seconds()
 
 	status := "success"
 	if err != nil {
 		status = "error"
 	}
+	metrics.S3RequestsTotal.WithLabelValues("DeleteBucket", status).Inc()
+	metrics.S3RequestDuration.WithLabelValues("DeleteBucket", status).Observe(duration)
 
-	metrics.S3RequestsTotal.WithLabelValues(method, status).Inc()
-	metrics.S3RequestDuration.WithLabelValues(method, status).Observe(duration)
 	return err
 }

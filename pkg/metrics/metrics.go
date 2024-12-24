@@ -16,29 +16,8 @@ var (
 	IAMRequestDuration *prometheus.HistogramVec
 )
 
-// StartMetricsServerWithRegistry starts an HTTP metrics server with a custom Prometheus registry.
-func StartMetricsServerWithRegistry(addr string, registry prometheus.Gatherer, driverMetricsPath string, driverMetricsPrefix string) (*http.Server, error) {
-	listener, err := net.Listen("tcp", addr)
-	if err != nil {
-		return nil, err
-	}
-
-	// Initialize metrics with the provided prefix
-	InitializeMetrics(driverMetricsPrefix)
-
-	// Register the initialized metrics with the Prometheus registry
-	prometheus.MustRegister(
-		S3RequestsTotal,
-		S3RequestDuration,
-		IAMRequestsTotal,
-		IAMRequestDuration,
-	)
-
-	return StartMetricsServerWithListenerAndRegistry(listener, registry, driverMetricsPath)
-}
-
-// initializeMetrics dynamically initializes metrics with the given prefix.
-func InitializeMetrics(prefix string) {
+// InitializeMetrics initializes the metrics with a given prefix and registers them to a registry.
+func InitializeMetrics(prefix string, registry prometheus.Registerer) {
 	S3RequestsTotal = prometheus.NewCounterVec(
 		prometheus.CounterOpts{
 			Namespace: prefix,
@@ -77,14 +56,20 @@ func InitializeMetrics(prefix string) {
 		[]string{"method", "status"},
 	)
 
+	registry.MustRegister(S3RequestsTotal, S3RequestDuration, IAMRequestsTotal, IAMRequestDuration)
+
 	klog.InfoS("Custom metrics initialized", "prefix", prefix)
 }
 
-// StartMetricsServerWithListenerAndRegistry starts an HTTP server with a custom registry, listener on specified driver metrics path.
-func StartMetricsServerWithListenerAndRegistry(listener net.Listener, registry prometheus.Gatherer, driverMetricsPath string) (*http.Server, error) {
-	mux := http.NewServeMux()
+// StartMetricsServerWithRegistry starts an HTTP server for exposing metrics using a custom registry.
+func StartMetricsServerWithRegistry(addr string, registry prometheus.Gatherer, metricsPath string) (*http.Server, error) {
+	listener, err := net.Listen("tcp", addr)
+	if err != nil {
+		return nil, err
+	}
 
-	mux.Handle(driverMetricsPath, promhttp.HandlerFor(registry, promhttp.HandlerOpts{
+	mux := http.NewServeMux()
+	mux.Handle(metricsPath, promhttp.HandlerFor(registry, promhttp.HandlerOpts{
 		EnableOpenMetrics: true,
 	}))
 
