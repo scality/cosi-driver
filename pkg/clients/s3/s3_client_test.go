@@ -11,6 +11,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/s3/types"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"github.com/prometheus/client_golang/prometheus"
 	s3client "github.com/scality/cosi-driver/pkg/clients/s3"
 	"github.com/scality/cosi-driver/pkg/metrics"
 	"github.com/scality/cosi-driver/pkg/mock"
@@ -24,7 +25,7 @@ func TestS3Client(t *testing.T) {
 
 var _ = BeforeSuite(func() {
 	// Initialize metrics globally before all tests
-	metrics.InitializeMetrics("test_driver_prefix")
+	metrics.InitializeMetrics("test_driver_prefix", prometheus.NewRegistry())
 })
 
 var _ = Describe("S3Client", func() {

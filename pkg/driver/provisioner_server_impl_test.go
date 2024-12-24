@@ -12,6 +12,7 @@ import (
 	"github.com/aws/smithy-go"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"github.com/prometheus/client_golang/prometheus"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
@@ -158,7 +159,7 @@ func restoreInitializeClient() {
 
 var _ = BeforeSuite(func() {
 	// Initialize metrics globally before all tests
-	metrics.InitializeMetrics("test_driver_prefix")
+	metrics.InitializeMetrics("test_driver_prefix", prometheus.NewRegistry())
 })
 
 var _ = Describe("ProvisionerServer InitProvisionerServer", func() {
