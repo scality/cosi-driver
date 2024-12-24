@@ -103,8 +103,6 @@ if [[ "$EXPECTED_CREATE_BUCKET" -gt 0 ]]; then
   echo "Metrics fetched successfully:" | tee -a "$LOG_FILE"
   echo "$S3_IAM_METRICS_OUTPUT" | tee -a "$LOG_FILE"
 
-  log_and_run cat /tmp/s3_iam_metrics_output.log
-
   CREATE_BUCKET_COUNT="$(echo "$METRICS_OUTPUT" | grep 'scality_cosi_driver_s3_requests_total' | grep 'method="CreateBucket"' | grep 'status="success"' | awk '{print $NF}')"
   DELETE_BUCKET_COUNT="$(echo "$METRICS_OUTPUT" | grep 'scality_cosi_driver_s3_requests_total' | grep 'method="DeleteBucket"' | grep 'status="success"' | awk '{print $NF}')"
 
