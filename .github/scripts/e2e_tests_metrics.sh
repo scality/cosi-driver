@@ -104,6 +104,41 @@ if [[ "$EXPECTED_CREATE_BUCKET" -gt 0 ]]; then
   echo "$S3_IAM_METRICS_OUTPUT" | tee -a "$LOG_FILE"
 
   log_and_run cat /tmp/s3_iam_metrics_output.log
+
+  CREATE_BUCKET_COUNT=$(echo "$METRICS_OUTPUT" | grep 'scality_cosi_driver_s3_requests_total' | grep 'method="CreateBucket"' | grep 'status="success"' | awk '{print $NF}')
+  DELETE_BUCKET_COUNT=$(echo "$METRICS_OUTPUT" | grep 'scality_cosi_driver_s3_requests_total' | grep 'method="DeleteBucket"' | grep 'status="success"' | awk '{print $NF}')
+  
+  CREATE_BUCKET_DURATION=$(echo "$METRICS_OUTPUT" | grep 'scality_cosi_driver_s3_request_duration_seconds_sum' | grep 'method="CreateBucket"' | awk '{print $NF}')
+  DELETE_BUCKET_DURATION=$(echo "$METRICS_OUTPUT" | grep 'scality_cosi_driver_s3_request_duration_seconds_sum' | grep 'method="DeleteBucket"' | awk '{print $NF}')
+  
+  echo "CreateBucket Count: $CREATE_BUCKET_COUNT, Expected: $EXPECTED_CREATE_BUCKET" | tee -a "$LOG_FILE"
+  echo "DeleteBucket Count: $DELETE_BUCKET_COUNT, Expected: $EXPECTED_DELETE_BUCKET" | tee -a "$LOG_FILE"
+  echo "CreateBucket Duration: $CREATE_BUCKET_DURATION" | tee -a "$LOG_FILE"
+  echo "DeleteBucket Duration: $DELETE_BUCKET_DURATION" | tee -a "$LOG_FILE"
+  
+  # Validate counts
+  if [[ "$CREATE_BUCKET_COUNT" -ne "$EXPECTED_CREATE_BUCKET" ]]; then
+    echo "Error: CreateBucket count mismatch. Found: $CREATE_BUCKET_COUNT, Expected: $EXPECTED_CREATE_BUCKET" | tee -a "$LOG_FILE"
+    exit 1
+  fi
+  
+  if [[ "$DELETE_BUCKET_COUNT" -ne "$EXPECTED_DELETE_BUCKET" ]]; then
+    echo "Error: DeleteBucket count mismatch. Found: $DELETE_BUCKET_COUNT, Expected: $EXPECTED_DELETE_BUCKET" | tee -a "$LOG_FILE"
+    exit 1
+  fi
+  
+  # Validate durations are greater than 0
+  if (( $(echo "$CREATE_BUCKET_DURATION <= 0" | bc -l) )); then
+    echo "Error: CreateBucket duration is not greater than 0. Duration: $CREATE_BUCKET_DURATION" | tee -a "$LOG_FILE"
+    exit 1
+  fi
+  
+  if (( $(echo "$DELETE_BUCKET_DURATION <= 0" | bc -l) )); then
+    echo "Error: DeleteBucket duration is not greater than 0. Duration: $DELETE_BUCKET_DURATION" | tee -a "$LOG_FILE"
+    exit 1
+  fi
+
+
 fi
 
 echo "Metrics validation successful!" | tee -a "$LOG_FILE"
