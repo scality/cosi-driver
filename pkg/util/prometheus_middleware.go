@@ -9,7 +9,7 @@ import (
 )
 
 // AttachPrometheusMiddleware attaches a Prometheus middleware for metrics tracking.
-func AttachPrometheusMiddleware(stack *middleware.Stack, requestDuration *prometheus.HistogramVec, requestsTotal *prometheus.CounterVec) error {
+var AttachPrometheusMiddleware = func(stack *middleware.Stack, requestDuration *prometheus.HistogramVec, requestsTotal *prometheus.CounterVec) error {
 	middlewareFunc := middleware.FinalizeMiddlewareFunc("PrometheusMetrics", func(
 		ctx context.Context, in middleware.FinalizeInput, next middleware.FinalizeHandler,
 	) (out middleware.FinalizeOutput, metadata middleware.Metadata, err error) {

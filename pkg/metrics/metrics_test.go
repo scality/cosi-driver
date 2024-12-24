@@ -119,3 +119,32 @@ var _ = Describe("Metrics", func() {
 	// 	})
 	// })
 })
+
+var _ = Describe("InitializeMetrics", func() {
+	var (
+		prefix            string
+		registry          *prometheus.Registry
+		driverMetricsPath string
+	)
+
+	BeforeEach(func() {
+		prefix = "test"
+		registry = prometheus.NewRegistry()
+		driverMetricsPath = "/metrics"
+		metrics.InitializeMetrics(prefix, registry)
+	})
+
+	It("should serve metrics via an HTTP endpoint", func() {
+		addr := "127.0.0.1:0"
+		server, err := metrics.StartMetricsServerWithRegistry(addr, registry, driverMetricsPath)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(server).NotTo(BeNil())
+
+		resp, err := http.Get("http://" + server.Addr + driverMetricsPath)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(resp.StatusCode).To(Equal(http.StatusOK))
+
+		err = server.Close()
+		Expect(err).NotTo(HaveOccurred())
+	})
+})
