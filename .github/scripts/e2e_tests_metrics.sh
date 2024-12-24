@@ -92,10 +92,10 @@ done
 
 echo "All metrics validated successfully." | tee -a "$LOG_FILE"
 
-log_and_run kill "$PORT_FORWARD_PID"
+
 
 log_and_run echo "Verifying S3 and IAM metrics..."
-// only verify metrics if EXPECTED_CREATE_BUCKET is more than 0
+# only verify metrics if EXPECTED_CREATE_BUCKET is more than 0
 
 if [[ "$EXPECTED_CREATE_BUCKET" -gt 0 ]]; then
   log_and_run kubectl port-forward -n "$NAMESPACE" svc/scality-cosi-driver-s3 8080:8080 &
@@ -112,3 +112,6 @@ if [[ "$EXPECTED_CREATE_BUCKET" -gt 0 ]]; then
 
   log_and_run kill "$PORT_FORWARD_PID"
 fi
+
+
+log_and_run kill "$PORT_FORWARD_PID"
