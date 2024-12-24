@@ -2,12 +2,14 @@ package util_test
 
 import (
 	"context"
+	"errors"
 
 	"github.com/aws/smithy-go/middleware"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/prometheus/client_golang/prometheus"
 	u "github.com/scality/cosi-driver/pkg/util"
+	"k8s.io/klog/v2"
 )
 
 // MockFinalizeMiddleware satisfies the FinalizeMiddleware interface
@@ -16,9 +18,13 @@ type MockFinalizeMiddleware struct {
 	IDValue    string
 }
 
-// HandleFinalize executes the middleware logic
 func (m MockFinalizeMiddleware) HandleFinalize(ctx context.Context, in middleware.FinalizeInput, next middleware.FinalizeHandler) (middleware.FinalizeOutput, middleware.Metadata, error) {
-	return m.HandleFunc(ctx, in, next)
+	if next == nil {
+		return middleware.FinalizeOutput{}, middleware.Metadata{}, errors.New("next handler is nil")
+	}
+
+	out, metadata, err := m.HandleFunc(ctx, in, next)
+	return out, metadata, err
 }
 
 // ID returns the unique identifier for the middleware
@@ -69,6 +75,43 @@ var _ = Describe("AttachPrometheusMiddleware", func() {
 		// Verify middleware is in the stack
 		Expect(stack.Finalize.List()).To(HaveLen(1))
 		Expect(stack.Finalize.List()[0]).To(Equal("PrometheusMetrics"))
+	})
+
+	It("should safely execute the middleware chain", func(ctx SpecContext) {
+		// Attach Prometheus middleware
+		err := u.AttachPrometheusMiddleware(stack, requestDuration, requestsTotal)
+		Expect(err).NotTo(HaveOccurred())
+
+		// Add mock middleware to simulate behavior
+		mockMiddleware := MockFinalizeMiddleware{
+			HandleFunc: func(ctx context.Context, in middleware.FinalizeInput, next middleware.FinalizeHandler) (middleware.FinalizeOutput, middleware.Metadata, error) {
+				klog.InfoS("Mock middleware executed", "operation", middleware.GetOperationName(ctx))
+				if next == nil {
+					return middleware.FinalizeOutput{}, middleware.Metadata{}, errors.New("next handler is nil")
+				}
+				return next.HandleFinalize(ctx, in)
+			},
+			IDValue: "MockMiddleware",
+		}
+		err = stack.Finalize.Add(mockMiddleware, middleware.Before)
+		Expect(err).NotTo(HaveOccurred())
+
+		// Ensure the chain is correctly constructed
+		var handler middleware.FinalizeHandler = TerminalHandler{}
+		for i := len(stack.Finalize.List()) - 1; i >= 0; i-- {
+			middlewareID := stack.Finalize.List()[i]
+			m, _ := stack.Finalize.Get(middlewareID)
+
+			// Wrap the handler in a way that prevents infinite recursion
+			previousHandler := handler
+			handler = middleware.FinalizeHandlerFunc(func(ctx context.Context, in middleware.FinalizeInput) (middleware.FinalizeOutput, middleware.Metadata, error) {
+				return m.HandleFinalize(ctx, in, previousHandler)
+			})
+		}
+
+		// Execute the middleware chain
+		_, _, err = handler.HandleFinalize(ctx, middleware.FinalizeInput{})
+		Expect(err).NotTo(HaveOccurred())
 	})
 
 	// It("should record metrics with status 'success'", func() {
