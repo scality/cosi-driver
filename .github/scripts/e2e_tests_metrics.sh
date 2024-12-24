@@ -94,7 +94,7 @@ log_and_run echo "Verifying S3 and IAM metrics..."
 # only verify metrics if EXPECTED_CREATE_BUCKET is more than 0
 
 if [[ "$EXPECTED_CREATE_BUCKET" -gt 0 ]]; then
-  log_and_run curl -s http://localhost:8080/metrics | grep -E 'scality_cosi_driver' > /tmp/s3_iam_metrics_output.log
+log_and_run curl -s http://localhost:$LOCAL_PORT/metrics | grep 'scality_cosi_driver' > /tmp/s3_iam_metrics_output.log
   S3_IAM_METRICS_OUTPUT=$(cat /tmp/s3_iam_metrics_output.log)
   echo "Metrics fetched successfully:" | tee -a "$LOG_FILE"
   echo "$S3_IAM_METRICS_OUTPUT" | tee -a "$LOG_FILE"
