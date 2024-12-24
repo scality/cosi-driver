@@ -78,7 +78,7 @@ func run(ctx context.Context) error {
 	registry := prometheus.NewRegistry()
 	driverName := *driverPrefix + "." + provisionerName
 
-	metricsServer, err := metrics.StartMetricsServerWithRegistry(*driverMetricsAddress, registry, *driverMetricsPath)
+	metricsServer, err := metrics.StartMetricsServerWithRegistry(*driverMetricsAddress, registry, *driverMetricsPath, *driverMetricsPrefix)
 	if err != nil {
 		return fmt.Errorf("failed to start metrics server: %w", err)
 	}
