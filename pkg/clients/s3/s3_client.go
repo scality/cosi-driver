@@ -13,6 +13,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/aws/aws-sdk-go-v2/service/s3/types"
 	"github.com/aws/smithy-go/logging"
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/scality/cosi-driver/pkg/metrics"
 	"github.com/scality/cosi-driver/pkg/util"
 )
@@ -65,7 +66,13 @@ var InitS3Client = func(ctx context.Context, params util.StorageClientParameters
 }
 
 func (client *S3Client) CreateBucket(ctx context.Context, bucketName string, params util.StorageClientParameters) error {
-	start := time.Now()
+	metricStatus := "success"
+
+	timer := prometheus.NewTimer(prometheus.ObserverFunc(func(duration float64) {
+		metrics.S3RequestDuration.WithLabelValues("CreateBucket", metricStatus).Observe(duration)
+	}))
+	defer timer.ObserveDuration()
+
 	input := &s3.CreateBucketInput{Bucket: &bucketName}
 	if params.Region != util.DefaultRegion {
 		input.CreateBucketConfiguration = &types.CreateBucketConfiguration{
@@ -74,15 +81,11 @@ func (client *S3Client) CreateBucket(ctx context.Context, bucketName string, par
 	}
 
 	_, err := client.S3Service.CreateBucket(ctx, input)
-	duration := time.Since(start).Seconds()
 
-	status := "success"
 	if err != nil {
-		status = "error"
+		metricStatus = "error"
 	}
-	metrics.S3RequestsTotal.WithLabelValues("CreateBucket", status).Inc()
-	metrics.S3RequestDuration.WithLabelValues("CreateBucket", status).Observe(duration)
-
+	metrics.S3RequestsTotal.WithLabelValues("CreateBucket", metricStatus).Inc()
 	return err
 }
 
