@@ -15,6 +15,7 @@ import (
 	"github.com/aws/smithy-go/middleware"
 	"github.com/scality/cosi-driver/pkg/metrics"
 	"github.com/scality/cosi-driver/pkg/util"
+	"go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go-v2/otelaws"
 )
 
 // S3API defines the methods the S3 client must implement.
@@ -57,16 +58,15 @@ var InitS3Client = func(ctx context.Context, params util.StorageClientParameters
 		config.WithLogger(logger),
 		config.WithAPIOptions([]func(*middleware.Stack) error{
 			func(stack *middleware.Stack) error {
-				if err := util.AttachPrometheusMiddleware(stack, metrics.S3RequestDuration, metrics.S3RequestsTotal); err != nil {
-					return err
-				}
-				return util.AttachOpenTelemetryMiddleware(stack, "S3")
+				// Attach Prometheus middleware
+				return util.AttachPrometheusMiddleware(stack, metrics.S3RequestDuration, metrics.S3RequestsTotal)
 			},
 		}),
 	)
 	if err != nil {
 		return nil, err
 	}
+	otelaws.AppendMiddlewares(&awsCfg.APIOptions)
 
 	// Create the S3 client
 	s3Client := s3.NewFromConfig(awsCfg, func(o *s3.Options) {
