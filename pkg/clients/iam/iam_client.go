@@ -65,7 +65,7 @@ var InitIAMClient = func(ctx context.Context, params util.StorageClientParameter
 				if err := util.AttachPrometheusMiddleware(stack, metrics.S3RequestDuration, metrics.S3RequestsTotal); err != nil {
 					return err
 				}
-				return util.AttachOpenTelemetryMiddleware(stack, "IAM", metrics.S3RequestDuration, metrics.S3RequestsTotal)
+				return util.AttachOpenTelemetryMiddleware(stack, "IAM")
 			},
 		}),
 	)

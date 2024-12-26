@@ -9,11 +9,9 @@ import (
 	"k8s.io/klog/v2"
 )
 
-var AttachPrometheusMiddleware = attachPrometheusMiddlewareMetrics
-
-// AttachPrometheusMiddleware attaches a Prometheus middleware for metrics tracking.
-func attachPrometheusMiddlewareMetrics(stack *middleware.Stack, requestDuration *prometheus.HistogramVec, requestsTotal *prometheus.CounterVec) error {
-	middlewareFunc := middleware.FinalizeMiddlewareFunc("PrometheusMetrics", func(
+// AttachPrometheusMiddleware adds Prometheus metrics tracking to the middleware stack.
+func AttachPrometheusMiddleware(stack *middleware.Stack, requestDuration *prometheus.HistogramVec, requestsTotal *prometheus.CounterVec) error {
+	prometheusMiddleware := middleware.FinalizeMiddlewareFunc("PrometheusMetrics", func(
 		ctx context.Context, in middleware.FinalizeInput, next middleware.FinalizeHandler,
 	) (out middleware.FinalizeOutput, metadata middleware.Metadata, err error) {
 		operationName := middleware.GetOperationName(ctx)
@@ -23,26 +21,25 @@ func attachPrometheusMiddlewareMetrics(stack *middleware.Stack, requestDuration 
 			if err != nil {
 				status = "error"
 			}
-
-			// Extract trace_id from the current span context.
 			traceID := ""
-			if span := trace.SpanContextFromContext(ctx); span.IsSampled() {
-				traceID = span.TraceID().String()
+			// Add traceID if available
+			if span := trace.SpanFromContext(ctx); span.SpanContext().IsValid() {
+				traceID = span.SpanContext().TraceID().String()
 			}
-
-			// Record metrics with the trace_id label.
 			requestDuration.WithLabelValues(operationName, status, traceID).Observe(duration)
 			requestsTotal.WithLabelValues(operationName, status, traceID).Inc()
 		}))
 		defer timer.ObserveDuration()
 
+		// Proceed with the AWS operation.
 		out, metadata, err = next.HandleFinalize(ctx, in)
+
 		if err != nil {
 			klog.ErrorS(err, "AWS SDK operation failed", "operation", operationName)
 		}
 		return out, metadata, err
 	})
 
-	// Add the middleware to the Finalize step
-	return stack.Finalize.Add(middlewareFunc, middleware.After)
+	// Attach the middleware to the Finalize step.
+	return stack.Finalize.Add(prometheusMiddleware, middleware.After)
 }
