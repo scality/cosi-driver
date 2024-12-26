@@ -48,13 +48,14 @@ const (
 )
 
 var (
-	driverAddress        = flag.String("driver-address", defaultDriverAddress, "Driver address for the socket file, default: unix:///var/lib/cosi/cosi.sock")
-	driverPrefix         = flag.String("driver-prefix", defaultDriverPrefix, "Prefix for COSI driver, e.g. <prefix>.scality.com, default: cosi.scality.com")
-	driverMetricsAddress = flag.String("driver-metrics-address", defaultMetricsAddress, "The address to expose Prometheus metrics, default: :8080")
-	driverMetricsPath    = flag.String("driver-metrics-path", defaultMetricsPath, "Path for the metrics endpoint, default: /metrics")
-	driverMetricsPrefix  = flag.String("driver-custom-metrics-prefix", defaultMetricsPrefix, "Prefix for the metrics, default: scality_cosi_driver_")
-	driverOtelEndpoint   = flag.String("driver-otel-endpoint", defaultOtelEndpoint, "OpenTelemetry endpoint to export traces, default: localhost:4317")
-	driverOtelStdout     = flag.Bool("driver-otel-stdout", defaultOtelStdout, "Enable OpenTelemetry trace export to stdout, disables endpoint if enabled")
+	driverAddress         = flag.String("driver-address", defaultDriverAddress, "Driver address for the socket file, default: unix:///var/lib/cosi/cosi.sock")
+	driverPrefix          = flag.String("driver-prefix", defaultDriverPrefix, "Prefix for COSI driver, e.g. <prefix>.scality.com, default: cosi.scality.com")
+	driverMetricsAddress  = flag.String("driver-metrics-address", defaultMetricsAddress, "The address to expose Prometheus metrics, default: :8080")
+	driverMetricsPath     = flag.String("driver-metrics-path", defaultMetricsPath, "Path for the metrics endpoint, default: /metrics")
+	driverMetricsPrefix   = flag.String("driver-custom-metrics-prefix", defaultMetricsPrefix, "Prefix for the metrics, default: scality_cosi_driver_")
+	driverOtelEndpoint    = flag.String("driver-otel-endpoint", defaultOtelEndpoint, "OpenTelemetry endpoint to export traces, default: localhost:4317")
+	driverOtelStdout      = flag.Bool("driver-otel-stdout", defaultOtelStdout, "Enable OpenTelemetry trace export to stdout, disables endpoint if enabled")
+	driverOtelServiceName = flag.String("driver-otel-service-name", *driverPrefix+"."+provisionerName, "Service name for OpenTelemetry traces")
 )
 
 func init() {
@@ -103,12 +104,11 @@ func initOpenTelemetry(ctx context.Context) (*sdktrace.TracerProvider, error) {
 		}
 		klog.InfoS("OpenTelemetry tracing enabled with OTLP exporter", "endpoint", *driverOtelEndpoint)
 	}
-	driverName := *driverPrefix + "." + provisionerName
 	// Set up the tracer provider with the selected exporter
 	tp := sdktrace.NewTracerProvider(
 		sdktrace.WithBatcher(exporter),
 		sdktrace.WithSampler(sdktrace.AlwaysSample()),
-		sdktrace.WithResource(resource.NewWithAttributes("", attribute.String("service.name", driverName))),
+		sdktrace.WithResource(resource.NewWithAttributes("", attribute.String("service.name", *driverOtelServiceName))),
 	)
 	otel.SetTracerProvider(tp)
 
@@ -162,12 +162,5 @@ func run(ctx context.Context) error {
 		return fmt.Errorf("failed to start the provisioner server: %w", err)
 	}
 
-	err = server.Run(ctx, registry)
-	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer shutdownCancel()
-	if shutdownErr := metricsServer.Shutdown(shutdownCtx); shutdownErr != nil {
-		klog.ErrorS(shutdownErr, "Failed to gracefully shutdown metrics server")
-	}
-
-	return err
+	return server.Run(ctx, registry)
 }
