@@ -25,10 +25,15 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/scality/cosi-driver/pkg/driver"
-	"k8s.io/klog/v2"
-
 	"github.com/scality/cosi-driver/pkg/grpcfactory"
 	"github.com/scality/cosi-driver/pkg/metrics"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp"
+	stdout "go.opentelemetry.io/otel/exporters/stdout/stdouttrace"
+	"go.opentelemetry.io/otel/sdk/resource"
+	sdktrace "go.opentelemetry.io/otel/sdk/trace"
+	"k8s.io/klog/v2"
 )
 
 const (
@@ -38,14 +43,18 @@ const (
 	defaultMetricsPath    = "/metrics"
 	defaultMetricsPrefix  = "scality_cosi_driver"
 	defaultMetricsAddress = ":8080"
+	defaultOtelStdout     = false
+	defaultOtelEndpoint   = "localhost:4318"
 )
 
 var (
-	driverAddress        = flag.String("driver-address", defaultDriverAddress, "driver address for the socket file, default: unix:///var/lib/cosi/cosi.sock")
-	driverPrefix         = flag.String("driver-prefix", defaultDriverPrefix, "prefix for COSI driver, e.g. <prefix>.scality.com, default cosi.scality.com")
+	driverAddress        = flag.String("driver-address", defaultDriverAddress, "Driver address for the socket file, default: unix:///var/lib/cosi/cosi.sock")
+	driverPrefix         = flag.String("driver-prefix", defaultDriverPrefix, "Prefix for COSI driver, e.g. <prefix>.scality.com, default: cosi.scality.com")
 	driverMetricsAddress = flag.String("driver-metrics-address", defaultMetricsAddress, "The address to expose Prometheus metrics, default: :8080")
-	driverMetricsPath    = flag.String("driver-metrics-path", defaultMetricsPath, "path for the metrics endpoint, default: /metrics")
-	driverMetricsPrefix  = flag.String("driver-custom-metrics-prefix", defaultMetricsPrefix, "prefix for the metrics, default: scality_cosi_driver_")
+	driverMetricsPath    = flag.String("driver-metrics-path", defaultMetricsPath, "Path for the metrics endpoint, default: /metrics")
+	driverMetricsPrefix  = flag.String("driver-custom-metrics-prefix", defaultMetricsPrefix, "Prefix for the metrics, default: scality_cosi_driver_")
+	driverOtelEndpoint   = flag.String("driver-otel-endpoint", defaultOtelEndpoint, "OpenTelemetry endpoint to export traces, default: localhost:4317")
+	driverOtelStdout     = flag.Bool("driver-otel-stdout", defaultOtelStdout, "Enable OpenTelemetry trace export to stdout, disables endpoint if enabled")
 )
 
 func init() {
@@ -55,9 +64,12 @@ func init() {
 	}
 	flag.Parse()
 
-	// check if driverMetricsPath starts with / if nor add it and chekc id it is path prood
+	// Ensure driverMetricsPath is properly formatted.
 	if !strings.HasPrefix(*driverMetricsPath, "/") {
 		*driverMetricsPath = "/" + *driverMetricsPath
+	}
+	if *driverOtelStdout && *driverOtelEndpoint != "" {
+		klog.Warning("Both --driver-otel-stdout and --driver-otel-endpoint are set. Defaulting to stdout tracing.")
 	}
 
 	klog.InfoS("COSI driver startup configuration",
@@ -66,19 +78,80 @@ func init() {
 		"driverMetricsPath", *driverMetricsPath,
 		"driverMetricsPrefix", *driverMetricsPrefix,
 		"driverMetricsAddress", *driverMetricsAddress,
+		"driverOtelEndpoint", *driverOtelEndpoint,
+		"driverOtelStdout", *driverOtelStdout,
 	)
 }
 
-func run(ctx context.Context) error {
-	registry := prometheus.NewRegistry()
+// initOpenTelemetry initializes OpenTelemetry tracing.
+func initOpenTelemetry(ctx context.Context) (*sdktrace.TracerProvider, error) {
+	var exporter sdktrace.SpanExporter
+	var err error
+
+	if *driverOtelStdout {
+		// Configure stdout exporter
+		exporter, err = stdout.New(stdout.WithPrettyPrint())
+		if err != nil {
+			return nil, fmt.Errorf("failed to initialize stdout exporter: %w", err)
+		}
+		klog.Info("OpenTelemetry tracing enabled with stdout exporter")
+	} else {
+		// Configure OTLP exporter
+		exporter, err = otlptracehttp.New(ctx, otlptracehttp.WithEndpoint(*driverOtelEndpoint), otlptracehttp.WithInsecure())
+		if err != nil {
+			return nil, fmt.Errorf("failed to initialize OTLP exporter: %w", err)
+		}
+		klog.InfoS("OpenTelemetry tracing enabled with OTLP exporter", "endpoint", *driverOtelEndpoint)
+	}
 	driverName := *driverPrefix + "." + provisionerName
+	// Set up the tracer provider with the selected exporter
+	tp := sdktrace.NewTracerProvider(
+		sdktrace.WithBatcher(exporter),
+		sdktrace.WithSampler(sdktrace.AlwaysSample()),
+		sdktrace.WithResource(resource.NewWithAttributes("", attribute.String("service.name", driverName))),
+	)
+	otel.SetTracerProvider(tp)
+
+	// Set error handler for OpenTelemetry
+	otel.SetErrorHandler(otel.ErrorHandlerFunc(func(err error) {
+		klog.ErrorS(err, "OpenTelemetry error")
+	}))
+
+	return tp, nil
+}
+
+func run(ctx context.Context) error {
+	// Initialize metrics
+	registry := prometheus.NewRegistry()
 	metrics.InitializeMetrics(defaultMetricsPrefix, registry)
 
 	metricsServer, err := metrics.StartMetricsServerWithRegistry(*driverMetricsAddress, registry, *driverMetricsPath)
 	if err != nil {
 		return fmt.Errorf("failed to start metrics server: %w", err)
 	}
+	defer func() {
+		shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		if shutdownErr := metricsServer.Shutdown(shutdownCtx); shutdownErr != nil {
+			klog.ErrorS(shutdownErr, "Failed to gracefully shutdown metrics server")
+		}
+	}()
 
+	// Initialize OpenTelemetry
+	tp, err := initOpenTelemetry(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to initialize OpenTelemetry: %w", err)
+	}
+	if tp != nil {
+		defer func() {
+			klog.Info("Shutting down OpenTelemetry tracer provider")
+			if shutdownErr := tp.Shutdown(ctx); shutdownErr != nil {
+				klog.ErrorS(shutdownErr, "Failed to shut down OpenTelemetry tracer provider")
+			}
+		}()
+	}
+
+	driverName := *driverPrefix + "." + provisionerName
 	identityServer, bucketProvisioner, err := driver.CreateDriver(ctx, driverName)
 	if err != nil {
 		return fmt.Errorf("failed to initialize Scality driver: %w", err)
