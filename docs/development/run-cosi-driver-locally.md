@@ -124,7 +124,7 @@ grpcurl -plaintext -proto cosi.proto -import-path ./proto -unix ./cosi.sock cosi
 
 ```sh
 grpcurl -plaintext -proto cosi.proto -import-path ./proto -unix -d '{
-  "name": "example-bucket",
+  "name": "example-bucket444",
   "parameters": {
     "objectStorageSecretName": "s3-secret-for-cosi",
     "objectStorageSecretNamespace": "default"
@@ -136,8 +136,8 @@ grpcurl -plaintext -proto cosi.proto -import-path ./proto -unix -d '{
 
 ```sh
 grpcurl -plaintext -proto cosi.proto -import-path ./proto -unix -d '{
-  "name": "user-name-example",
-  "bucketId": "example-bucket",
+  "name": "user-name-example444",
+  "bucketId": "example-bucket444",
   "parameters": {
     "objectStorageSecretName": "s3-secret-for-cosi",
     "objectStorageSecretNamespace": "default"
@@ -149,7 +149,7 @@ grpcurl -plaintext -proto cosi.proto -import-path ./proto -unix -d '{
 
 ```sh
 grpcurl -plaintext -proto cosi.proto -import-path ./proto -unix -d '{
-"bucketid": "example-bucket"
+  "bucket_id": "example-bucket444"
 }' ./cosi.sock cosi.v1alpha1.Provisioner.DriverDeleteBucket
 ```
 
@@ -157,8 +157,8 @@ grpcurl -plaintext -proto cosi.proto -import-path ./proto -unix -d '{
 
 ```sh
 grpcurl -plaintext -proto cosi.proto -import-path ./proto -unix -d '{
-  "accountId": "user-name-example",
-  "bucketId": "example-bucket",
+  "accountId": "user-name-example444",
+  "bucketId": "example-bucket444"
 }' ./cosi.sock cosi.v1alpha1.Provisioner.DriverRevokeBucketAccess
 ```
 
