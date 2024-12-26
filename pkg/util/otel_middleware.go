@@ -20,7 +20,7 @@ func AttachOpenTelemetryMiddleware(stack *middleware.Stack, serviceName string) 
 
 		// Start a new span.
 		tracer := otel.Tracer("github.com/scality/cosi-driver")
-		ctx, span := tracer.Start(ctx, operationName, trace.WithSpanKind(trace.SpanKindClient))
+		ctx, span := tracer.Start(ctx, serviceName+"/"+operationName, trace.WithSpanKind(trace.SpanKindClient))
 		defer span.End()
 
 		// Proceed with the AWS operation.
