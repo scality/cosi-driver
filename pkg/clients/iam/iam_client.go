@@ -62,7 +62,10 @@ var InitIAMClient = func(ctx context.Context, params util.StorageClientParameter
 		config.WithLogger(logger),
 		config.WithAPIOptions([]func(*middleware.Stack) error{
 			func(stack *middleware.Stack) error {
-				return util.AttachPrometheusMiddleware(stack, metrics.IAMRequestDuration, metrics.IAMRequestsTotal)
+				if err := util.AttachPrometheusMiddleware(stack, metrics.S3RequestDuration, metrics.S3RequestsTotal); err != nil {
+					return err
+				}
+				return util.AttachOpenTelemetryMiddleware(stack, "IAM", metrics.S3RequestDuration, metrics.S3RequestsTotal)
 			},
 		}),
 	)

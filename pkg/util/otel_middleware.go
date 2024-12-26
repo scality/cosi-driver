@@ -63,16 +63,16 @@ func AttachOpenTelemetryMiddleware(stack *middleware.Stack, serviceName string, 
 			)
 
 			// Extract request ID from metadata and add it to the span.
-			requestID := getRequestID(metadata)
-			if requestID != "" {
-				span.SetAttributes(attribute.String("aws.request_id", requestID))
-			}
+			// requestID := getRequestID(metadata)
+			// if requestID != "" {
+			// 	span.SetAttributes(attribute.String("aws.request_id", requestID))
+			// }
 
 			// Record errors and set span status.
 			if err != nil {
 				span.RecordError(err)
 				span.SetStatus(codes.Error, "AWS operation failed")
-				klog.ErrorS(err, "AWS SDK operation failed", "operation", operationName, "request_id", requestID)
+				klog.ErrorS(err, "AWS SDK operation failed", "operation", operationName)
 			} else {
 				span.SetStatus(codes.Ok, "AWS operation succeeded")
 			}
@@ -95,12 +95,14 @@ func AttachOpenTelemetryMiddleware(stack *middleware.Stack, serviceName string, 
 }
 
 // getRequestID retrieves the AWS request ID from middleware metadata.
-func getRequestID(metadata middleware.Metadata) string {
-	// The AWS SDK uses specific keys to store request metadata. "x-amz-request-id" is common.
-	if value := metadata.Get("x-amz-request-id"); value != nil {
-		if requestID, ok := value.(string); ok {
-			return requestID
-		}
-	}
-	return ""
-}
+// func getRequestID(metadata middleware.Metadata) string {
+// 	// The AWS SDK uses specific keys to store request metadata. "x-amz-request-id" is common.
+// 	// clone metadata and print all values of metadata
+
+// 	if value := metadata.Get("x-amz-request-id"); value != nil {
+// 		if requestID, ok := value.(string); ok {
+// 			return requestID
+// 		}
+// 	}
+// 	return ""
+// }
