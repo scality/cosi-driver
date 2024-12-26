@@ -5,6 +5,7 @@ import (
 
 	"github.com/aws/smithy-go/middleware"
 	"github.com/prometheus/client_golang/prometheus"
+	"go.opentelemetry.io/otel/trace"
 	"k8s.io/klog/v2"
 )
 
@@ -22,8 +23,16 @@ func attachPrometheusMiddlewareMetrics(stack *middleware.Stack, requestDuration 
 			if err != nil {
 				status = "error"
 			}
-			requestDuration.WithLabelValues(operationName, status).Observe(duration)
-			requestsTotal.WithLabelValues(operationName, status).Inc()
+
+			// Extract trace_id from the current span context.
+			traceID := ""
+			if span := trace.SpanContextFromContext(ctx); span.IsSampled() {
+				traceID = span.TraceID().String()
+			}
+
+			// Record metrics with the trace_id label.
+			requestDuration.WithLabelValues(operationName, status, traceID).Observe(duration)
+			requestsTotal.WithLabelValues(operationName, status, traceID).Inc()
 		}))
 		defer timer.ObserveDuration()
 

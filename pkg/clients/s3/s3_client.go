@@ -57,7 +57,10 @@ var InitS3Client = func(ctx context.Context, params util.StorageClientParameters
 		config.WithLogger(logger),
 		config.WithAPIOptions([]func(*middleware.Stack) error{
 			func(stack *middleware.Stack) error {
-				return util.AttachPrometheusMiddleware(stack, metrics.S3RequestDuration, metrics.S3RequestsTotal)
+				if err := util.AttachPrometheusMiddleware(stack, metrics.S3RequestDuration, metrics.S3RequestsTotal); err != nil {
+					return err
+				}
+				return util.AttachOpenTelemetryMiddleware(stack, "S3", metrics.S3RequestDuration, metrics.S3RequestsTotal)
 			},
 		}),
 	)
