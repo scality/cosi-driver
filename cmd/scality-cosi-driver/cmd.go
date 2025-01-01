@@ -31,20 +31,22 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp"
 	stdout "go.opentelemetry.io/otel/exporters/stdout/stdouttrace"
+	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"k8s.io/klog/v2"
 )
 
 const (
-	provisionerName       = "scality.com"
-	defaultDriverAddress  = "unix:///var/lib/cosi/cosi.sock"
-	defaultDriverPrefix   = "cosi"
-	defaultMetricsPath    = "/metrics"
-	defaultMetricsPrefix  = "scality_cosi_driver"
-	defaultMetricsAddress = ":8080"
-	defaultOtelStdout     = false
-	defaultOtelEndpoint   = "localhost:4318"
+	provisionerName        = "scality.com"
+	defaultDriverAddress   = "unix:///var/lib/cosi/cosi.sock"
+	defaultDriverPrefix    = "cosi"
+	defaultMetricsPath     = "/metrics"
+	defaultMetricsPrefix   = "scality_cosi_driver"
+	defaultMetricsAddress  = ":8080"
+	defaultOtelStdout      = false
+	defaultOtelEndpoint    = "localhost:4318"
+	defaultOtelServiceName = "cosi.scality.com"
 )
 
 var (
@@ -55,7 +57,7 @@ var (
 	driverMetricsPrefix   = flag.String("driver-custom-metrics-prefix", defaultMetricsPrefix, "Prefix for the metrics, default: scality_cosi_driver_")
 	driverOtelEndpoint    = flag.String("driver-otel-endpoint", defaultOtelEndpoint, "OpenTelemetry endpoint to export traces, default: localhost:4317")
 	driverOtelStdout      = flag.Bool("driver-otel-stdout", defaultOtelStdout, "Enable OpenTelemetry trace export to stdout, disables endpoint if enabled")
-	driverOtelServiceName = flag.String("driver-otel-service-name", *driverPrefix+"."+provisionerName, "Service name for OpenTelemetry traces")
+	driverOtelServiceName = flag.String("driver-otel-service-name", defaultOtelServiceName, "Service name for OpenTelemetry traces")
 )
 
 func init() {
@@ -111,6 +113,7 @@ func initOpenTelemetry(ctx context.Context) (*sdktrace.TracerProvider, error) {
 		sdktrace.WithResource(resource.NewWithAttributes("", attribute.String("service.name", *driverOtelServiceName))),
 	)
 	otel.SetTracerProvider(tp)
+	otel.SetTextMapPropagator(propagation.TraceContext{})
 
 	// Set error handler for OpenTelemetry
 	otel.SetErrorHandler(otel.ErrorHandlerFunc(func(err error) {
