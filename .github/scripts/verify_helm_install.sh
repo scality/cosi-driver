@@ -10,7 +10,7 @@ if ! helm status scality-cosi-driver -n $NAMESPACE; then
   exit 1
 fi
 
-kubectl describe --namespace $NAMESPACE --for=condition=ready pod --selector=app.kubernetes.io/name=scality-cosi-driver
+kubectl describe --namespace $NAMESPACE pod --selector=app.kubernetes.io/name=scality-cosi-driver
 
 echo "Verifying COSI driver Pod status for 120s..."
 if ! kubectl wait --namespace $NAMESPACE --for=condition=ready pod --selector=app.kubernetes.io/name=scality-cosi-driver --timeout=120s; then
