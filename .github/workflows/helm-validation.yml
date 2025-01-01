@@ -63,7 +63,7 @@ jobs:
           --namespace scality-object-storage \
           --create-namespace \
           --set image.tag=latest \
-          --set trace.otel_stdout=true
+          --set traces.otel_stdout=true
 
     - name: Print all resources in scality-object-storage namespace
       run: |
