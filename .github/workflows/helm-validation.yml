@@ -88,29 +88,9 @@ jobs:
         completion_delay_m: ${{ inputs.debug_delay_duration_minutes }}
       continue-on-error: true
 
-    - name: Capture Kubernetes Logs in artifacts directory
-      run: |
-        .github/scripts/capture_k8s_logs.sh
-      if: always()
-
-    # - name: "E2E test for Opentelemetry traces"
-    #   run: |
-    #     .github/scripts/e2e_tests_opentelemetry.sh
-    
     - name: Cleanup Helm Release and Namespace
       run: |
         helm uninstall scality-cosi-driver -n scality-object-storage
         kubectl delete namespace scality-object-storage
       if: always()
 
-    - name: Upload logs and data to Scality artifacts
-      uses: scality/action-artifacts@v4
-      with:
-        method: upload
-        url: https://artifacts.scality.net
-        user: ${{ secrets.ARTIFACTS_USER }}
-        password: ${{ secrets.ARTIFACTS_PASSWORD }}
-        source: .github/e2e_tests/artifacts
-      if: always()
-
-    
