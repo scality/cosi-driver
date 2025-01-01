@@ -62,7 +62,8 @@ jobs:
         helm install scality-cosi-driver ./helm/scality-cosi-driver \
           --namespace scality-object-storage \
           --create-namespace \
-          --set image.tag=latest
+          --set image.tag=latest \
+          --set trace.stdout=true
 
     - name: Print all resources in scality-object-storage namespace
       run: |

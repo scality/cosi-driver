@@ -34,6 +34,9 @@ spec:
             - "--driver-metrics-address={{ .Values.metrics.address }}"
             - "--driver-metrics-path={{ .Values.metrics.path }}"
             - "--driver-custom-metrics-prefix={{ .Values.metrics.prefix }}"
+            - "--driver-otel-endpoint={{ .Values.traces.otel-endpoint }}"
+            - "--driver-otel-service-name={{ .Values.traces.otel-service-name }}"
+            - "--driver-otel-trace-service={{ .Values.traces.otel-stdout }}"
           resources:
             limits:
               cpu: {{ .Values.resources.limits.cpu }}
