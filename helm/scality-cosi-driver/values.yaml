@@ -33,6 +33,14 @@ metrics:
   address: "0.0.0.0:8080"
   path: "/metrics"
 
+traces:
+  # endpoint for trace collector to send traces to
+  otel_endpoint: "http://localhost:4318"
+  # prints traces to stdout if true and does not send to collector
+  otel_stdout: false
+  # Trace span service name
+  otel_service_name: "cosi.scality.com"
+
 resources:
   limits:
     cpu: "500m"
