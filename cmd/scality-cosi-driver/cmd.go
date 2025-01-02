@@ -72,6 +72,7 @@ func init() {
 func run(ctx context.Context) error {
 	registry := prometheus.NewRegistry()
 	driverName := *driverPrefix + "." + provisionerName
+	metrics.InitializeMetrics(defaultMetricsPrefix, registry)
 
 	metricsServer, err := metrics.StartMetricsServerWithRegistry(*driverMetricsAddress, registry, *driverMetricsPath)
 	if err != nil {

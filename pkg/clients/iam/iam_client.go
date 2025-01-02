@@ -13,7 +13,9 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/iam"
 	"github.com/aws/aws-sdk-go-v2/service/iam/types"
 	"github.com/aws/smithy-go/logging"
+	"github.com/aws/smithy-go/middleware"
 	c "github.com/scality/cosi-driver/pkg/constants"
+	"github.com/scality/cosi-driver/pkg/metrics"
 	"github.com/scality/cosi-driver/pkg/util"
 	"k8s.io/klog/v2"
 )
@@ -58,6 +60,11 @@ var InitIAMClient = func(ctx context.Context, params util.StorageClientParameter
 		config.WithCredentialsProvider(credentials.NewStaticCredentialsProvider(params.AccessKeyID, params.SecretAccessKey, "")),
 		config.WithHTTPClient(httpClient),
 		config.WithLogger(logger),
+		config.WithAPIOptions([]func(*middleware.Stack) error{
+			func(stack *middleware.Stack) error {
+				return metrics.AttachPrometheusMiddleware(stack, metrics.IAMRequestDuration, metrics.IAMRequestsTotal)
+			},
+		}),
 	)
 	if err != nil {
 		return nil, err

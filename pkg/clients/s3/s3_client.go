@@ -12,6 +12,8 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/aws/aws-sdk-go-v2/service/s3/types"
 	"github.com/aws/smithy-go/logging"
+	"github.com/aws/smithy-go/middleware"
+	"github.com/scality/cosi-driver/pkg/metrics"
 	"github.com/scality/cosi-driver/pkg/util"
 )
 
@@ -47,6 +49,11 @@ var InitS3Client = func(ctx context.Context, params util.StorageClientParameters
 		config.WithCredentialsProvider(credentials.NewStaticCredentialsProvider(params.AccessKeyID, params.SecretAccessKey, "")),
 		config.WithHTTPClient(httpClient),
 		config.WithLogger(logger),
+		config.WithAPIOptions([]func(*middleware.Stack) error{
+			func(stack *middleware.Stack) error {
+				return metrics.AttachPrometheusMiddleware(stack, metrics.S3RequestDuration, metrics.S3RequestsTotal)
+			},
+		}),
 	)
 	if err != nil {
 		return nil, err
