@@ -22,3 +22,20 @@ The table below details the configuration parameters for BucketClass, which dete
 | `tlsCert`| The name of the secret containing the TLS certificate (optional).                                       | `string`                                    | No           |
 
 [Example](../cosi-examples/s3-secret-for-cosi.yaml)
+
+## Deployment Parameters for COSI Driver
+
+Below are the deployment parameters for configuring the COSI driver, which can be passed as flags or environment variables.
+
+| **Parameter**                   | **Description**                                                | **Default Value**                | **Required** |
+|---------------------------------|----------------------------------------------------------------|----------------------------------|--------------|
+| `driver-address`                | The socket file address for the COSI driver.                   | `unix:///var/lib/cosi/cosi.sock` | Yes          |
+| `driver-prefix`                 | The prefix for the COSI driver (e.g., `<prefix>.scality.com`). | `cosi`                           | No           |
+| `driver-metrics-address`        | The address to expose Prometheus metrics.                      | `:8080`                          | No           |
+| `driver-metrics-path`           | The HTTP path for exposing metrics.                            | `/metrics`                       | No           |
+| `driver-custom-metrics-prefix`  | The prefix for metrics collected by the COSI driver.           | `scality_cosi_driver`            | No           |
+
+### Notes
+
+- If driver-metrics-path does not start with /, it will automatically prepend /.
+- Prometheus metrics are exposed for monitoring at the address and path specified.
