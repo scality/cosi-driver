@@ -11,6 +11,7 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/scality/cosi-driver/pkg/grpcfactory"
 	cosi "sigs.k8s.io/container-object-storage-interface-spec"
 )
@@ -59,7 +60,7 @@ var _ = Describe("gRPC Factory Server", Ordered, func() {
 			Expect(server).NotTo(BeNil())
 
 			go func() {
-				err := server.Run(ctx)
+				err := server.Run(ctx, prometheus.NewRegistry())
 				if errors.Is(err, context.Canceled) {
 					return // Expected when the context is canceled
 				}
@@ -81,7 +82,7 @@ var _ = Describe("gRPC Factory Server", Ordered, func() {
 			Expect(server2).NotTo(BeNil())
 
 			// Run the second server and expect it to fail
-			err = server2.Run(ctx)
+			err = server2.Run(ctx, prometheus.NewRegistry())
 			Expect(err).To(HaveOccurred())
 			Expect(err.Error()).To(ContainSubstring("address already in use"))
 		}, SpecTimeout(1*time.Second))
@@ -94,7 +95,7 @@ var _ = Describe("gRPC Factory Server", Ordered, func() {
 			Expect(server).NotTo(BeNil())
 
 			// Wait for server.Run to return an error
-			err = server.Run(ctx)
+			err = server.Run(ctx, prometheus.NewRegistry())
 			Expect(err).To(HaveOccurred())
 			Expect(err.Error()).To(ContainSubstring("unsupported scheme: expected 'unix'"))
 		}, SpecTimeout(1*time.Second))
