@@ -29,6 +29,34 @@ func generateUniqueAddress() string {
 	return fmt.Sprintf("unix:///tmp/test-%d.sock", time.Now().UnixNano())
 }
 
+type mockRegisterer struct{}
+
+func (m *mockRegisterer) Register(prometheus.Collector) error {
+	return fmt.Errorf("mock registration failure")
+}
+
+func (m *mockRegisterer) MustRegister(...prometheus.Collector) {
+	panic("mock registration failure")
+}
+
+func (m *mockRegisterer) Unregister(prometheus.Collector) bool {
+	return false
+}
+
+type failingListener struct{}
+
+func (f *failingListener) Accept() (net.Conn, error) {
+	return nil, fmt.Errorf("simulated listener failure")
+}
+
+func (f *failingListener) Close() error {
+	return nil
+}
+
+func (f *failingListener) Addr() net.Addr {
+	return &net.UnixAddr{Name: "mock", Net: "unix"}
+}
+
 var _ = Describe("gRPC Factory Server", Ordered, func() {
 	var (
 		address           string
@@ -98,6 +126,31 @@ var _ = Describe("gRPC Factory Server", Ordered, func() {
 			err = server.Run(ctx, prometheus.NewRegistry())
 			Expect(err).To(HaveOccurred())
 			Expect(err.Error()).To(ContainSubstring("unsupported scheme: expected 'unix'"))
+		}, SpecTimeout(1*time.Second))
+
+		It("should return an error when gRPC metrics registration fails", func(ctx SpecContext) {
+			mockRegistry := &mockRegisterer{}
+
+			server, err := grpcfactory.NewCOSIProvisionerServer(address, identityServer, provisionerServer, nil)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(server).NotTo(BeNil())
+
+			err = server.Run(ctx, mockRegistry)
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("failed to register gRPC metrics"))
+		}, SpecTimeout(3*time.Second))
+
+		It("should return an error when the address is invalid", func(ctx SpecContext) {
+			// produce missing protocol scheme error
+			invalidAddress := "::/invalid-address"
+
+			server, err := grpcfactory.NewCOSIProvisionerServer(invalidAddress, identityServer, provisionerServer, nil)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(server).NotTo(BeNil())
+
+			err = server.Run(ctx, prometheus.NewRegistry())
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("missing protocol scheme"))
 		}, SpecTimeout(1*time.Second))
 	})
 })
