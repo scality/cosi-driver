@@ -20,38 +20,10 @@ on:
 jobs:
   e2e-tests-with-kind:
     runs-on: ubuntu-latest
+
     steps:
     - name: Check out repository
       uses: actions/checkout@v4
-
-    - name: Create k8s KIND Cluster
-      uses: helm/kind-action@v1.10.0
-      with:
-        version: v0.21.0
-        wait: 90s
-        cluster_name: object-storage-cluster
-
-    - name: Verify KIND cluster is running
-      run: |
-        kubectl cluster-info
-        kubectl get nodes
-
-    - name: "Debug: SSH to runner"
-      uses: scality/actions/action-ssh-to-runner@v1
-      with:
-        tmate-server-host: ${{ secrets.TMATE_SERVER_HOST }}
-        tmate-server-port: ${{ secrets.TMATE_SERVER_PORT }}
-        tmate-server-rsa-fingerprint: ${{ secrets.TMATE_SERVER_RSA_FINGERPRINT }}
-        tmate-server-ed25519-fingerprint: ${{ secrets.TMATE_SERVER_ED25519_FINGERPRINT }}
-        detached: true
-      if: ${{ github.event_name == 'workflow_dispatch' && inputs.debug_enabled }}
-      timeout-minutes: 10
-      continue-on-error: true
-
-    - name: Setup COSI Controller, CRDs and Driver
-      run: |
-        pwd
-        .github/scripts/setup_cosi_resources.sh
 
     - name: Login to Registry
       uses: docker/login-action@v3
@@ -68,18 +40,58 @@ jobs:
         key: docker-${{ runner.os }}-${{ hashFiles('.github/s3_and_iam_deployment/.env') }}
         restore-keys: |
           docker-${{ runner.os }}-
+    
+    - name: Create k8s KIND Cluster
+      uses: helm/kind-action@v1.10.0
+      with:
+        version: v0.21.0
+        wait: 90s
+        cluster_name: object-storage-cluster
 
-    - name: Load Cached Images
+    - name: Verify KIND cluster is running
       run: |
-        for image in /tmp/.docker_cache/*.tar; do
-          docker load -i "$image" || true
-        done
+        kubectl cluster-info
+        kubectl get nodes
+
+    - name: Setup COSI, S3 and IAM environments
+      run: |
+        set -e -o pipefail
+        (
+          echo "=== Setup COSI Controller, CRDs and Driver ==="
+          .github/scripts/setup_cosi_resources.sh
+        ) &
+        (
+          echo "=== Loading cached S3 and IAM Docker images ==="
+          if [ -d /tmp/.docker_cache ] && [ "$(ls -A /tmp/.docker_cache 2>/dev/null)" ]; then
+            for image in /tmp/.docker_cache/*.tar; do
+              docker load -i "$image" || true  # continue on failure
+            done
+          else
+            echo "No cached images found. Skipping load."
+          fi
+        ) &
+
+        # Wait for both background processes
+        wait
+
+    - name: "Debug: SSH to runner"
+      if: ${{ github.event_name == 'workflow_dispatch' && inputs.debug_enabled }}
+      uses: scality/actions/action-ssh-to-runner@v1
+      with:
+        tmate-server-host: ${{ secrets.TMATE_SERVER_HOST }}
+        tmate-server-port: ${{ secrets.TMATE_SERVER_PORT }}
+        tmate-server-rsa-fingerprint: ${{ secrets.TMATE_SERVER_RSA_FINGERPRINT }}
+        tmate-server-ed25519-fingerprint: ${{ secrets.TMATE_SERVER_ED25519_FINGERPRINT }}
+        detached: true
+      timeout-minutes: 10
       continue-on-error: true
 
     - name: Setup IAM and S3 Services
       run: |-
         set -e -o pipefail;
-        mkdir -p logs/s3 logs/iam logs/cosi_driver data/vaultdb && chown -R runner:docker logs data && chmod -R ugo+rwx logs data
+        mkdir -p logs/s3 logs/iam logs/cosi_driver data/vaultdb
+        chown -R runner:docker logs data
+        chmod -R ugo+rwx logs data
         docker compose --profile iam_s3 up -d --quiet-pull
         bash ../scripts/wait_for_local_port.bash 8600 30
         bash ../scripts/wait_for_local_port.bash 8000 30
@@ -116,23 +128,24 @@ jobs:
       working-directory: .github/s3_and_iam_deployment
 
     - name: Move S3 and IAM logs and data to artifacts directory
+      if: always()
       run: |-
         set -e -o pipefail;
         mkdir -p .github/e2e_tests/artifacts/logs .github/e2e_tests/artifacts/data
         cp -r .github/s3_and_iam_deployment/logs/* .github/e2e_tests/artifacts/logs/
         cp -r .github/s3_and_iam_deployment/data/* .github/e2e_tests/artifacts/data/
-      if: always()
 
     - name: Capture Kubernetes Logs in artifacts directory
+      if: always()
       run: |
         .github/scripts/capture_k8s_logs.sh
-      if: always()
 
     - name: Cleanup COSI CRDs, Controller, and Driver
       run: |
         .github/scripts/cleanup_cosi_resources.sh
 
     - name: Upload logs and data to Scality artifacts
+      if: always()
       uses: scality/action-artifacts@v4
       with:
         method: upload
@@ -140,4 +153,3 @@ jobs:
         user: ${{ secrets.ARTIFACTS_USER }}
         password: ${{ secrets.ARTIFACTS_PASSWORD }}
         source: .github/e2e_tests/artifacts
-      if: always()
