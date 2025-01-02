@@ -128,15 +128,15 @@ if [[ "$EXPECTED_CREATE_BUCKET" -gt 0 ]]; then
   S3_IAM_METRICS_OUTPUT=$(cat  /tmp/metrics_output.log | grep 'scality_cosi_driver')
   echo "Metrics fetched successfully:" | tee -a "$LOG_FILE"
   echo "$S3_IAM_METRICS_OUTPUT" | tee -a "$LOG_FILE"
-  CREATE_BUCKET_COUNT="$(echo "$S3_IAM_METRICS_OUTPUT" | grep 'scality_cosi_driver_s3_requests_total' | grep 'action="CreateBucket"' | grep 'status="success"' | awk '{print $NF}')"
-  DELETE_BUCKET_COUNT="$(echo "$S3_IAM_METRICS_OUTPUT" | grep 'scality_cosi_driver_s3_requests_total' | grep 'action="DeleteBucket"' | grep 'status="success"' | awk '{print $NF}')"
-  CREATE_USER_COUNT="$(echo "$S3_IAM_METRICS_OUTPUT" | grep 'scality_cosi_driver_iam_requests_total' | grep 'action="CreateUser"' | grep 'status="success"' | awk '{print $NF}')"
-  DELETE_USER_COUNT="$(echo "$S3_IAM_METRICS_OUTPUT" | grep 'scality_cosi_driver_iam_requests_total' | grep 'action="DeleteUser"' | grep 'status="success"' | awk '{print $NF}')"
-
-  CREATE_BUCKET_DURATION="$(echo "$S3_IAM_METRICS_OUTPUT" | grep 'scality_cosi_driver_s3_request_duration_seconds_sum' | grep 'action="CreateBucket"' | awk '{print $NF}')"
-  DELETE_BUCKET_DURATION="$(echo "$S3_IAM_METRICS_OUTPUT" | grep 'scality_cosi_driver_s3_request_duration_seconds_sum' | grep 'action="DeleteBucket"' | awk '{print $NF}')"
-  CREATE_USER_DURATION="$(echo "$S3_IAM_METRICS_OUTPUT" | grep 'scality_cosi_driver_iam_request_duration_seconds_sum' | grep 'action="CreateUser"' | awk '{print $NF}')"
-  DELETE_USER_DURATION="$(echo "$S3_IAM_METRICS_OUTPUT" | grep 'scality_cosi_driver_iam_request_duration_seconds_sum' | grep 'action="DeleteUser"' | awk '{print $NF}')"
+   # Capture the counts for S3 and IAM requests
+  CREATE_BUCKET_COUNT="$(echo "$S3_IAM_METRICS_OUTPUT" | grep 'scality_cosi_driver_s3_requests_total' | grep 'method="CreateBucket"' | grep 'status="success"' | awk '{print $NF}' | awk '{sum+=$1} END {print sum}')"
+  DELETE_BUCKET_COUNT="$(echo "$S3_IAM_METRICS_OUTPUT" | grep 'scality_cosi_driver_s3_requests_total' | grep 'method="DeleteBucket"' | grep 'status="success"' | awk '{print $NF}' | awk '{sum+=$1} END {print sum}')"
+  CREATE_BUCKET_DURATION="$(echo "$S3_IAM_METRICS_OUTPUT" | grep 'scality_cosi_driver_s3_request_duration_seconds_sum' | grep 'method="CreateBucket"' | awk '{print $NF}' | awk '{sum+=$1} END {print sum}')"
+  DELETE_BUCKET_DURATION="$(echo "$S3_IAM_METRICS_OUTPUT" | grep 'scality_cosi_driver_s3_request_duration_seconds_sum' | grep 'method="DeleteBucket"' | awk '{print $NF}' | awk '{sum+=$1} END {print sum}')"
+  CREATE_USER_COUNT="$(echo "$S3_IAM_METRICS_OUTPUT" | grep 'scality_cosi_driver_iam_requests_total' | grep 'method="CreateUser"' | grep 'status="success"' | awk -F ' ' '{print $NF}' | awk '{s+=$1} END {print s}')"
+  DELETE_USER_COUNT="$(echo "$S3_IAM_METRICS_OUTPUT" | grep 'scality_cosi_driver_iam_requests_total' | grep 'method="DeleteUser"' | grep 'status="success"' | awk -F ' ' '{print $NF}' | awk '{s+=$1} END {print s}')"
+  CREATE_USER_DURATION="$(echo "$S3_IAM_METRICS_OUTPUT" | grep 'scality_cosi_driver_iam_request_duration_seconds_sum' | grep 'method="CreateUser"' | awk '{s+=$NF} END {print s}')"
+  DELETE_USER_DURATION="$(echo "$S3_IAM_METRICS_OUTPUT" | grep 'scality_cosi_driver_iam_request_duration_seconds_sum' | grep 'method="DeleteUser"' | awk '{s+=$NF} END {print s}')"
 
   validate_metric "CreateBucket" "$CREATE_BUCKET_COUNT" "$EXPECTED_CREATE_BUCKET" "$CREATE_BUCKET_DURATION"
   validate_metric "DeleteBucket" "$DELETE_BUCKET_COUNT" "$EXPECTED_DELETE_BUCKET" "$DELETE_BUCKET_DURATION"
