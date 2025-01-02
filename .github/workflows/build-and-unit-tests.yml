@@ -26,6 +26,9 @@ jobs:
       - name: Install dependencies
         run: go mod tidy
 
+      - name: Set GOCOVERDIR
+        run: echo "GOCOVERDIR=/home/runner/work/cosi-driver/cosi-driver" >> $GITHUB_ENV
+
       - name: Run tests
         run: make test
 
