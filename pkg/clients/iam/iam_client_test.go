@@ -26,6 +26,10 @@ func TestIAMClient(t *testing.T) {
 
 var _ = Describe("IAMClient", func() {
 	var params util.StorageClientParameters
+	accessDeniedError := &smithy.GenericAPIError{
+		Code:    "AccessDenied",
+		Message: "Access Denied",
+	}
 
 	BeforeEach(func() {
 		params = util.StorageClientParameters{
@@ -61,7 +65,7 @@ var _ = Describe("IAMClient", func() {
 
 		It("should return an error when CreateUser fails", func(ctx SpecContext) {
 			mockIAM.CreateUserFunc = func(ctx context.Context, input *iam.CreateUserInput, opts ...func(*iam.Options)) (*iam.CreateUserOutput, error) {
-				return nil, fmt.Errorf("simulated CreateUser failure")
+				return nil, accessDeniedError
 			}
 
 			client, _ := iamclient.InitIAMClient(params)
@@ -69,7 +73,7 @@ var _ = Describe("IAMClient", func() {
 
 			err := client.CreateUser(ctx, "test-user")
 			Expect(err).NotTo(BeNil())
-			Expect(err.Error()).To(ContainSubstring("simulated CreateUser failure"))
+			Expect(errors.As(err, &accessDeniedError)).To(BeTrue())
 		})
 
 		It("should attach an inline policy with the correct name and content", func(ctx SpecContext) {
@@ -92,7 +96,7 @@ var _ = Describe("IAMClient", func() {
 
 		It("should return an error when PutUserPolicy fails", func(ctx SpecContext) {
 			mockIAM.PutUserPolicyFunc = func(ctx context.Context, input *iam.PutUserPolicyInput, opts ...func(*iam.Options)) (*iam.PutUserPolicyOutput, error) {
-				return nil, fmt.Errorf("simulated PutUserPolicy failure")
+				return nil, accessDeniedError
 			}
 
 			client, _ := iamclient.InitIAMClient(params)
@@ -100,7 +104,7 @@ var _ = Describe("IAMClient", func() {
 
 			err := client.AttachS3WildcardInlinePolicy(ctx, "test-user", "test-bucket")
 			Expect(err).NotTo(BeNil())
-			Expect(err.Error()).To(ContainSubstring("simulated PutUserPolicy failure"))
+			Expect(errors.As(err, &accessDeniedError)).To(BeTrue())
 		})
 
 		It("should create an access key successfully", func(ctx SpecContext) {
@@ -125,7 +129,7 @@ var _ = Describe("IAMClient", func() {
 
 		It("should return an error when CreateAccessKey fails", func(ctx SpecContext) {
 			mockIAM.CreateAccessKeyFunc = func(ctx context.Context, input *iam.CreateAccessKeyInput, opts ...func(*iam.Options)) (*iam.CreateAccessKeyOutput, error) {
-				return nil, fmt.Errorf("simulated CreateAccessKey failure")
+				return nil, accessDeniedError
 			}
 
 			client, _ := iamclient.InitIAMClient(params)
@@ -134,12 +138,16 @@ var _ = Describe("IAMClient", func() {
 			output, err := client.CreateAccessKey(ctx, "test-user")
 			Expect(err).NotTo(BeNil())
 			Expect(output).To(BeNil())
-			Expect(err.Error()).To(ContainSubstring("simulated CreateAccessKey failure"))
+			Expect(errors.As(err, &accessDeniedError)).To(BeTrue())
 		})
 	})
 
 	Describe("CreateBucketAccess", func() {
 		var mockIAM *mock.MockIAMClient
+		accessDeniedError := &smithy.GenericAPIError{
+			Code:    "AccessDenied",
+			Message: "Access Denied",
+		}
 
 		BeforeEach(func() {
 			mockIAM = &mock.MockIAMClient{}
@@ -179,7 +187,7 @@ var _ = Describe("IAMClient", func() {
 
 		It("should return an error if CreateUser fails", func(ctx SpecContext) {
 			mockIAM.CreateUserFunc = func(ctx context.Context, input *iam.CreateUserInput, opts ...func(*iam.Options)) (*iam.CreateUserOutput, error) {
-				return nil, fmt.Errorf("simulated CreateUser failure")
+				return nil, accessDeniedError
 			}
 
 			client, _ := iamclient.InitIAMClient(params)
@@ -188,7 +196,7 @@ var _ = Describe("IAMClient", func() {
 			output, err := client.CreateBucketAccess(ctx, "test-user", "test-bucket")
 			Expect(err).NotTo(BeNil())
 			Expect(output).To(BeNil())
-			Expect(err.Error()).To(ContainSubstring("simulated CreateUser failure"))
+			Expect(errors.As(err, &accessDeniedError)).To(BeTrue())
 		})
 
 		It("should return an error if AttachS3WildcardInlinePolicy fails", func(ctx SpecContext) {
@@ -197,7 +205,7 @@ var _ = Describe("IAMClient", func() {
 			}
 
 			mockIAM.PutUserPolicyFunc = func(ctx context.Context, input *iam.PutUserPolicyInput, opts ...func(*iam.Options)) (*iam.PutUserPolicyOutput, error) {
-				return nil, fmt.Errorf("simulated AttachS3WildcardInlinePolicy failure")
+				return nil, accessDeniedError
 			}
 
 			client, _ := iamclient.InitIAMClient(params)
@@ -206,7 +214,7 @@ var _ = Describe("IAMClient", func() {
 			output, err := client.CreateBucketAccess(ctx, "test-user", "test-bucket")
 			Expect(err).NotTo(BeNil())
 			Expect(output).To(BeNil())
-			Expect(err.Error()).To(ContainSubstring("simulated AttachS3WildcardInlinePolicy failure"))
+			Expect(errors.As(err, &accessDeniedError)).To(BeTrue())
 		})
 
 		It("should return an error if CreateAccessKey fails", func(ctx SpecContext) {
@@ -219,7 +227,7 @@ var _ = Describe("IAMClient", func() {
 			}
 
 			mockIAM.CreateAccessKeyFunc = func(ctx context.Context, input *iam.CreateAccessKeyInput, opts ...func(*iam.Options)) (*iam.CreateAccessKeyOutput, error) {
-				return nil, fmt.Errorf("simulated CreateAccessKey failure")
+				return nil, accessDeniedError
 			}
 
 			client, _ := iamclient.InitIAMClient(params)
@@ -228,7 +236,7 @@ var _ = Describe("IAMClient", func() {
 			output, err := client.CreateBucketAccess(ctx, "test-user", "test-bucket")
 			Expect(err).NotTo(BeNil())
 			Expect(output).To(BeNil())
-			Expect(err.Error()).To(ContainSubstring("simulated CreateAccessKey failure"))
+			Expect(errors.As(err, &accessDeniedError)).To(BeTrue())
 		})
 	})
 
