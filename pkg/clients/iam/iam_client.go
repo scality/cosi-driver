@@ -89,8 +89,8 @@ func (client *IAMClient) CreateUser(ctx context.Context, userName string) error 
 	return err
 }
 
-// AttachS3WildcardInlinePolicy attaches an inline policy to an IAM user for a specific bucket.
-func (client *IAMClient) AttachS3WildcardInlinePolicy(ctx context.Context, userName, bucketName string) error {
+// CreateS3WildcardInlinePolicy creates an inline policy to an IAM user for a specific bucket.
+func (client *IAMClient) CreateS3WildcardInlinePolicy(ctx context.Context, userName, bucketName string) error {
 	policyDocument := fmt.Sprintf(`{
 		"Version": "2012-10-17",
 		"Statement": [
@@ -133,7 +133,7 @@ func (client *IAMClient) CreateBucketAccess(ctx context.Context, userName, bucke
 	}
 	klog.V(c.LvlInfo).InfoS("Successfully created IAM user", "userName", userName)
 
-	err = client.AttachS3WildcardInlinePolicy(ctx, userName, bucketName)
+	err = client.CreateS3WildcardInlinePolicy(ctx, userName, bucketName)
 	if err != nil {
 		return nil, err
 	}

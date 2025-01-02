@@ -90,7 +90,7 @@ var _ = Describe("IAMClient", func() {
 			client, _ := iamclient.InitIAMClient(ctx, params)
 			client.IAMService = mockIAM
 
-			err := client.AttachS3WildcardInlinePolicy(ctx, "test-user", bucketName)
+			err := client.CreateS3WildcardInlinePolicy(ctx, "test-user", bucketName)
 			Expect(err).To(BeNil())
 		})
 
@@ -102,7 +102,7 @@ var _ = Describe("IAMClient", func() {
 			client, _ := iamclient.InitIAMClient(ctx, params)
 			client.IAMService = mockIAM
 
-			err := client.AttachS3WildcardInlinePolicy(ctx, "test-user", "test-bucket")
+			err := client.CreateS3WildcardInlinePolicy(ctx, "test-user", "test-bucket")
 			Expect(err).NotTo(BeNil())
 			Expect(errors.As(err, &accessDeniedError)).To(BeTrue())
 		})
@@ -199,7 +199,7 @@ var _ = Describe("IAMClient", func() {
 			Expect(errors.As(err, &accessDeniedError)).To(BeTrue())
 		})
 
-		It("should return an error if AttachS3WildcardInlinePolicy fails", func(ctx SpecContext) {
+		It("should return an error if CreateS3WildcardInlinePolicy fails", func(ctx SpecContext) {
 			mockIAM.CreateUserFunc = func(ctx context.Context, input *iam.CreateUserInput, opts ...func(*iam.Options)) (*iam.CreateUserOutput, error) {
 				return &iam.CreateUserOutput{}, nil
 			}
