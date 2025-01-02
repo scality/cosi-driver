@@ -33,6 +33,29 @@ log_and_run() {
   "$@" 2>&1 | tee -a "$LOG_FILE"
 }
 
+validate_metric() {
+  local action="$1"
+  local count="$2"
+  local expected="$3"
+  local duration="$4"
+
+  # Print details for the metric
+  echo "$action Count: $count, Expected: $expected" | tee -a "$LOG_FILE"
+  echo "$action Duration: $duration" | tee -a "$LOG_FILE"
+
+  # Validate counts
+  if [[ "$count" -ne "$expected" ]]; then
+    echo "Error: $action count mismatch. Found: $count, Expected: $expected" | tee -a "$LOG_FILE"
+    exit 1
+  fi
+
+  # Validate durations are greater than 0
+  if (( $(echo "$duration <= 0" | bc -l) )); then
+    echo "Error: $action duration is not greater than 0. Duration: $duration" | tee -a "$LOG_FILE"
+    exit 1
+  fi
+}
+
 # Fetch services and validate the target service exists
 log_and_run kubectl get svc --all-namespaces
 
@@ -96,5 +119,29 @@ echo "$METRICS_OUTPUT" | while read -r line; do
     exit 1
   fi
 done
+
+log_and_run echo "Verifying S3 and IAM metrics..."
+# only verify metrics if EXPECTED_CREATE_BUCKET is more than 0
+
+if [[ "$EXPECTED_CREATE_BUCKET" -gt 0 ]]; then
+
+  S3_IAM_METRICS_OUTPUT=$(cat  /tmp/metrics_output.log | grep 'scality_cosi_driver')
+  echo "Metrics fetched successfully:" | tee -a "$LOG_FILE"
+  echo "$S3_IAM_METRICS_OUTPUT" | tee -a "$LOG_FILE"
+  CREATE_BUCKET_COUNT="$(echo "$S3_IAM_METRICS_OUTPUT" | grep 'scality_cosi_driver_s3_requests_total' | grep 'action="CreateBucket"' | grep 'status="success"' | awk '{print $NF}')"
+  DELETE_BUCKET_COUNT="$(echo "$S3_IAM_METRICS_OUTPUT" | grep 'scality_cosi_driver_s3_requests_total' | grep 'action="DeleteBucket"' | grep 'status="success"' | awk '{print $NF}')"
+  CREATE_USER_COUNT="$(echo "$S3_IAM_METRICS_OUTPUT" | grep 'scality_cosi_driver_iam_requests_total' | grep 'action="CreateUser"' | grep 'status="success"' | awk '{print $NF}')"
+  DELETE_USER_COUNT="$(echo "$S3_IAM_METRICS_OUTPUT" | grep 'scality_cosi_driver_iam_requests_total' | grep 'action="DeleteUser"' | grep 'status="success"' | awk '{print $NF}')"
+
+  CREATE_BUCKET_DURATION="$(echo "$S3_IAM_METRICS_OUTPUT" | grep 'scality_cosi_driver_s3_request_duration_seconds_sum' | grep 'action="CreateBucket"' | awk '{print $NF}')"
+  DELETE_BUCKET_DURATION="$(echo "$S3_IAM_METRICS_OUTPUT" | grep 'scality_cosi_driver_s3_request_duration_seconds_sum' | grep 'action="DeleteBucket"' | awk '{print $NF}')"
+  CREATE_USER_DURATION="$(echo "$S3_IAM_METRICS_OUTPUT" | grep 'scality_cosi_driver_iam_request_duration_seconds_sum' | grep 'action="CreateUser"' | awk '{print $NF}')"
+  DELETE_USER_DURATION="$(echo "$S3_IAM_METRICS_OUTPUT" | grep 'scality_cosi_driver_iam_request_duration_seconds_sum' | grep 'action="DeleteUser"' | awk '{print $NF}')"
+
+  validate_metric "CreateBucket" "$CREATE_BUCKET_COUNT" "$EXPECTED_CREATE_BUCKET" "$CREATE_BUCKET_DURATION"
+  validate_metric "DeleteBucket" "$DELETE_BUCKET_COUNT" "$EXPECTED_DELETE_BUCKET" "$DELETE_BUCKET_DURATION"
+  validate_metric "CreateUser" "$CREATE_USER_COUNT" "$EXPECTED_GRANT_ACCESS" "$CREATE_USER_DURATION"
+  validate_metric "DeleteUser" "$DELETE_USER_COUNT" "$EXPECTED_REVOKE_ACCESS" "$DELETE_USER_DURATION"
+fi
 
 echo "Metrics validation successful!" | tee -a "$LOG_FILE"
