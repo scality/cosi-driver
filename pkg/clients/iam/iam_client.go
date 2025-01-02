@@ -36,7 +36,7 @@ type IAMClient struct {
 
 var LoadAWSConfig = config.LoadDefaultConfig
 
-var InitIAMClient = func(params util.StorageClientParameters) (*IAMClient, error) {
+var InitIAMClient = func(ctx context.Context, params util.StorageClientParameters) (*IAMClient, error) {
 	var logger logging.Logger
 	if params.Debug {
 		logger = logging.NewStandardLogger(os.Stdout)
@@ -52,8 +52,6 @@ var InitIAMClient = func(params util.StorageClientParameters) (*IAMClient, error
 		klog.V(c.LvlDebug).InfoS("Configuring TLS transport for IAM client", "IAMEndpoint", params.IAMEndpoint)
 		httpClient.Transport = util.ConfigureTLSTransport(params.TLSCert)
 	}
-
-	ctx := context.Background()
 
 	awsCfg, err := LoadAWSConfig(ctx,
 		config.WithRegion(params.Region),

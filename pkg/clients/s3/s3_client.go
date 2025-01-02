@@ -26,7 +26,7 @@ type S3Client struct {
 
 var LoadAWSConfig = config.LoadDefaultConfig
 
-var InitS3Client = func(params util.StorageClientParameters) (*S3Client, error) {
+var InitS3Client = func(ctx context.Context, params util.StorageClientParameters) (*S3Client, error) {
 	var logger logging.Logger
 	if params.Debug {
 		logger = logging.NewStandardLogger(os.Stdout)
@@ -41,8 +41,6 @@ var InitS3Client = func(params util.StorageClientParameters) (*S3Client, error) 
 	if strings.HasPrefix(params.Endpoint, "https://") {
 		httpClient.Transport = util.ConfigureTLSTransport(params.TLSCert)
 	}
-
-	ctx := context.Background()
 
 	awsCfg, err := LoadAWSConfig(ctx,
 		config.WithRegion(params.Region),
