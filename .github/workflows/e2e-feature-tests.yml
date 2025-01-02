@@ -1,4 +1,4 @@
-name: CI End-to-End Tests
+name: End to End Feature Tests
 
 on:
   push:
