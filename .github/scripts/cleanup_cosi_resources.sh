@@ -14,7 +14,7 @@ trap 'error_handler' ERR
 
 log_and_run() {
   echo "Running: $*" | tee -a "$LOG_FILE"
-  "$@" | tee -a "$LOG_FILE"
+  "$@" 2>&1 | tee -a "$LOG_FILE"
 }
 
 log_and_run echo "Removing COSI driver manifests and namespace..."
