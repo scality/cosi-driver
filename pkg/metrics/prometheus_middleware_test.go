@@ -53,12 +53,12 @@ var _ = Describe("AttachPrometheusMiddleware", func() {
 		requestDuration = prometheus.NewHistogramVec(prometheus.HistogramOpts{
 			Name: "request_duration_seconds",
 			Help: "Duration of requests",
-		}, []string{"operation", "status"})
+		}, []string{"operation", "status", "trace_id"})
 
 		requestsTotal = prometheus.NewCounterVec(prometheus.CounterOpts{
 			Name: "requests_total",
 			Help: "Total number of requests",
-		}, []string{"operation", "status"})
+		}, []string{"operation", "status", "trace_id"})
 
 		stack = middleware.NewStack("testStack", nil)
 
@@ -146,7 +146,7 @@ var _ = Describe("AttachPrometheusMiddleware", func() {
 
 		metrics := testutil.CollectAndCount(requestDuration)
 		Expect(metrics).To(BeNumerically(">", 0)) // Ensure metrics are collected
-		Expect(requestDuration.WithLabelValues("TestOperation", "error")).NotTo(BeNil())
-		Expect(requestsTotal.WithLabelValues("TestOperation", "error")).NotTo(BeNil())
+		Expect(requestDuration.WithLabelValues("TestOperation", "error", "trace_id")).NotTo(BeNil())
+		Expect(requestsTotal.WithLabelValues("TestOperation", "error", "trace_id")).NotTo(BeNil())
 	})
 })
