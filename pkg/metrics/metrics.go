@@ -24,7 +24,7 @@ func InitializeMetrics(prefix string, registry prometheus.Registerer) {
 			Name:      "s3_requests_total",
 			Help:      "Total number of S3 requests, categorized by action and status.",
 		},
-		[]string{"action", "status"},
+		[]string{"action", "status", "trace_id"},
 	)
 
 	S3RequestDuration = prometheus.NewHistogramVec(
@@ -34,7 +34,7 @@ func InitializeMetrics(prefix string, registry prometheus.Registerer) {
 			Help:      "Duration of S3 requests in seconds, categorized by action and status.",
 			Buckets:   prometheus.DefBuckets,
 		},
-		[]string{"action", "status"},
+		[]string{"action", "status", "trace_id"},
 	)
 
 	IAMRequestsTotal = prometheus.NewCounterVec(
@@ -43,7 +43,7 @@ func InitializeMetrics(prefix string, registry prometheus.Registerer) {
 			Name:      "iam_requests_total",
 			Help:      "Total number of IAM requests, categorized by action and status.",
 		},
-		[]string{"action", "status"},
+		[]string{"action", "status", "trace_id"},
 	)
 
 	IAMRequestDuration = prometheus.NewHistogramVec(
@@ -53,7 +53,7 @@ func InitializeMetrics(prefix string, registry prometheus.Registerer) {
 			Help:      "Duration of IAM requests in seconds, categorized by action and status.",
 			Buckets:   prometheus.DefBuckets,
 		},
-		[]string{"action", "status"},
+		[]string{"action", "status", "trace_id"},
 	)
 
 	registry.MustRegister(S3RequestsTotal, S3RequestDuration, IAMRequestsTotal, IAMRequestDuration)
