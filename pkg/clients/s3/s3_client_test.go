@@ -2,6 +2,7 @@ package s3client_test
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"testing"
 
@@ -9,6 +10,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/aws/aws-sdk-go-v2/service/s3/types"
+	"github.com/aws/smithy-go"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	s3client "github.com/scality/cosi-driver/pkg/clients/s3"
@@ -131,6 +133,10 @@ var _ = Describe("S3Client", func() {
 	Describe("DeleteBucket", func() {
 		var mockS3 *mock.MockS3Client
 		var client *s3client.S3Client
+		accessDeniedError := &smithy.GenericAPIError{
+			Code:    "AccessDenied",
+			Message: "Access Denied",
+		}
 
 		BeforeEach(func() {
 			mockS3 = &mock.MockS3Client{}
@@ -146,12 +152,12 @@ var _ = Describe("S3Client", func() {
 
 		It("should handle errors when deleting a bucket", func(ctx SpecContext) {
 			mockS3.DeleteBucketFunc = func(ctx context.Context, input *s3.DeleteBucketInput, opts ...func(*s3.Options)) (*s3.DeleteBucketOutput, error) {
-				return nil, fmt.Errorf("mock delete bucket error")
+				return nil, accessDeniedError
 			}
 
 			err := client.DeleteBucket(ctx, "test-bucket")
 			Expect(err).To(HaveOccurred())
-			Expect(err.Error()).To(ContainSubstring("mock delete bucket error"))
+			Expect(errors.As(err, &accessDeniedError)).To(BeTrue())
 		})
 	})
 })
