@@ -1,4 +1,4 @@
-name: CI Build and Unit Tests
+name: Build & Unit Tests
 
 on:
   push:
@@ -25,6 +25,9 @@ jobs:
 
       - name: Install dependencies
         run: go mod tidy
+
+      - name: Set GOCOVERDIR
+        run: echo "GOCOVERDIR=/home/runner/work/cosi-driver/cosi-driver" >> $GITHUB_ENV
 
       - name: Run tests
         run: make test

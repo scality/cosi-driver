@@ -1,4 +1,4 @@
-name: CI Smoke Tests
+name: Helm Validation
 
 on:
   push:

@@ -14,7 +14,7 @@ trap 'error_handler' ERR
 
 log_and_run() {
   echo "Running: $*" | tee -a "$LOG_FILE"
-  "$@" | tee -a "$LOG_FILE"
+  "$@" 2>&1 | tee -a "$LOG_FILE"
 }
 
 log_and_run echo "Removing COSI driver manifests and namespace..."
@@ -62,9 +62,8 @@ log_and_run kubectl delete -f cosi-examples/greenfield/bucketclass-deletion-poli
 log_and_run echo "Deleting s3-secret-for-cosi secret..."
 log_and_run kubectl delete secret s3-secret-for-cosi --namespace=default || { echo "Secret s3-secret-for-cosi not found." | tee -a "$LOG_FILE"; }
 
-log_and_run echo "Deleting COSI CRDs..."
-log_and_run kubectl delete -k github.com/kubernetes-sigs/container-object-storage-interface-api || { echo "COSI API CRDs not found." | tee -a "$LOG_FILE"; }
-log_and_run kubectl delete -k github.com/kubernetes-sigs/container-object-storage-interface-controller || { echo "COSI Controller CRDs not found." | tee -a "$LOG_FILE"; }
+log_and_run echo "Deleting COSI CRD..."
+log_and_run kubectl delete -k github.com/kubernetes-sigs/container-object-storage-interface || { echo "COSI API CRDs or controller not found." | tee -a "$LOG_FILE"; }
 
 log_and_run echo "Verifying COSI CRDs deletion..."
 if kubectl get crd | grep 'container-object-storage-interface' &>/dev/null; then
