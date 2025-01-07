@@ -72,6 +72,18 @@ jobs:
       run: |
         .github/scripts/verify_helm_install.sh
 
+    # the script accepts number of requests for APIs: CREATE_BUCKET, DELETE_BUCKET, GET_INFO
+    # GRANT_ACCESS and REVOKE_ACCESS in order
+    # Example below we are testing for those API counts:
+    # - 0 CREATE_BUCKET
+    # - 0 DELETE_BUCKET
+    # - 1 GET_INFO
+    # - 0 GRANT_ACCESS
+    # - 0 REVOKE_ACCESS
+    - name: Verify metrics for healthcheck route
+      run: |
+        .github/scripts/e2e_tests_metrics.sh 0 0 1 0 0
+
     - name: "Delay completion"
       if: ${{ github.event_name == 'workflow_dispatch' && inputs.debug_enabled }}
       uses: scality/actions/action-delay-job-completion@1.11.0

@@ -116,6 +116,18 @@ jobs:
       run: |
         .github/scripts/e2e_tests_brownfield_use_case.sh
 
+    # the script accepts number of requests for APIs: CREATE_BUCKET, DELETE_BUCKET, GET_INFO
+    # GRANT_ACCESS and REVOKE_ACCESS in order
+    # Example below we are testing for those API counts:
+    # - 2 CREATE_BUCKET
+    # - 1 DELETE_BUCKET
+    # - 1 GET_INFO
+    # - 2 GRANT_ACCESS
+    # - 2 REVOKE_ACCESS
+    - name: E2E tests for metrics using API call metrics generated from above tests
+      run: |
+        .github/scripts/e2e_tests_metrics.sh 2 1 1 2 2
+
     - name: "Delay completion"
       if: ${{ github.event_name == 'workflow_dispatch' && inputs.debug_enabled }}
       uses: scality/actions/action-delay-job-completion@1.11.0

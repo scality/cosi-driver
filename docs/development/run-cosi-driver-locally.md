@@ -145,6 +145,40 @@ grpcurl -plaintext -proto cosi.proto -import-path ./proto -unix -d '{
 }' ./cosi.sock cosi.v1alpha1.Provisioner.DriverGrantBucketAccess
 ```
 
+- DriverDeleteBucket gRPC API
+
+```sh
+grpcurl -plaintext -proto cosi.proto -import-path ./proto -unix -d '{
+  "bucket_id": "example-bucket"
+}' ./cosi.sock cosi.v1alpha1.Provisioner.DriverDeleteBucket
+```
+
+- DriverRevokeBucketAccess gRPC API
+
+```sh
+grpcurl -plaintext -proto cosi.proto -import-path ./proto -unix -d '{
+  "accountId": "user-name",
+  "bucketId": "example-bucket"
+}' ./cosi.sock cosi.v1alpha1.Provisioner.DriverRevokeBucketAccess
+```
+
+## Metrics
+
+Query metrics using localhost:8080/metrics endpoint
+
+Example:
+
+```sh
+ curl -s localhost:8080/metrics | grep grpc_server_msg_sent_total
+# HELP grpc_server_msg_sent_total Total number of gRPC stream messages sent by the server.
+# TYPE grpc_server_msg_sent_total counter
+grpc_server_msg_sent_total{grpc_method="DriverCreateBucket",grpc_service="cosi.v1alpha1.Provisioner",grpc_type="unary"} 2
+grpc_server_msg_sent_total{grpc_method="DriverDeleteBucket",grpc_service="cosi.v1alpha1.Provisioner",grpc_type="unary"} 0
+grpc_server_msg_sent_total{grpc_method="DriverGetInfo",grpc_service="cosi.v1alpha1.Identity",grpc_type="unary"} 3
+grpc_server_msg_sent_total{grpc_method="DriverGrantBucketAccess",grpc_service="cosi.v1alpha1.Provisioner",grpc_type="unary"} 0
+grpc_server_msg_sent_total{grpc_method="DriverRevokeBucketAccess",grpc_service="cosi.v1alpha1.Provisioner",grpc_type="unary"} 0
+```
+
 ## Troubleshooting
 
 - Socket Not Found: If /var/lib/cosi/cosi.sock is not created, ensure the COSI driver started correctly by checking its logs.
