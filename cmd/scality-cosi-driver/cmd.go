@@ -42,10 +42,10 @@ const (
 
 var (
 	driverAddress        = flag.String("driver-address", defaultDriverAddress, "driver address for the socket file, default: unix:///var/lib/cosi/cosi.sock")
-	driverPrefix         = flag.String("driver-prefix", defaultDriverPrefix, "prefix for COSI driver, e.g. <prefix>.scality.com, default cosi.scality.com")
-	driverMetricsAddress = flag.String("driver-metrics-address", defaultMetricsAddress, "The address to expose Prometheus metrics, default: :8080")
+	driverPrefix         = flag.String("driver-prefix", defaultDriverPrefix, "prefix for COSI driver, e.g. <prefix>.scality.com, default: cosi")
+	driverMetricsAddress = flag.String("driver-metrics-address", defaultMetricsAddress, "The address (hostname:port) to expose Prometheus metrics, default: 0.0.0.0:8080")
 	driverMetricsPath    = flag.String("driver-metrics-path", defaultMetricsPath, "path for the metrics endpoint, default: /metrics")
-	driverMetricsPrefix  = flag.String("driver-custom-metrics-prefix", defaultMetricsPrefix, "prefix for the metrics, default: scality_cosi_driver_")
+	driverMetricsPrefix  = flag.String("driver-custom-metrics-prefix", defaultMetricsPrefix, "prefix for the metrics, default: scality_cosi_driver")
 )
 
 func init() {
@@ -89,8 +89,7 @@ func run(ctx context.Context) error {
 	}
 
 	err = server.Run(ctx, registry)
-	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer shutdownCancel()
+	shutdownCtx, _ := context.WithTimeout(context.Background(), 5*time.Second)
 	if shutdownErr := metricsServer.Shutdown(shutdownCtx); shutdownErr != nil {
 		klog.ErrorS(shutdownErr, "Failed to gracefully shutdown metrics server")
 	}

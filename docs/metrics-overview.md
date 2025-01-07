@@ -31,5 +31,5 @@ grpc_server_started_total{grpc_method="DriverGetInfo",grpc_service="cosi.v1alpha
 
 ## Additional Resource
 
-- [gRPC-Go Prometheus Metrics](https://github.com/grpc-ecosystem/go-grpc-prometheus)
+- [gRPC-Go Prometheus Metrics](https://github.com/grpc-ecosystem/go-grpc-middleware)
 - [Default Prometheus Metrics](https://pkg.go.dev/github.com/prometheus/client_golang/prometheus#pkg-subdirectories)

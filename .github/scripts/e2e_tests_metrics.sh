@@ -41,7 +41,10 @@ log_and_run kubectl port-forward -n "$NAMESPACE" svc/"$SERVICE" "$LOCAL_PORT":"$
 PORT_FORWARD_PID=$!
 
 # Wait a few seconds to ensure port-forward is established
-log_and_run sleep 5
+while ! nc -vz localhost $LOCAL_PORT > /dev/null 2>&1 ; do
+    # echo sleeping
+    sleep 0.1
+done
 
 # Fetch metrics
 log_and_run curl -s http://localhost:$LOCAL_PORT/metrics > /tmp/metrics_output.log
