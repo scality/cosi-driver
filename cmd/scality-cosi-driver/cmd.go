@@ -56,8 +56,8 @@ var (
 	driverMetricsPath     = flag.String("driver-metrics-path", defaultMetricsPath, "path for the metrics endpoint, default: /metrics")
 	driverMetricsPrefix   = flag.String("driver-custom-metrics-prefix", defaultMetricsPrefix, "prefix for the metrics, default: scality_cosi_driver")
 	driverOtelEndpoint    = flag.String("driver-otel-endpoint", defaultOtelEndpoint, "OpenTelemetry endpoint to export traces, default: localhost:4318")
-	driverOtelStdout      = flag.Bool("driver-otel-stdout", defaultOtelStdout, "Enable OpenTelemetry trace export to stdout, disables endpoint if enabled")
-	driverOtelServiceName = flag.String("driver-otel-service-name", defaultOtelServiceName, "Service name for OpenTelemetry traces")
+	driverOtelStdout      = flag.Bool("driver-otel-stdout", defaultOtelStdout, "Enable OpenTelemetry trace export to stdout, disables endpoint if enabled, default: false")
+	driverOtelServiceName = flag.String("driver-otel-service-name", defaultOtelServiceName, "Service name for OpenTelemetry traces, default: cosi.scality.com")
 )
 
 func init() {
