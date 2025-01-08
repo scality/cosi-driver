@@ -12,12 +12,14 @@ import (
 	"github.com/aws/smithy-go"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"github.com/prometheus/client_golang/prometheus"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
 	iamclient "github.com/scality/cosi-driver/pkg/clients/iam"
 	s3client "github.com/scality/cosi-driver/pkg/clients/s3"
 	"github.com/scality/cosi-driver/pkg/driver"
+	"github.com/scality/cosi-driver/pkg/metrics"
 	"github.com/scality/cosi-driver/pkg/mock"
 	"github.com/scality/cosi-driver/pkg/util"
 	corev1 "k8s.io/api/core/v1"
@@ -154,6 +156,11 @@ func restoreInitializeClient() {
 }
 
 // Tests
+
+var _ = BeforeSuite(func() {
+	// Initialize metrics globally before all tests
+	metrics.InitializeMetrics("test_driver_prefix", prometheus.NewRegistry())
+})
 
 var _ = Describe("ProvisionerServer InitProvisionerServer", func() {
 	var provisioner string
@@ -431,7 +438,7 @@ var _ = Describe("initializeObjectStorageClient", Ordered, func() {
 		originalInitS3Client := s3client.InitS3Client
 		defer func() { s3client.InitS3Client = originalInitS3Client }()
 
-		s3client.InitS3Client = func(params util.StorageClientParameters) (*s3client.S3Client, error) {
+		s3client.InitS3Client = func(ctx context.Context, params util.StorageClientParameters) (*s3client.S3Client, error) {
 			return nil, fmt.Errorf("mock S3 client error")
 		}
 
@@ -456,7 +463,7 @@ var _ = Describe("initializeObjectStorageClient", Ordered, func() {
 		originalInitIAMClient := iamclient.InitIAMClient
 		defer func() { iamclient.InitIAMClient = originalInitIAMClient }()
 
-		iamclient.InitIAMClient = func(params util.StorageClientParameters) (*iamclient.IAMClient, error) {
+		iamclient.InitIAMClient = func(ctx context.Context, params util.StorageClientParameters) (*iamclient.IAMClient, error) {
 			return nil, fmt.Errorf("mock IAM error")
 		}
 

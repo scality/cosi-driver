@@ -16,6 +16,51 @@ var (
 	IAMRequestDuration *prometheus.HistogramVec
 )
 
+// InitializeMetrics initializes the metrics with a given prefix and registers them to a registry.
+func InitializeMetrics(prefix string, registry prometheus.Registerer) {
+	S3RequestsTotal = prometheus.NewCounterVec(
+		prometheus.CounterOpts{
+			Namespace: prefix,
+			Name:      "s3_requests_total",
+			Help:      "Total number of S3 requests, categorized by action and status.",
+		},
+		[]string{"action", "status"},
+	)
+
+	S3RequestDuration = prometheus.NewHistogramVec(
+		prometheus.HistogramOpts{
+			Namespace: prefix,
+			Name:      "s3_request_duration_seconds",
+			Help:      "Duration of S3 requests in seconds, categorized by action and status.",
+			Buckets:   prometheus.DefBuckets,
+		},
+		[]string{"action", "status"},
+	)
+
+	IAMRequestsTotal = prometheus.NewCounterVec(
+		prometheus.CounterOpts{
+			Namespace: prefix,
+			Name:      "iam_requests_total",
+			Help:      "Total number of IAM requests, categorized by action and status.",
+		},
+		[]string{"action", "status"},
+	)
+
+	IAMRequestDuration = prometheus.NewHistogramVec(
+		prometheus.HistogramOpts{
+			Namespace: prefix,
+			Name:      "iam_request_duration_seconds",
+			Help:      "Duration of IAM requests in seconds, categorized by action and status.",
+			Buckets:   prometheus.DefBuckets,
+		},
+		[]string{"action", "status"},
+	)
+
+	registry.MustRegister(S3RequestsTotal, S3RequestDuration, IAMRequestsTotal, IAMRequestDuration)
+
+	klog.InfoS("Custom metrics initialized", "prefix", prefix)
+}
+
 // StartMetricsServerWithRegistry starts an HTTP server for exposing metrics using a custom registry.
 func StartMetricsServerWithRegistry(addr string, registry prometheus.Gatherer, metricsPath string) (*http.Server, error) {
 	listener, err := net.Listen("tcp", addr)

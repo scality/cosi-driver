@@ -38,15 +38,15 @@ var _ = Describe("S3Client", func() {
 	})
 
 	Describe("InitS3Client", func() {
-		It("should initialize the S3 client without error", func() {
-			client, err := s3client.InitS3Client(params)
+		It("should initialize the S3 client without error", func(ctx SpecContext) {
+			client, err := s3client.InitS3Client(ctx, params)
 			Expect(err).To(BeNil())
 			Expect(client).NotTo(BeNil())
 			Expect(client).To(BeAssignableToTypeOf(&s3client.S3Client{}))
 		})
 
-		It("should use the default region when none is provided", func() {
-			client, err := s3client.InitS3Client(params)
+		It("should use the default region when none is provided", func(ctx SpecContext) {
+			client, err := s3client.InitS3Client(ctx, params)
 			Expect(err).To(BeNil())
 			Expect(client).NotTo(BeNil())
 			Expect(client.S3Service).NotTo(BeNil())
@@ -54,7 +54,7 @@ var _ = Describe("S3Client", func() {
 			Expect(opts.Region).To(Equal("us-east-1"))
 		})
 
-		It("should return an error if AWS config loading fails", func() {
+		It("should return an error if AWS config loading fails", func(ctx SpecContext) {
 			originalLoadAWSConfig := s3client.LoadAWSConfig
 			defer func() { s3client.LoadAWSConfig = originalLoadAWSConfig }()
 
@@ -62,12 +62,12 @@ var _ = Describe("S3Client", func() {
 				return aws.Config{}, fmt.Errorf("mock config loading error")
 			}
 
-			client, err := s3client.InitS3Client(params)
+			client, err := s3client.InitS3Client(ctx, params)
 			Expect(err).To(HaveOccurred())
 			Expect(client).To(BeNil())
 		})
 
-		It("should set up a logger when Debug is enabled", func() {
+		It("should set up a logger when Debug is enabled", func(ctx SpecContext) {
 			params.Debug = true
 
 			// Mock LoadAWSConfig
@@ -87,7 +87,7 @@ var _ = Describe("S3Client", func() {
 				return aws.Config{}, nil // Simulate a successful load
 			}
 
-			_, err := s3client.InitS3Client(params)
+			_, err := s3client.InitS3Client(ctx, params)
 			Expect(err).To(BeNil())
 			Expect(loggerUsed).To(BeTrue(), "Expected logger to be used when Debug is enabled")
 		})
@@ -96,10 +96,10 @@ var _ = Describe("S3Client", func() {
 	Describe("CreateBucket", func() {
 		var mockS3 *mock.MockS3Client
 
-		BeforeEach(func() {
+		BeforeEach(func(ctx SpecContext) {
 			mockS3 = &mock.MockS3Client{}
 			params.Region = "us-west-2"
-			client, _ := s3client.InitS3Client(params)
+			client, _ := s3client.InitS3Client(ctx, params)
 			client.S3Service = mockS3
 		})
 
@@ -110,7 +110,7 @@ var _ = Describe("S3Client", func() {
 				return &s3.CreateBucketOutput{}, nil
 			}
 
-			client, _ := s3client.InitS3Client(params)
+			client, _ := s3client.InitS3Client(ctx, params)
 			client.S3Service = mockS3
 
 			err := client.CreateBucket(ctx, "new-bucket", params)
@@ -122,7 +122,7 @@ var _ = Describe("S3Client", func() {
 				return nil, fmt.Errorf("SomeOtherError: Something went wrong")
 			}
 
-			client, _ := s3client.InitS3Client(params)
+			client, _ := s3client.InitS3Client(ctx, params)
 			client.S3Service = mockS3
 
 			err := client.CreateBucket(ctx, "new-bucket", params)

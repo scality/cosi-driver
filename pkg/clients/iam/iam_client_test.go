@@ -56,7 +56,7 @@ var _ = Describe("IAMClient", func() {
 				return &iam.CreateUserOutput{}, nil
 			}
 
-			client, _ := iamclient.InitIAMClient(params)
+			client, _ := iamclient.InitIAMClient(ctx, params)
 			client.IAMService = mockIAM
 
 			err := client.CreateUser(ctx, "test-user")
@@ -68,7 +68,7 @@ var _ = Describe("IAMClient", func() {
 				return nil, accessDeniedError
 			}
 
-			client, _ := iamclient.InitIAMClient(params)
+			client, _ := iamclient.InitIAMClient(ctx, params)
 			client.IAMService = mockIAM
 
 			err := client.CreateUser(ctx, "test-user")
@@ -87,10 +87,10 @@ var _ = Describe("IAMClient", func() {
 				return &iam.PutUserPolicyOutput{}, nil
 			}
 
-			client, _ := iamclient.InitIAMClient(params)
+			client, _ := iamclient.InitIAMClient(ctx, params)
 			client.IAMService = mockIAM
 
-			err := client.AttachS3WildcardInlinePolicy(ctx, "test-user", bucketName)
+			err := client.CreateS3WildcardInlinePolicy(ctx, "test-user", bucketName)
 			Expect(err).To(BeNil())
 		})
 
@@ -99,10 +99,10 @@ var _ = Describe("IAMClient", func() {
 				return nil, accessDeniedError
 			}
 
-			client, _ := iamclient.InitIAMClient(params)
+			client, _ := iamclient.InitIAMClient(ctx, params)
 			client.IAMService = mockIAM
 
-			err := client.AttachS3WildcardInlinePolicy(ctx, "test-user", "test-bucket")
+			err := client.CreateS3WildcardInlinePolicy(ctx, "test-user", "test-bucket")
 			Expect(err).NotTo(BeNil())
 			Expect(errors.As(err, &accessDeniedError)).To(BeTrue())
 		})
@@ -118,7 +118,7 @@ var _ = Describe("IAMClient", func() {
 				}, nil
 			}
 
-			client, _ := iamclient.InitIAMClient(params)
+			client, _ := iamclient.InitIAMClient(ctx, params)
 			client.IAMService = mockIAM
 
 			output, err := client.CreateAccessKey(ctx, "test-user")
@@ -132,7 +132,7 @@ var _ = Describe("IAMClient", func() {
 				return nil, accessDeniedError
 			}
 
-			client, _ := iamclient.InitIAMClient(params)
+			client, _ := iamclient.InitIAMClient(ctx, params)
 			client.IAMService = mockIAM
 
 			output, err := client.CreateAccessKey(ctx, "test-user")
@@ -175,7 +175,7 @@ var _ = Describe("IAMClient", func() {
 				}, nil
 			}
 
-			client, _ := iamclient.InitIAMClient(params)
+			client, _ := iamclient.InitIAMClient(ctx, params)
 			client.IAMService = mockIAM
 
 			output, err := client.CreateBucketAccess(ctx, "test-user", "test-bucket")
@@ -190,7 +190,7 @@ var _ = Describe("IAMClient", func() {
 				return nil, accessDeniedError
 			}
 
-			client, _ := iamclient.InitIAMClient(params)
+			client, _ := iamclient.InitIAMClient(ctx, params)
 			client.IAMService = mockIAM
 
 			output, err := client.CreateBucketAccess(ctx, "test-user", "test-bucket")
@@ -199,7 +199,7 @@ var _ = Describe("IAMClient", func() {
 			Expect(errors.As(err, &accessDeniedError)).To(BeTrue())
 		})
 
-		It("should return an error if AttachS3WildcardInlinePolicy fails", func(ctx SpecContext) {
+		It("should return an error if CreateS3WildcardInlinePolicy fails", func(ctx SpecContext) {
 			mockIAM.CreateUserFunc = func(ctx context.Context, input *iam.CreateUserInput, opts ...func(*iam.Options)) (*iam.CreateUserOutput, error) {
 				return &iam.CreateUserOutput{}, nil
 			}
@@ -208,7 +208,7 @@ var _ = Describe("IAMClient", func() {
 				return nil, accessDeniedError
 			}
 
-			client, _ := iamclient.InitIAMClient(params)
+			client, _ := iamclient.InitIAMClient(ctx, params)
 			client.IAMService = mockIAM
 
 			output, err := client.CreateBucketAccess(ctx, "test-user", "test-bucket")
@@ -230,7 +230,7 @@ var _ = Describe("IAMClient", func() {
 				return nil, accessDeniedError
 			}
 
-			client, _ := iamclient.InitIAMClient(params)
+			client, _ := iamclient.InitIAMClient(ctx, params)
 			client.IAMService = mockIAM
 
 			output, err := client.CreateBucketAccess(ctx, "test-user", "test-bucket")
@@ -241,7 +241,7 @@ var _ = Describe("IAMClient", func() {
 	})
 
 	Describe("InitIAMClient", func() {
-		It("should return an error if AWS config loading fails", func() {
+		It("should return an error if AWS config loading fails", func(ctx SpecContext) {
 			originalLoadAWSConfig := iamclient.LoadAWSConfig
 			defer func() { iamclient.LoadAWSConfig = originalLoadAWSConfig }()
 
@@ -249,12 +249,12 @@ var _ = Describe("IAMClient", func() {
 				return aws.Config{}, fmt.Errorf("mock LoadAWSConfig failure")
 			}
 
-			client, err := iamclient.InitIAMClient(params)
+			client, err := iamclient.InitIAMClient(ctx, params)
 			Expect(err).To(HaveOccurred())
 			Expect(client).To(BeNil())
 		})
 
-		It("should set up a logger when Debug is enabled", func() {
+		It("should set up a logger when Debug is enabled", func(ctx SpecContext) {
 			params.Debug = true
 
 			// Mock LoadAWSConfig
@@ -274,7 +274,7 @@ var _ = Describe("IAMClient", func() {
 				return aws.Config{}, nil // Simulate a successful load
 			}
 
-			_, err := iamclient.InitIAMClient(params)
+			_, err := iamclient.InitIAMClient(ctx, params)
 			Expect(err).To(BeNil())
 			Expect(loggerUsed).To(BeTrue(), "Expected logger to be used when Debug is enabled")
 		})
@@ -298,7 +298,7 @@ var _ = Describe("IAMClient", func() {
 				return nil, noSuchEntityError
 			}
 
-			client, _ := iamclient.InitIAMClient(params)
+			client, _ := iamclient.InitIAMClient(ctx, params)
 			client.IAMService = mockIAM
 
 			err := client.RevokeBucketAccess(ctx, "non-existent-user", "test-bucket")
@@ -311,7 +311,7 @@ var _ = Describe("IAMClient", func() {
 				return nil, noSuchEntityError
 			}
 
-			client, _ := iamclient.InitIAMClient(params)
+			client, _ := iamclient.InitIAMClient(ctx, params)
 			client.IAMService = mockIAM
 
 			err := client.RevokeBucketAccess(ctx, "test-user", "test-bucket")
@@ -324,7 +324,7 @@ var _ = Describe("IAMClient", func() {
 				return nil, noSuchEntityError
 			}
 
-			client, _ := iamclient.InitIAMClient(params)
+			client, _ := iamclient.InitIAMClient(ctx, params)
 			client.IAMService = mockIAM
 
 			err := client.RevokeBucketAccess(ctx, "test-user", "test-bucket")
@@ -336,7 +336,7 @@ var _ = Describe("IAMClient", func() {
 				return nil, accessDeniedError
 			}
 
-			client, _ := iamclient.InitIAMClient(params)
+			client, _ := iamclient.InitIAMClient(ctx, params)
 			client.IAMService = mockIAM
 
 			err := client.RevokeBucketAccess(ctx, "test-user", "test-bucket")
@@ -349,7 +349,7 @@ var _ = Describe("IAMClient", func() {
 				return nil, &types.NoSuchEntityException{}
 			}
 
-			client, _ := iamclient.InitIAMClient(params)
+			client, _ := iamclient.InitIAMClient(ctx, params)
 			client.IAMService = mockIAM
 
 			err := client.RevokeBucketAccess(ctx, "test-user", "test-bucket")
@@ -357,7 +357,7 @@ var _ = Describe("IAMClient", func() {
 		})
 
 		It("should successfully delete all access keys for the user", func(ctx SpecContext) {
-			client, _ := iamclient.InitIAMClient(params)
+			client, _ := iamclient.InitIAMClient(ctx, params)
 			client.IAMService = mockIAM
 
 			err := client.RevokeBucketAccess(ctx, "test-user", "test-bucket")
@@ -369,7 +369,7 @@ var _ = Describe("IAMClient", func() {
 				return nil, accessDeniedError
 			}
 
-			client, _ := iamclient.InitIAMClient(params)
+			client, _ := iamclient.InitIAMClient(ctx, params)
 			client.IAMService = mockIAM
 
 			err := client.RevokeBucketAccess(ctx, "test-user", "test-bucket")
@@ -382,7 +382,7 @@ var _ = Describe("IAMClient", func() {
 				return nil, noSuchEntityError
 			}
 
-			client, _ := iamclient.InitIAMClient(params)
+			client, _ := iamclient.InitIAMClient(ctx, params)
 			client.IAMService = mockIAM
 
 			err := client.RevokeBucketAccess(ctx, "test-user", "test-bucket")
@@ -390,7 +390,7 @@ var _ = Describe("IAMClient", func() {
 		})
 
 		It("should successfully delete the user", func(ctx SpecContext) {
-			client, _ := iamclient.InitIAMClient(params)
+			client, _ := iamclient.InitIAMClient(ctx, params)
 			client.IAMService = mockIAM
 
 			err := client.RevokeBucketAccess(ctx, "test-user", "test-bucket")
@@ -402,7 +402,7 @@ var _ = Describe("IAMClient", func() {
 				return nil, accessDeniedError
 			}
 
-			client, _ := iamclient.InitIAMClient(params)
+			client, _ := iamclient.InitIAMClient(ctx, params)
 			client.IAMService = mockIAM
 
 			err := client.RevokeBucketAccess(ctx, "test-user", "test-bucket")
@@ -417,7 +417,7 @@ var _ = Describe("IAMClient", func() {
 				return &iam.DeleteUserPolicyOutput{}, nil
 			}
 
-			client, _ := iamclient.InitIAMClient(params)
+			client, _ := iamclient.InitIAMClient(ctx, params)
 			client.IAMService = mockIAM
 
 			err := client.DeleteInlinePolicy(ctx, "test-user", "test-bucket")
@@ -429,7 +429,7 @@ var _ = Describe("IAMClient", func() {
 				return nil, &types.NoSuchEntityException{}
 			}
 
-			client, _ := iamclient.InitIAMClient(params)
+			client, _ := iamclient.InitIAMClient(ctx, params)
 			client.IAMService = mockIAM
 
 			err := client.DeleteInlinePolicy(ctx, "test-user", "test-bucket")
@@ -437,7 +437,7 @@ var _ = Describe("IAMClient", func() {
 		})
 
 		It("should successfully delete all access keys", func(ctx SpecContext) {
-			client, _ := iamclient.InitIAMClient(params)
+			client, _ := iamclient.InitIAMClient(ctx, params)
 			client.IAMService = mockIAM
 
 			err := client.DeleteAllAccessKeys(ctx, "test-user")
@@ -450,7 +450,7 @@ var _ = Describe("IAMClient", func() {
 				return &iam.DeleteUserOutput{}, nil
 			}
 
-			client, _ := iamclient.InitIAMClient(params)
+			client, _ := iamclient.InitIAMClient(ctx, params)
 			client.IAMService = mockIAM
 
 			err := client.DeleteUser(ctx, "test-user")
@@ -462,7 +462,7 @@ var _ = Describe("IAMClient", func() {
 				return nil, &types.NoSuchEntityException{}
 			}
 
-			client, _ := iamclient.InitIAMClient(params)
+			client, _ := iamclient.InitIAMClient(ctx, params)
 			client.IAMService = mockIAM
 
 			err := client.DeleteUser(ctx, "test-user")
@@ -474,7 +474,7 @@ var _ = Describe("IAMClient", func() {
 				return nil, accessDeniedError
 			}
 
-			client, _ := iamclient.InitIAMClient(params)
+			client, _ := iamclient.InitIAMClient(ctx, params)
 			client.IAMService = mockIAM
 
 			err := client.DeleteAllAccessKeys(ctx, "test-user")

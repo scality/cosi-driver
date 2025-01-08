@@ -81,13 +81,16 @@ var _ = Describe("Metrics", func() {
 
 var _ = Describe("InitializeMetrics", func() {
 	var (
+		prefix            string
 		registry          *prometheus.Registry
 		driverMetricsPath string
 	)
 
 	BeforeEach(func() {
+		prefix = "test"
 		registry = prometheus.NewRegistry()
 		driverMetricsPath = "/metrics"
+		metrics.InitializeMetrics(prefix, registry)
 	})
 
 	It("should serve metrics via an HTTP endpoint", func() {

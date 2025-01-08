@@ -315,14 +315,14 @@ func initializeObjectStorageClient(ctx context.Context, clientset kubernetes.Int
 	var client interface{}
 	switch service {
 	case "S3":
-		client, err = s3client.InitS3Client(*storageClientParameters)
+		client, err = s3client.InitS3Client(ctx, *storageClientParameters)
 		if err != nil {
 			klog.ErrorS(err, "Failed to initialize S3 client", "endpoint", storageClientParameters.Endpoint)
 			return nil, nil, status.Error(codes.Internal, "failed to initialize S3 client")
 		}
 		klog.V(c.LvlDebug).InfoS("Successfully initialized S3 client", "endpoint", storageClientParameters.Endpoint)
 	case "IAM":
-		client, err = iamclient.InitIAMClient(*storageClientParameters)
+		client, err = iamclient.InitIAMClient(ctx, *storageClientParameters)
 		if err != nil {
 			klog.ErrorS(err, "Failed to initialize IAM client", "endpoint", storageClientParameters.Endpoint)
 			return nil, nil, status.Error(codes.Internal, "failed to initialize IAM client")

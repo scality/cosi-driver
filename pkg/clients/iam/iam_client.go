@@ -13,7 +13,9 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/iam"
 	"github.com/aws/aws-sdk-go-v2/service/iam/types"
 	"github.com/aws/smithy-go/logging"
+	"github.com/aws/smithy-go/middleware"
 	c "github.com/scality/cosi-driver/pkg/constants"
+	"github.com/scality/cosi-driver/pkg/metrics"
 	"github.com/scality/cosi-driver/pkg/util"
 	"k8s.io/klog/v2"
 )
@@ -36,7 +38,7 @@ type IAMClient struct {
 
 var LoadAWSConfig = config.LoadDefaultConfig
 
-var InitIAMClient = func(params util.StorageClientParameters) (*IAMClient, error) {
+var InitIAMClient = func(ctx context.Context, params util.StorageClientParameters) (*IAMClient, error) {
 	var logger logging.Logger
 	if params.Debug {
 		logger = logging.NewStandardLogger(os.Stdout)
@@ -53,13 +55,16 @@ var InitIAMClient = func(params util.StorageClientParameters) (*IAMClient, error
 		httpClient.Transport = util.ConfigureTLSTransport(params.TLSCert)
 	}
 
-	ctx := context.Background()
-
 	awsCfg, err := LoadAWSConfig(ctx,
 		config.WithRegion(params.Region),
 		config.WithCredentialsProvider(credentials.NewStaticCredentialsProvider(params.AccessKeyID, params.SecretAccessKey, "")),
 		config.WithHTTPClient(httpClient),
 		config.WithLogger(logger),
+		config.WithAPIOptions([]func(*middleware.Stack) error{
+			func(stack *middleware.Stack) error {
+				return metrics.AttachPrometheusMiddleware(stack, metrics.IAMRequestDuration, metrics.IAMRequestsTotal)
+			},
+		}),
 	)
 	if err != nil {
 		return nil, err
@@ -84,8 +89,8 @@ func (client *IAMClient) CreateUser(ctx context.Context, userName string) error 
 	return err
 }
 
-// AttachS3WildcardInlinePolicy attaches an inline policy to an IAM user for a specific bucket.
-func (client *IAMClient) AttachS3WildcardInlinePolicy(ctx context.Context, userName, bucketName string) error {
+// CreateS3WildcardInlinePolicy creates an inline policy to an IAM user for a specific bucket.
+func (client *IAMClient) CreateS3WildcardInlinePolicy(ctx context.Context, userName, bucketName string) error {
 	policyDocument := fmt.Sprintf(`{
 		"Version": "2012-10-17",
 		"Statement": [
@@ -128,7 +133,7 @@ func (client *IAMClient) CreateBucketAccess(ctx context.Context, userName, bucke
 	}
 	klog.V(c.LvlInfo).InfoS("Successfully created IAM user", "userName", userName)
 
-	err = client.AttachS3WildcardInlinePolicy(ctx, userName, bucketName)
+	err = client.CreateS3WildcardInlinePolicy(ctx, userName, bucketName)
 	if err != nil {
 		return nil, err
 	}
