@@ -45,10 +45,6 @@ log_and_run docker build -t ghcr.io/scality/cosi-driver:latest .
 log_and_run echo "Loading COSI driver image into KIND cluster..."
 log_and_run kind load docker-image ghcr.io/scality/cosi-driver:latest --name object-storage-cluster
 
-# Log trace output to std out for e2e tests
-sed -i 's/# - "--driver-otel-stdout=false"/- "--driver-otel-stdout=true"/' kustomize/base/deployment.yaml
-cat kustomize/base/deployment.yaml
-
 # Step 5: Run COSI driver
 log_and_run echo "Applying COSI driver manifests..."
 if ! kubectl apply -k .; then

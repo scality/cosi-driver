@@ -34,11 +34,22 @@ metrics:
   path: "/metrics"
 
 traces:
-  # endpoint for trace collector to send traces to
-  otel_endpoint: "http://localhost:4318"
-  # prints traces to stdout if true and does not send to collector
+  # Configure tracing for the application.
+
+  # If both `otel_stdout` and `otel_endpoint` are set, `otel_stdout` takes precedence.
+  # Set `otel_stdout: false` and `otel_endpoint: ""` to disable tracing entirely.
+
+  # The endpoint of the trace collector to which traces will be sent.
+  # Use an empty string ("") to disable endpoint-based trace collection.
+  # Use the format "http://<host>:<port>/v1/trace" to specify the collector endpoint.
+  otel_endpoint: ""
+
+  # Enable stdout tracing by setting this to true. When enabled, traces will be printed
+  # to the console instead of being sent to the collector endpoint.
   otel_stdout: false
-  # Trace span service name
+
+  # The name of the service to appear in trace spans, used for identification
+  # in observability tools.
   otel_service_name: "cosi.scality.com"
 
 resources:
