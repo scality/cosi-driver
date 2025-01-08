@@ -165,11 +165,5 @@ func run(ctx context.Context) error {
 		return fmt.Errorf("failed to start the provisioner server: %w", err)
 	}
 
-	err = server.Run(ctx, registry)
-	shutdownCtx, _ := context.WithTimeout(context.Background(), 5*time.Second)
-	if shutdownErr := metricsServer.Shutdown(shutdownCtx); shutdownErr != nil {
-		klog.ErrorS(shutdownErr, "Failed to gracefully shutdown metrics server")
-	}
-
-	return err
+	return server.Run(ctx, registry)
 }
