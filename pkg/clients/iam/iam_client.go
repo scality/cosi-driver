@@ -17,6 +17,7 @@ import (
 	c "github.com/scality/cosi-driver/pkg/constants"
 	"github.com/scality/cosi-driver/pkg/metrics"
 	"github.com/scality/cosi-driver/pkg/util"
+	"go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go-v2/otelaws"
 	"k8s.io/klog/v2"
 )
 
@@ -69,6 +70,7 @@ var InitIAMClient = func(ctx context.Context, params util.StorageClientParameter
 	if err != nil {
 		return nil, err
 	}
+	otelaws.AppendMiddlewares(&awsCfg.APIOptions)
 
 	iamClient := iam.NewFromConfig(awsCfg, func(o *iam.Options) {
 		o.BaseEndpoint = &params.IAMEndpoint

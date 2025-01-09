@@ -15,6 +15,7 @@ import (
 	"github.com/aws/smithy-go/middleware"
 	"github.com/scality/cosi-driver/pkg/metrics"
 	"github.com/scality/cosi-driver/pkg/util"
+	"go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go-v2/otelaws"
 )
 
 type S3API interface {
@@ -58,6 +59,7 @@ var InitS3Client = func(ctx context.Context, params util.StorageClientParameters
 	if err != nil {
 		return nil, err
 	}
+	otelaws.AppendMiddlewares(&awsCfg.APIOptions)
 
 	s3Client := s3.NewFromConfig(awsCfg, func(o *s3.Options) {
 		o.UsePathStyle = true

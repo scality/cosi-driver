@@ -22,6 +22,7 @@ func attachPrometheusMiddlewareMetrics(stack *middleware.Stack, requestDuration 
 			if err != nil {
 				status = "error"
 			}
+
 			requestDuration.WithLabelValues(operationName, status).Observe(duration)
 			requestsTotal.WithLabelValues(operationName, status).Inc()
 		}))

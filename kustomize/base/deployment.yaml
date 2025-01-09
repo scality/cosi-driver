@@ -27,6 +27,10 @@ spec:
             - "--driver-metrics-address=:8080"
             - "--driver-metrics-path=/metrics"
             - "--driver-custom-metrics-prefix=scality_cosi_driver"
+            # default values for traces
+            # - "--driver-otel-endpoint=http://localhost:4318"
+            # - "--driver-otel-service-name=cosi.scality.com"
+            # - "--driver-otel-stdout=false"
           volumeMounts:
             - mountPath: /var/lib/cosi
               name: socket

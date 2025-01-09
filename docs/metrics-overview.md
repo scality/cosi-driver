@@ -84,7 +84,7 @@ scality_cosi_driver_iam_requests_total{action="DeleteAccessKey",status="error"} 
 #### Creating Bucket Access
 
 1. Create an IAM user (`CreateUser`).
-2. Attach an inline policy for bucket access (`PutUserPolicy`).
+2. Attach an inline policy for bucket **access** (`PutUserPolicy`).
 3. Generate access keys for the IAM user (`CreateAccessKey`).
 
 #### Revoking Bucket Access

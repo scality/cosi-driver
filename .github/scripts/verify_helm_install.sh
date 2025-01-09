@@ -14,6 +14,7 @@ echo "Verifying COSI driver Pod status for 120s..."
 if ! kubectl wait --namespace $NAMESPACE --for=condition=ready pod --selector=app.kubernetes.io/name=scality-cosi-driver --timeout=120s; then
   echo "Error: COSI driver Pod did not reach ready state."
   kubectl get pods -n $NAMESPACE
+  kubectl describe --namespace $NAMESPACE pod --selector=app.kubernetes.io/name=scality-cosi-driver
   exit 1
 fi
 kubectl get pods -n $NAMESPACE
