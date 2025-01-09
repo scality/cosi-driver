@@ -45,7 +45,7 @@ const (
 	defaultMetricsPrefix   = "scality_cosi_driver"
 	defaultMetricsAddress  = ":8080"
 	defaultOtelStdout      = false
-	defaultOtelEndpoint    = "localhost:4318"
+	defaultOtelEndpoint    = ""
 	defaultOtelServiceName = "cosi.scality.com"
 )
 
@@ -55,7 +55,7 @@ var (
 	driverMetricsAddress  = flag.String("driver-metrics-address", defaultMetricsAddress, "The address (hostname:port) to expose Prometheus metrics, default: 0.0.0.0:8080")
 	driverMetricsPath     = flag.String("driver-metrics-path", defaultMetricsPath, "path for the metrics endpoint, default: /metrics")
 	driverMetricsPrefix   = flag.String("driver-custom-metrics-prefix", defaultMetricsPrefix, "prefix for the metrics, default: scality_cosi_driver")
-	driverOtelEndpoint    = flag.String("driver-otel-endpoint", defaultOtelEndpoint, "OpenTelemetry endpoint to export traces, default: localhost:4318")
+	driverOtelEndpoint    = flag.String("driver-otel-endpoint", defaultOtelEndpoint, "OpenTelemetry endpoint to export traces, default: \"\"")
 	driverOtelStdout      = flag.Bool("driver-otel-stdout", defaultOtelStdout, "Enable OpenTelemetry trace export to stdout, disables endpoint if enabled, default: false")
 	driverOtelServiceName = flag.String("driver-otel-service-name", defaultOtelServiceName, "Service name for OpenTelemetry traces, default: cosi.scality.com")
 )
@@ -83,6 +83,7 @@ func init() {
 		"driverMetricsAddress", *driverMetricsAddress,
 		"driverOtelEndpoint", *driverOtelEndpoint,
 		"driverOtelStdout", *driverOtelStdout,
+		"driverOtelServiceName", *driverOtelServiceName,
 	)
 }
 
@@ -98,13 +99,17 @@ func initOpenTelemetry(ctx context.Context) (*sdktrace.TracerProvider, error) {
 			return nil, fmt.Errorf("failed to initialize stdout exporter: %w", err)
 		}
 		klog.Info("OpenTelemetry tracing enabled with stdout exporter")
-	} else {
-		// Configure OTLP exporter
+	} else if *driverOtelEndpoint != "" {
+		// Configure OTLP exporter only if the endpoint is set
 		exporter, err = otlptracehttp.New(ctx, otlptracehttp.WithEndpoint(*driverOtelEndpoint), otlptracehttp.WithInsecure())
 		if err != nil {
 			return nil, fmt.Errorf("failed to initialize OTLP exporter: %w", err)
 		}
 		klog.InfoS("OpenTelemetry tracing enabled with OTLP exporter", "endpoint", *driverOtelEndpoint)
+	} else {
+		// If neither stdout nor endpoint is set, disable tracing
+		klog.Info("OpenTelemetry tracing is disabled (no exporter configured)")
+		return nil, nil
 	}
 	// Set up the tracer provider with the selected exporter
 	tp := sdktrace.NewTracerProvider(
