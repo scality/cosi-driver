@@ -23,7 +23,7 @@ fullnameOverride: scality-cosi-driver
 
 
 serviceAccount:
-  name: scality-object-storage-provisioner
+  name: scality-cosi-driver-provisioner
   create: true
 
 metrics:
