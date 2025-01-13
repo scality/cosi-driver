@@ -18,7 +18,7 @@ logLevels:
   sidecar: "2"
 
 
-namespace: scality-object-storage
+namespace: container-object-storage-system
 fullnameOverride: scality-cosi-driver
 
 

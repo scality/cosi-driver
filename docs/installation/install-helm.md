@@ -36,7 +36,7 @@ This guide provides step-by-step instructions for installing the Scality COSI Dr
 ```bash
     git clone https://github.com/scality/cosi-driver.git
     cd cosi-driver
-    helm install scality-cosi-driver ./helm/scality-cosi-driver --namespace scality-object-storage --create-namespace --set image.tag=0.1.0
+    helm install scality-cosi-driver ./helm/scality-cosi-driver --namespace container-object-storage-system --create-namespace --set image.tag=0.1.0
 ```
 
 ### Package locally and install
@@ -45,7 +45,7 @@ This guide provides step-by-step instructions for installing the Scality COSI Dr
     git clone https://github.com/scality/cosi-driver.git
     cd cosi-driver
     helm package ./helm/scality-cosi-driver --version 0.1.0
-    helm install scality-cosi-driver ./scality-cosi-driver-0.1.0.tgz --namespace scality-object-storage --create-namespace --set image.tag=0.1.0
+    helm install scality-cosi-driver ./scality-cosi-driver-0.1.0.tgz --namespace container-object-storage-system --create-namespace --set image.tag=0.1.0
 ```
 
 ### Install from OCI Registry with Helm

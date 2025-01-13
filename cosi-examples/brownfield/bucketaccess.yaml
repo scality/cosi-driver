@@ -2,7 +2,7 @@ apiVersion: objectstorage.k8s.io/v1alpha1
 kind: BucketAccess
 metadata:
   name: brownfield-bucket-access
-  namespace: scality-object-storage
+  namespace: container-object-storage-system
 spec:
   bucketAccessClassName: brownfield-bucket-access-class
   bucketClaimName: brownfield-bucket-claim
