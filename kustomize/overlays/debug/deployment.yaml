@@ -16,7 +16,7 @@ spec:
         app.kubernetes.io/version: main
         app.kubernetes.io/managed-by: kustomize
     spec:
-      serviceAccountName: scality-object-storage-provisioner
+      serviceAccountName: scality-cosi-driver-provisioner
       containers:
         - name: scality-cosi-driver
           image: ghcr.io/scality/cosi-driver-delve:latest
