@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-NAMESPACE="scality-object-storage"
+NAMESPACE="container-object-storage-system"
 
 echo "Verifying Helm installation..."
 

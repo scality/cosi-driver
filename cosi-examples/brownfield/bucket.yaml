@@ -2,7 +2,7 @@ apiVersion: objectstorage.k8s.io/v1alpha1
 kind: Bucket
 metadata:
   name: brownfield-bucket # should be same as bucket name
-  namespace: scality-object-storage
+  namespace: container-object-storage-system
 spec:
   bucketClaim: {}
   bucketClassName: brownfield-bucket-class

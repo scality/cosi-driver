@@ -6,7 +6,7 @@ mkdir -p logs/kind_cluster_logs
 LOG_FILE_PATH=".github/e2e_tests/artifacts/logs/kind_cluster_logs"
 mkdir -p "$(dirname "$LOG_FILE_PATH")"  # Ensure the log directory exists
 # Define namespaces to capture logs from
-namespaces=("default" "scality-object-storage")
+namespaces=("default" "container-object-storage-system")
 
 # Loop through specified namespaces, pods, and containers
 for namespace in "${namespaces[@]}"; do

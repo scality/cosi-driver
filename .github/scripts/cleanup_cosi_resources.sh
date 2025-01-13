@@ -19,11 +19,11 @@ log_and_run() {
 
 log_and_run echo "Removing COSI driver manifests and namespace..."
 log_and_run kubectl delete -k . || { echo "COSI driver manifests not found." | tee -a "$LOG_FILE"; }
-log_and_run kubectl delete namespace scality-object-storage || { echo "Namespace scality-object-storage not found." | tee -a "$LOG_FILE"; }
+log_and_run kubectl delete namespace container-object-storage-system || { echo "Namespace container-object-storage-system not found." | tee -a "$LOG_FILE"; }
 
 log_and_run echo "Verifying namespace deletion..."
-if kubectl get namespace scality-object-storage &>/dev/null; then
-  echo "Warning: Namespace scality-object-storage was not deleted." | tee -a "$LOG_FILE"
+if kubectl get namespace container-object-storage-system &>/dev/null; then
+  echo "Warning: Namespace container-object-storage-system was not deleted." | tee -a "$LOG_FILE"
   exit 1
 fi
 

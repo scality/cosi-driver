@@ -60,14 +60,14 @@ jobs:
     - name: Install Scality COSI Helm Chart
       run: |
         helm install scality-cosi-driver ./helm/scality-cosi-driver \
-          --namespace scality-object-storage \
+          --namespace container-object-storage-system \
           --create-namespace \
           --set image.tag=latest \
           --set traces.otel_stdout=true
 
-    - name: Print all resources in scality-object-storage namespace
+    - name: Print all resources in container-object-storage-system namespace
       run: |
-        kubectl get all -n scality-object-storage
+        kubectl get all -n container-object-storage-system
 
     - name: Verify Helm Installation
       run: |
@@ -94,6 +94,6 @@ jobs:
 
     - name: Cleanup Helm Release and Namespace
       run: |
-        helm uninstall scality-cosi-driver -n scality-object-storage
-        kubectl delete namespace scality-object-storage
+        helm uninstall scality-cosi-driver -n container-object-storage-system
+        kubectl delete namespace container-object-storage-system
       if: always()
