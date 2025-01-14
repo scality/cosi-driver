@@ -42,7 +42,7 @@ jobs:
           docker-${{ runner.os }}-
     
     - name: Create k8s KIND Cluster
-      uses: helm/kind-action@v1.10.0
+      uses: helm/kind-action@v1.12.0
       with:
         version: v0.21.0
         wait: 90s
