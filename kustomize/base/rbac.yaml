@@ -1,7 +1,7 @@
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: scality-object-storage-provisioner-role
+  name: scality-cosi-driver-provisioner-role
 rules:
   - apiGroups: ["objectstorage.k8s.io"]
     resources: ["buckets", "bucketaccesses", "bucketclaims", "bucketaccessclasses", "buckets/status", "bucketaccesses/status", "bucketclaims/status", "bucketaccessclasses/status"]
@@ -20,12 +20,12 @@ rules:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: scality-object-storage-provisioner-role-binding
+  name: scality-cosi-driver-provisioner-role-binding
 subjects:
   - kind: ServiceAccount
-    name: scality-object-storage-provisioner
+    name: scality-cosi-driver-provisioner
     namespace: default
 roleRef:
   kind: ClusterRole
-  name: scality-object-storage-provisioner-role
+  name: scality-cosi-driver-provisioner-role
   apiGroup: rbac.authorization.k8s.io

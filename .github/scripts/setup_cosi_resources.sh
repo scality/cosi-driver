@@ -54,10 +54,10 @@ fi
 
 # Step 6: Verify COSI driver Pod Status
 log_and_run echo "Verifying COSI driver Pod status..."
-if ! kubectl wait --namespace scality-object-storage --for=condition=ready pod --selector=app.kubernetes.io/name=scality-cosi-driver --timeout=30s; then
+if ! kubectl wait --namespace container-object-storage-system --for=condition=ready pod --selector=app.kubernetes.io/name=scality-cosi-driver --timeout=30s; then
   echo "Error: COSI driver Pod did not reach ready state." | tee -a "$LOG_FILE"
   exit 1
 fi
-log_and_run kubectl get pods -n scality-object-storage
+log_and_run kubectl get pods -n container-object-storage-system
 
 log_and_run echo "COSI setup completed successfully."

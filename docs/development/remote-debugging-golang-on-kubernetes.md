@@ -44,7 +44,7 @@ kubectl apply -k kustomize/overlays/debug
 Wait until the pod is ready to ensure the deployment succeeded:
 
 ```bash
-kubectl wait --namespace scality-object-storage --for=condition=ready pod --selector=app.kubernetes.io/name=scality-cosi-driver --timeout=120s
+kubectl wait --namespace container-object-storage-system --for=condition=ready pod --selector=app.kubernetes.io/name=scality-cosi-driver --timeout=120s
 ```
 
 ---
@@ -54,13 +54,13 @@ kubectl wait --namespace scality-object-storage --for=condition=ready pod --sele
 Identify the pod name for the COSI driver:
 
 ```bash
-kubectl get pods -n scality-object-storage
+kubectl get pods -n container-object-storage-system
 ```
 
 Forward port `2345` from the Kubernetes pod to your local machine to connect VS Code to the Delve debugger:
 
 ```bash
-kubectl port-forward -n scality-object-storage pod/<pod-name> 2345:2345
+kubectl port-forward -n container-object-storage-system pod/<pod-name> 2345:2345
 ```
 
 Replace `<pod-name>` with the actual name of the pod.

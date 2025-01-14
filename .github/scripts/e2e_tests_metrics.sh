@@ -4,7 +4,7 @@ set -e
 LOG_FILE=".github/e2e_tests/artifacts/logs/e2e_tests/metrics_service.log"
 mkdir -p "$(dirname "$LOG_FILE")"
 
-NAMESPACE="scality-object-storage"
+NAMESPACE="container-object-storage-system"
 SERVICE="scality-cosi-driver-metrics"
 LOCAL_PORT=8080
 TARGET_PORT=8080
