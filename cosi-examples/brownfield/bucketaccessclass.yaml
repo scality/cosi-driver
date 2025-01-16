@@ -2,7 +2,6 @@ kind: BucketAccessClass
 apiVersion: objectstorage.k8s.io/v1alpha1
 metadata:
   name: brownfield-bucket-access-class
-  namespace: container-object-storage-system
 driverName: cosi.scality.com
 authenticationType: KEY
 parameters:
