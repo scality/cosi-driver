@@ -1,4 +1,4 @@
-name: End to End Feature Tests
+name: Kustomize Validation
 
 on:
   push:
@@ -18,7 +18,7 @@ on:
         default: 5
 
 jobs:
-  e2e-tests-with-kind:
+  e2e-tests-with-kustomize:
     runs-on: ubuntu-latest
 
     steps:
