@@ -77,7 +77,6 @@ In the **Scality COSI Driver**, both **Greenfield** and **Brownfield** provision
 
 > Note:
 > For **fully working** examples, see the YAMLs in the [cosi-examples/brownfield](../cosi-examples/brownfield/) and [cosi-examples/greenfield](../cosi-examples/greenfield/) directories.
-> For brownfield scenario it is madatory to create COSI CRs in the same namespace as COSI driver and controller.
 
 ### 1.1 Greenfield: Creating a New Bucket
 
@@ -92,7 +91,6 @@ Greenfield provisioning will create a brand-new S3 bucket in your object store, 
    kind: BucketClass
    metadata:
      name: greenfield-bucketclass
-     namespace: container-object-storage-system
    driverName: cosi.scality.com
    deletionPolicy: Delete
    parameters:
@@ -115,7 +113,6 @@ Greenfield provisioning will create a brand-new S3 bucket in your object store, 
    kind: BucketClaim
    metadata:
      name: my-greenfield-bucketclaim
-     namespace: container-object-storage-system
    spec:
      bucketClassName: greenfield-bucketclass
      protocols:
@@ -130,8 +127,6 @@ Greenfield provisioning will create a brand-new S3 bucket in your object store, 
 ### 1.2 Brownfield: Using an Existing Bucket
 
 Brownfield provisioning allows you to manage an **already-existing** S3 bucket in Kubernetes.
-
-> Note: For brownfield scenario, COSI CRs for Bucket and Access provisioning should be created in the same namespace as COSI driver and controller.
 
 1. **Verify Existing Bucket**
 
@@ -151,7 +146,6 @@ Brownfield provisioning allows you to manage an **already-existing** S3 bucket i
    kind: BucketClass
    metadata:
      name: brownfield-bucketclass
-     namespace: container-object-storage-system
    driverName: cosi.scality.com
    deletionPolicy: Delete
    parameters:
@@ -172,7 +166,6 @@ Brownfield provisioning allows you to manage an **already-existing** S3 bucket i
    kind: Bucket
    metadata:
      name: "<EXISTING_BUCKET_NAME>"
-     namespace: container-object-storage-system
    spec:
      bucketClaim: {}
      driverName: cosi.scality.com
@@ -199,7 +192,6 @@ Brownfield provisioning allows you to manage an **already-existing** S3 bucket i
    kind: BucketClaim
    metadata:
      name: my-brownfield-bucketclaim
-     namespace: container-object-storage-system
    spec:
      bucketClassName: brownfield-bucket-class
      existingBucketName: "<EXISTING_BUCKET_NAME>"
@@ -248,7 +240,6 @@ apiVersion: objectstorage.k8s.io/v1alpha1
 kind: BucketAccessClass
 metadata:
   name: bucketaccessclass
-  namespace: container-object-storage-system
 spec:
   driverName: cosi.scality.com
   authenticationType: KEY
@@ -273,7 +264,6 @@ apiVersion: objectstorage.k8s.io/v1alpha1
 kind: BucketAccess
 metadata:
   name: my-bucketaccess
-  namespace: container-object-storage-system
 spec:
   bucketClaimName: my-greenfield-bucketclaim  # or my-brownfield-bucketclaim
   bucketAccessClassName: bucketaccessclass
