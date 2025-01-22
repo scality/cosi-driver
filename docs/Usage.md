@@ -193,7 +193,7 @@ Brownfield provisioning allows you to manage an **already-existing** S3 bucket i
    metadata:
      name: my-brownfield-bucketclaim
    spec:
-     bucketClassName: brownfield-bucket-class
+     bucketClassName: brownfield-bucketclass
      existingBucketName: "<EXISTING_BUCKET_NAME>"
      protocols:
        - S3
@@ -236,16 +236,15 @@ A `BucketAccessClass` defines how access (IAM policy or S3 keys) is granted:
 
 ```bash
 cat <<EOF | kubectl apply -f -
-apiVersion: objectstorage.k8s.io/v1alpha1
 kind: BucketAccessClass
+apiVersion: objectstorage.k8s.io/v1alpha1
 metadata:
-  name: bucketaccessclass
-spec:
-  driverName: cosi.scality.com
-  authenticationType: KEY
-  parameters:
-    objectStorageSecretName: s3-secret-for-cosi
-    objectStorageSecretNamespace: default
+  name: bucket-access-class
+driverName: cosi.scality.com
+authenticationType: KEY
+parameters:
+  objectStorageSecretName: s3-secret-for-cosi
+  objectStorageSecretNamespace: default
 EOF
 ```
 
@@ -266,7 +265,7 @@ metadata:
   name: my-bucketaccess
 spec:
   bucketClaimName: my-greenfield-bucketclaim  # or my-brownfield-bucketclaim
-  bucketAccessClassName: bucketaccessclass
+  bucketAccessClassName: bucket-access-class
   credentialsSecretName: my-s3-credentials
   protocol: S3
 EOF
