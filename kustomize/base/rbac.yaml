@@ -2,25 +2,57 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
   name: scality-cosi-driver-provisioner-role
+  annotations:
+    description: Role for Scality COSI Driver Provisioner with permissions for managing COSI resources and related objects.
 rules:
   - apiGroups: ["objectstorage.k8s.io"]
-    resources: ["buckets", "bucketaccesses", "bucketclaims", "bucketaccessclasses", "buckets/status", "bucketaccesses/status", "bucketclaims/status", "bucketaccessclasses/status"]
-    verbs: ["get", "list", "watch", "update", "create", "delete"]
+    resources: 
+      - buckets
+      - bucketaccesses
+      - bucketclaims
+      - bucketaccessclasses
+      - buckets/status
+      - bucketaccesses/status
+      - bucketclaims/status
+      - bucketaccessclasses/status
+    verbs:
+      - create
+      - get
+      - update
+      - delete
+      - list
+      - watch
   - apiGroups: ["coordination.k8s.io"]
-    resources: ["leases"]
-    verbs: ["get", "watch", "list", "delete", "update", "create"]
+    resources: 
+      - leases # Leader election leases
+    verbs:
+      - create
+      - get
+      - update
+      - delete
+      - list
+      - watch
   - apiGroups: [""]
-    resources: ["secrets", "events"]
-    verbs: ["get", "delete", "update", "create"]
-  - apiGroups: [""]
-    resources: ["services", "endpoints"]
-    verbs: ["get", "list", "watch"]
+    resources:
+      - events # Emitted from COSI Provisioner Sidecar
+      - secrets # Created during access granting
+      - services # Ensure proper service resource permissions
+      - endpoints
+    verbs:
+      - create
+      - get
+      - update
+      - delete
+      - list
+      - watch
 
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
   name: scality-cosi-driver-provisioner-role-binding
+  annotations:
+    description: Binds the Scality COSI Driver ServiceAccount to the ClusterRole for cluster-wide permissions.
 subjects:
   - kind: ServiceAccount
     name: scality-cosi-driver-provisioner

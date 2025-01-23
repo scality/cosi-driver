@@ -18,12 +18,28 @@ on:
         default: 5
 
 jobs:
-  smoke-test-installation-with-helm:
+  e2e-tests-with-helm:
     runs-on: ubuntu-latest
 
     steps:
     - name: Check out repository
       uses: actions/checkout@v4
+
+    - name: Login to Registry
+      uses: docker/login-action@v3
+      with:
+        registry: ghcr.io
+        username: "${{ github.repository_owner }}"
+        password: "${{ github.token }}"
+
+    - name: Restore Cached Docker Images
+      id: cache_docker_images
+      uses: actions/cache@v4
+      with:
+        path: /tmp/.docker_cache
+        key: docker-${{ runner.os }}-${{ hashFiles('.github/s3_and_iam_deployment/.env') }}
+        restore-keys: |
+          docker-${{ runner.os }}-
 
     - name: Set up Helm
       uses: azure/setup-helm@v4.2.0
@@ -37,6 +53,35 @@ jobs:
         wait: 90s
         cluster_name: helm-test-cluster
 
+    - name: Verify KIND cluster is running
+      run: |
+        kubectl cluster-info
+        kubectl get nodes
+
+
+    - name: Setup COSI, S3 and IAM environments
+      run: |
+        set -e -o pipefail
+        (
+          echo "=== Setup COSI Controller, CRDs and Driver ==="
+          kubectl create -k github.com/kubernetes-sigs/container-object-storage-interface
+          make container
+          kind load docker-image ghcr.io/scality/cosi-driver:latest --name helm-test-cluster
+        ) &
+        (
+          echo "=== Loading cached S3 and IAM Docker images ==="
+          if [ -d /tmp/.docker_cache ] && [ "$(ls -A /tmp/.docker_cache 2>/dev/null)" ]; then
+            for image in /tmp/.docker_cache/*.tar; do
+              docker load -i "$image" || true  # continue on failure
+            done
+          else
+            echo "No cached images found. Skipping load."
+          fi
+        ) &
+
+        # Wait for both background processes
+        wait
+
     - name: "Debug: SSH to runner"
       uses: scality/actions/action-ssh-to-runner@v1
       with:
@@ -49,15 +94,29 @@ jobs:
       timeout-minutes: 10
       continue-on-error: true
 
-    - name: Build COSI Driver Docker Image
-      run: |
-        make container
+    - name: Setup IAM and S3 Services
+      run: |-
+        set -e -o pipefail;
+        mkdir -p logs/s3 logs/iam logs/cosi_driver data/vaultdb
+        chown -R runner:docker logs data
+        chmod -R ugo+rwx logs data
+        docker compose --profile iam_s3 up -d --quiet-pull
+        bash ../scripts/wait_for_local_port.bash 8600 30
+        bash ../scripts/wait_for_local_port.bash 8000 30
+      working-directory: .github/s3_and_iam_deployment
 
-    - name: Load Docker Image into Kind Cluster
+    - name: Save Images to Cache if not present
+      if: steps.cache_docker_images.outputs.cache-hit != 'true'
       run: |
-        kind load docker-image ghcr.io/scality/cosi-driver:latest --name helm-test-cluster
+        source .github/s3_and_iam_deployment/.env
+        echo "Vault Image: $VAULT_IMAGE"
+        echo "CloudServer Image: $CLOUDSERVER_IMAGE"
+        mkdir -p /tmp/.docker_cache
+        docker save "$VAULT_IMAGE" -o /tmp/.docker_cache/vault_image.tar
+        docker save "$CLOUDSERVER_IMAGE" -o /tmp/.docker_cache/cloudserver_image.tar
+      shell: bash
 
-    - name: Install Scality COSI Helm Chart
+    - name: Install Scality COSI Driver using Helm Chart
       run: |
         helm install scality-cosi-driver ./helm/scality-cosi-driver \
           --namespace container-object-storage-system \
@@ -73,6 +132,14 @@ jobs:
       run: |
         .github/scripts/verify_helm_install.sh
 
+    - name: E2E tests for greenfield use case using kustomize
+      run: |
+        .github/scripts/e2e_tests_greenfield_use_case.sh
+
+    - name: E2E tests for brownfield use case using kustomize
+      run: |
+        .github/scripts/e2e_tests_brownfield_use_case.sh
+
     # the script accepts number of requests for APIs: CREATE_BUCKET, DELETE_BUCKET, GET_INFO
     # GRANT_ACCESS and REVOKE_ACCESS in order
     # Example below we are testing for those API counts:
@@ -83,7 +150,7 @@ jobs:
     # - 0 REVOKE_ACCESS
     - name: Verify metrics for healthcheck route
       run: |
-        .github/scripts/e2e_tests_metrics.sh 0 0 1 0 0
+        .github/scripts/e2e_tests_metrics.sh 2 1 1 2 2
 
     - name: "Delay completion"
       if: ${{ github.event_name == 'workflow_dispatch' && inputs.debug_enabled }}
@@ -92,8 +159,35 @@ jobs:
         completion_delay_m: ${{ inputs.debug_delay_duration_minutes }}
       continue-on-error: true
 
+    - name: Cleaup IAM and S3 Services
+      run: docker compose --profile iam_s3 down
+      working-directory: .github/s3_and_iam_deployment
+
+    - name: Move S3 and IAM logs and data to artifacts directory
+      if: always()
+      run: |-
+        set -e -o pipefail;
+        mkdir -p .github/e2e_tests/artifacts/logs .github/e2e_tests/artifacts/data
+        cp -r .github/s3_and_iam_deployment/logs/* .github/e2e_tests/artifacts/logs/
+        cp -r .github/s3_and_iam_deployment/data/* .github/e2e_tests/artifacts/data/
+
+    - name: Capture Kubernetes Logs in artifacts directory
+      if: always()
+      run: |
+        .github/scripts/capture_k8s_logs.sh
+
     - name: Cleanup Helm Release and Namespace
       run: |
         helm uninstall scality-cosi-driver -n container-object-storage-system
         kubectl delete namespace container-object-storage-system
       if: always()
+
+    - name: Upload logs and data to Scality artifacts
+      if: always()
+      uses: scality/action-artifacts@v4
+      with:
+        method: upload
+        url: https://artifacts.scality.net
+        user: ${{ secrets.ARTIFACTS_USER }}
+        password: ${{ secrets.ARTIFACTS_PASSWORD }}
+        source: .github/e2e_tests/artifacts

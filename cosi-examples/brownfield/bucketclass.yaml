@@ -2,7 +2,6 @@ apiVersion: objectstorage.k8s.io/v1alpha1
 kind: BucketClass
 metadata:
   name: brownfield-bucket-class
-  namespace: container-object-storage-system
 driverName: cosi.scality.com
 deletionPolicy: Delete
 parameters:

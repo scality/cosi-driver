@@ -324,10 +324,10 @@ func initializeObjectStorageClient(ctx context.Context, clientset kubernetes.Int
 	case "IAM":
 		client, err = iamclient.InitIAMClient(ctx, *storageClientParameters)
 		if err != nil {
-			klog.ErrorS(err, "Failed to initialize IAM client", "endpoint", storageClientParameters.Endpoint)
+			klog.ErrorS(err, "Failed to initialize IAM client", "endpoint", storageClientParameters.IAMEndpoint)
 			return nil, nil, status.Error(codes.Internal, "failed to initialize IAM client")
 		}
-		klog.V(c.LvlDebug).InfoS("Successfully initialized IAM client", "endpoint", storageClientParameters.Endpoint)
+		klog.V(c.LvlDebug).InfoS("Successfully initialized IAM client", "endpoint", storageClientParameters.IAMEndpoint)
 	default:
 		klog.ErrorS(nil, "Unsupported object storage provider service", "service", service)
 		return nil, nil, status.Error(codes.Internal, "unsupported object storage provider service")

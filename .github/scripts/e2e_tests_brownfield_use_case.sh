@@ -9,7 +9,7 @@ SECRET_NAME="brownfield-bucket-secret"
 IAM_ENDPOINT="http://$HOST_IP:8600"
 S3_ENDPOINT="http://$HOST_IP:8000"
 BUCKET_NAME="brownfield-bucket"
-NAMESPACE="container-object-storage-system"
+NAMESPACE="default"
 REGION="us-west-1"
 
 # Error handling function

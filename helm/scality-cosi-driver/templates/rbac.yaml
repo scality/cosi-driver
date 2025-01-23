@@ -2,16 +2,49 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
   name: scality-cosi-driver-provisioner-role
+  annotations:
+    description: Role for Scality COSI Driver Provisioner with permissions for managing COSI resources and related objects.
 rules:
   - apiGroups: ["objectstorage.k8s.io"]
-    resources: ["buckets", "bucketaccesses", "bucketclaims", "bucketaccessclasses"]
-    verbs: ["get", "list", "watch", "update", "create", "delete"]
+    resources:
+      - buckets
+      - bucketaccesses
+      - bucketclaims
+      - bucketaccessclasses
+      - buckets/status
+      - bucketaccesses/status
+      - bucketclaims/status
+      - bucketaccessclasses/status
+    verbs:
+      - create
+      - get
+      - update
+      - delete
+      - list
+      - watch
   - apiGroups: ["coordination.k8s.io"]
-    resources: ["leases"]
-    verbs: ["get", "watch", "list", "delete", "update", "create"]
+    resources:
+      - leases
+    verbs:
+      - create
+      - get
+      - update
+      - delete
+      - list
+      - watch
   - apiGroups: [""]
-    resources: ["secrets", "events"]
-    verbs: ["get", "delete", "update", "create"]
+    resources:
+      - secrets
+      - events
+      - services
+      - endpoints
+    verbs:
+      - create
+      - get
+      - update
+      - delete
+      - list
+      - watch
 
 ---
 apiVersion: rbac.authorization.k8s.io/v1
