@@ -24,27 +24,43 @@ Its recommended to deploy COSI controller first which creates the `container-obj
 kubectl create -k github.com/kubernetes-sigs/container-object-storage-interface
 ```
 
+
+### Install from OCI Registry with Helm
+
+To automatically install the latest release of cosi-driver:
+
+```bash
+    helm install scality-cosi-driver oci://ghcr.io/scality/cosi-driver/helm-charts/scality-cosi-driver --namespace container-object-storage-system --create-namespace
+```
+
+Or find a desired version listed in the [releases] and
+specify it when installing:
+
+```bash
+    helm install scality-cosi-driver oci://ghcr.io/scality/cosi-driver/helm-charts/scality-cosi-driver --namespace container-object-storage-system --create-namespace --version <tag>
+```
+
 ### Install locally without helm package
+
+Find the latest or a desired version available under [releases].
 
 ```bash
     git clone https://github.com/scality/cosi-driver.git
     cd cosi-driver
-    helm install scality-cosi-driver ./helm/scality-cosi-driver --namespace container-object-storage-system --create-namespace --set image.tag=1.0.0
+    # replace <tag> with the latest version
+    helm install scality-cosi-driver ./helm/scality-cosi-driver --namespace container-object-storage-system --create-namespace --set image.tag=<tag>
 ```
 
 ### Package locally and install
 
+Find the latest or a desired version available under [releases].
+
 ```bash
     git clone https://github.com/scality/cosi-driver.git
     cd cosi-driver
-    helm package ./helm/scality-cosi-driver --version 1.0.0
-    helm install scality-cosi-driver ./scality-cosi-driver-1.0.0.tgz --namespace container-object-storage-system --create-namespace --set image.tag=1.0.0
-```
-
-### Install from OCI Registry with Helm
-
-```bash
-    helm install scality-cosi-driver oci://ghcr.io/scality/cosi-driver/helm-charts/scality-cosi-driver --namespace container-object-storage-system --create-namespace --set image.tag=1.0.0
+    # replace <tag> with the latest version
+    helm package ./helm/scality-cosi-driver --version <tag> --app-version <tag>
+    helm install scality-cosi-driver ./scality-cosi-driver-<tag>.tgz --namespace container-object-storage-system --create-namespace
 ```
 
 ---
@@ -112,3 +128,5 @@ When a new release of the Scality COSI Driver is published, it includes:
 
 - A Docker image pushed to `ghcr.io/scality/cosi-driver:<tag>`
 - A Helm chart available in the OCI registry `ghcr.io/scality/cosi-driver/helm-charts/scality-cosi-driver`
+
+[releases]: https://github.com/scality/cosi-driver/releases
