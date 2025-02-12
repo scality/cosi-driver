@@ -54,7 +54,7 @@ spec:
                 fieldRef:
                   fieldPath: metadata.namespace
         - name: objectstorage-provisioner-sidecar
-          image: gcr.io/k8s-staging-sig-storage/objectstorage-sidecar:latest
+          image: gcr.io/k8s-staging-sig-storage/objectstorage-sidecar:v20241219-v0.1.0-60-g6a5a12c
           imagePullPolicy: IfNotPresent
           args:
             - "--v={{ .Values.logLevels.sidecar }}"
