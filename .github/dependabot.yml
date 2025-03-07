@@ -9,7 +9,7 @@ updates:
   - package-ecosystem: "gomod"
     directory: "/"
     schedule:
-      interval: "daily"
+      interval: "weekly"
       time: "07:00"
       timezone: "Europe/Paris"
     open-pull-requests-limit: 10
@@ -21,12 +21,24 @@ updates:
     labels:
       - "gomod"
       - "dependencies"
-
+    ignore:
+      - dependency-name: "github.com/aws/*"
+        update-types:
+          - "version-update:semver-minor"
+    groups:
+      go:
+        patterns:
+          - "*"
+        exclude-patterns:
+          - "github.com/aws/*"
+      go-aws:
+        patterns:
+          - "github.com/aws/*"
 
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
-      interval: "daily"
+      interval: "weekly"
       time: "08:00"
     reviewers:
       - "scality/object"
@@ -36,3 +48,7 @@ updates:
     labels:
       - "github-actions"
       - "dependencies"
+    groups:
+      github-actions:
+        patterns:
+          - "*"
