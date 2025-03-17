@@ -2,11 +2,11 @@ module github.com/scality/cosi-driver
 
 go 1.22.7
 
-toolchain go1.23.3
+toolchain go1.24.1
 
 require (
 	github.com/aws/aws-sdk-go-v2/credentials v1.17.62
-	github.com/aws/smithy-go v1.22.2
+	github.com/aws/smithy-go v1.22.3
 	github.com/grpc-ecosystem/go-grpc-middleware/providers/prometheus v1.0.1
 	github.com/onsi/ginkgo/v2 v2.22.2
 	github.com/onsi/gomega v1.36.2
