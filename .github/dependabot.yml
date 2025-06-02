@@ -13,8 +13,6 @@ updates:
       time: "07:00"
       timezone: "Europe/Paris"
     open-pull-requests-limit: 10
-    reviewers:
-      - "scality/object"
     commit-message:
       prefix: "gomod"
       include: "scope"
@@ -40,8 +38,6 @@ updates:
     schedule:
       interval: "weekly"
       time: "08:00"
-    reviewers:
-      - "scality/object"
     commit-message:
       prefix: "github-actions"
       include: "scope"
