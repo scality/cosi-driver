@@ -19,7 +19,19 @@ on:
 
 jobs:
   e2e-tests-with-helm:
+    name: v${{ matrix.ring_version }}
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - ring_version: "9.4"
+            github_variable_name: "CLOUDSERVER_RING_9_4"
+          - ring_version: "9.5"
+            github_variable_name: "CLOUDSERVER_RING_9_5"
+
+    env:
+      CLOUDSERVER_IMAGE: ${{ vars[matrix.github_variable_name] }}
 
     steps:
     - name: Check out repository
@@ -37,8 +49,9 @@ jobs:
       uses: actions/cache@v4
       with:
         path: /tmp/.docker_cache
-        key: docker-${{ runner.os }}-${{ hashFiles('.github/s3_and_iam_deployment/.env') }}
+        key: docker-${{ runner.os }}-${{ matrix.ring_version }}-${{ env.CLOUDSERVER_IMAGE }}
         restore-keys: |
+          docker-${{ runner.os }}-${{ matrix.ring_version }}-
           docker-${{ runner.os }}-
 
     - name: Set up Helm
@@ -100,6 +113,9 @@ jobs:
         mkdir -p logs/s3 logs/iam logs/cosi_driver data/vaultdb
         chown -R runner:docker logs data
         chmod -R ugo+rwx logs data
+
+        # Override CLOUDSERVER_IMAGE in docker-compose
+        export CLOUDSERVER_IMAGE="${{ env.CLOUDSERVER_IMAGE }}"
         docker compose --profile iam_s3 up -d --quiet-pull
         bash ../scripts/wait_for_local_port.bash 8600 30
         bash ../scripts/wait_for_local_port.bash 8000 30
@@ -110,10 +126,10 @@ jobs:
       run: |
         source .github/s3_and_iam_deployment/.env
         echo "Vault Image: $VAULT_IMAGE"
-        echo "CloudServer Image: $CLOUDSERVER_IMAGE"
+        echo "CloudServer Image: ${{ env.CLOUDSERVER_IMAGE }}"
         mkdir -p /tmp/.docker_cache
         docker save "$VAULT_IMAGE" -o /tmp/.docker_cache/vault_image.tar
-        docker save "$CLOUDSERVER_IMAGE" -o /tmp/.docker_cache/cloudserver_image.tar
+        docker save "${{ env.CLOUDSERVER_IMAGE }}" -o /tmp/.docker_cache/cloudserver_image.tar
       shell: bash
 
     - name: Install Scality COSI Driver using Helm Chart
@@ -191,3 +207,4 @@ jobs:
         user: ${{ secrets.ARTIFACTS_USER }}
         password: ${{ secrets.ARTIFACTS_PASSWORD }}
         source: .github/e2e_tests/artifacts
+        name: e2e-tests-helm-${{ matrix.ring_version }}
