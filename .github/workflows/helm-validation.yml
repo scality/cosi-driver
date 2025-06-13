@@ -19,7 +19,7 @@ on:
 
 jobs:
   e2e-tests-with-helm:
-    name: v${{ matrix.ring_version }}
+    name: E2E tests with RING v${{ matrix.ring_version }}
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
