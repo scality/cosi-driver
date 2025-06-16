@@ -74,6 +74,14 @@ The following sections provide detailed documentation for deploying, configuring
 
 ---
 
+## Compatibility
+
+| S3 Implementation | Supported Versions | Notes                            |
+|-------------------|--------------------|----------------------------------|
+| Scality RING      | 9.4.2 or newer     | Full support with driver v1.x    |
+
+---
+
 ## Support
 
 For issues, please create a ticket in the [GitHub Issues](https://github.com/scality/cosi-driver/issues) section.
