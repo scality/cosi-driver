@@ -8,6 +8,7 @@ This guide provides step-by-step instructions for installing the Scality COSI Dr
 
 - **Kubernetes Cluster**: Ensure you have access to a running Kubernetes cluster (v1.23 or later).
 - **Helm**: Install Helm v3.8.0 or later.
+- **Scality RING**: Scality RING version 9.4.2 or newer is supported for full compatibility with driver v1.x.
 - **Git** (for local installation): Installed on your local machine to clone the repository.
 - **OCI Registry Access** (for OCI installation): Access to the OCI registry where the Helm chart is hosted (e.g., GitHub Container Registry).
 
