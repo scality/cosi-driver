@@ -248,8 +248,22 @@ func (s *ProvisionerServer) DriverGrantBucketAccess(ctx context.Context,
 	klog.V(c.LvlInfo).InfoS("Granting bucket access", "bucketName", bucketName, "userName", userName)
 	userInfo, err := iamClient.CreateBucketAccess(ctx, userName, bucketName)
 	if err != nil {
-		klog.ErrorS(err, "Failed to create bucket access", "bucketName", bucketName, "userName", userName)
-		return nil, status.Error(codes.Internal, "failed to create bucket access")
+		if strings.Contains(err.Error(), "EntityAlreadyExists") {
+			klog.V(c.LvlInfo).InfoS("IAM user already exists, attempting to get existing access", "userName", userName)
+			return nil, status.Errorf(codes.AlreadyExists, "IAM user already exists: %s", userName)
+		} else if strings.Contains(err.Error(), "AccessDenied") || strings.Contains(err.Error(), "Forbidden") {
+			klog.ErrorS(err, "Access denied for IAM operations - will not retry", "bucketName", bucketName, "userName", userName)
+			return nil, status.Errorf(codes.PermissionDenied, "Access denied for creating IAM user: %s", userName)
+		} else if strings.Contains(err.Error(), "InvalidParameterValue") || strings.Contains(err.Error(), "InvalidUser") || strings.Contains(err.Error(), "MalformedPolicy") {
+			klog.ErrorS(err, "Invalid IAM parameters - will not retry", "bucketName", bucketName, "userName", userName)
+			return nil, status.Errorf(codes.InvalidArgument, "Invalid IAM parameters for user: %s", userName)
+		} else if strings.Contains(err.Error(), "LimitExceeded") {
+			klog.ErrorS(err, "IAM limits exceeded - will not retry", "bucketName", bucketName, "userName", userName)
+			return nil, status.Errorf(codes.ResourceExhausted, "IAM limits exceeded for user: %s", userName)
+		} else {
+			klog.ErrorS(err, "Failed to create bucket access", "bucketName", bucketName, "userName", userName)
+			return nil, status.Error(codes.Internal, "failed to create bucket access")
+		}
 	}
 
 	klog.V(c.LvlInfo).InfoS("Successfully granted bucket access", "bucketName", bucketName, "userName", userName)
@@ -308,8 +322,19 @@ func (s *ProvisionerServer) DriverRevokeBucketAccess(ctx context.Context,
 	klog.V(c.LvlInfo).InfoS("Revoking bucket access", "bucketName", bucketName, "userName", userName)
 	err = iamClient.RevokeBucketAccess(ctx, userName, bucketName)
 	if err != nil {
-		klog.ErrorS(err, "Failed to revoke bucket access", "bucketName", bucketName, "userName", userName)
-		return nil, status.Error(codes.Internal, "failed to revoke bucket access")
+		if strings.Contains(err.Error(), "NoSuchEntity") || strings.Contains(err.Error(), "NotFound") {
+			klog.V(c.LvlInfo).InfoS("IAM user or resources do not exist - treating as successful revocation", "userName", userName)
+			return &cosiapi.DriverRevokeBucketAccessResponse{}, nil
+		} else if strings.Contains(err.Error(), "AccessDenied") || strings.Contains(err.Error(), "Forbidden") {
+			klog.ErrorS(err, "Access denied for IAM operations - will not retry", "bucketName", bucketName, "userName", userName)
+			return nil, status.Errorf(codes.PermissionDenied, "Access denied for revoking IAM user: %s", userName)
+		} else if strings.Contains(err.Error(), "InvalidParameterValue") || strings.Contains(err.Error(), "InvalidUser") {
+			klog.ErrorS(err, "Invalid IAM parameters - will not retry", "bucketName", bucketName, "userName", userName)
+			return nil, status.Errorf(codes.InvalidArgument, "Invalid IAM parameters for user: %s", userName)
+		} else {
+			klog.ErrorS(err, "Failed to revoke bucket access", "bucketName", bucketName, "userName", userName)
+			return nil, status.Error(codes.Internal, "failed to revoke bucket access")
+		}
 	}
 
 	klog.V(c.LvlInfo).InfoS("Successfully revoked bucket access", "bucketName", bucketName, "userName", userName)
