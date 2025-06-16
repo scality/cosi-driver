@@ -19,6 +19,7 @@ import (
 	"context"
 	"errors"
 	"os"
+	"strings"
 
 	s3types "github.com/aws/aws-sdk-go-v2/service/s3/types"
 	iamclient "github.com/scality/cosi-driver/pkg/clients/iam"
@@ -133,6 +134,18 @@ func (s *ProvisionerServer) DriverCreateBucket(ctx context.Context,
 		if errors.As(err, &bucketAlreadyExists) {
 			klog.V(c.LvlInfo).InfoS("Bucket already exists", "bucketName", bucketName)
 			return nil, status.Errorf(codes.AlreadyExists, "Bucket already exists: %s", bucketName)
+		} else if strings.Contains(err.Error(), "InvalidBucketName") {
+			klog.ErrorS(err, "Invalid bucket name - will not retry", "bucketName", bucketName)
+			return nil, status.Errorf(codes.InvalidArgument, "Invalid bucket name: %s", bucketName)
+		} else if strings.Contains(err.Error(), "InvalidLocationConstraint") {
+			klog.ErrorS(err, "Invalid location constraint - will not retry", "bucketName", bucketName)
+			return nil, status.Errorf(codes.InvalidArgument, "Invalid location constraint for bucket: %s", bucketName)
+		} else if strings.Contains(err.Error(), "AccessDenied") {
+			klog.ErrorS(err, "Access denied - will not retry", "bucketName", bucketName)
+			return nil, status.Errorf(codes.PermissionDenied, "Access denied for bucket: %s", bucketName)
+		} else if strings.Contains(err.Error(), "InvalidRequest") || strings.Contains(err.Error(), "MalformedXML") {
+			klog.ErrorS(err, "Invalid request format - will not retry", "bucketName", bucketName)
+			return nil, status.Errorf(codes.InvalidArgument, "Invalid request for bucket: %s", bucketName)
 		} else {
 			klog.ErrorS(err, "Failed to create bucket", "bucketName", bucketName)
 			return nil, status.Error(codes.Internal, "Failed to create bucket")
@@ -180,8 +193,22 @@ func (s *ProvisionerServer) DriverDeleteBucket(ctx context.Context,
 
 	err = s3Client.DeleteBucket(ctx, bucketName)
 	if err != nil {
-		klog.ErrorS(err, "Failed to delete bucket", "bucketName", bucketName)
-		return nil, status.Error(codes.Internal, "failed to delete bucket")
+		if strings.Contains(err.Error(), "BucketNotEmpty") {
+			klog.ErrorS(err, "Cannot delete non-empty bucket - will not retry", "bucketName", bucketName)
+			return nil, status.Errorf(codes.FailedPrecondition, "Cannot delete bucket %s: bucket is not empty", bucketName)
+		} else if strings.Contains(err.Error(), "NoSuchBucket") || strings.Contains(err.Error(), "NotFound") {
+			klog.V(c.LvlInfo).InfoS("Bucket does not exist - treating as successful deletion", "bucketName", bucketName)
+			return &cosiapi.DriverDeleteBucketResponse{}, nil
+		} else if strings.Contains(err.Error(), "AccessDenied") || strings.Contains(err.Error(), "Forbidden") {
+			klog.ErrorS(err, "Access denied for bucket deletion - will not retry", "bucketName", bucketName)
+			return nil, status.Errorf(codes.PermissionDenied, "Access denied for deleting bucket: %s", bucketName)
+		} else if strings.Contains(err.Error(), "InvalidBucketName") || strings.Contains(err.Error(), "InvalidRequest") || strings.Contains(err.Error(), "MalformedXML") {
+			klog.ErrorS(err, "Invalid request for bucket deletion - will not retry", "bucketName", bucketName)
+			return nil, status.Errorf(codes.InvalidArgument, "Invalid request for deleting bucket: %s", bucketName)
+		} else {
+			klog.ErrorS(err, "Failed to delete bucket", "bucketName", bucketName)
+			return nil, status.Error(codes.Internal, "failed to delete bucket")
+		}
 	}
 
 	klog.V(c.LvlInfo).InfoS("Successfully deleted bucket", "bucketName", bucketName)
