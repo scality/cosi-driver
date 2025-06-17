@@ -1,0 +1,66 @@
+--- a/sidecar/pkg/bucket/bucket_listener.go
++++ b/sidecar/pkg/bucket/bucket_listener.go
+@@ -20,6 +20,7 @@ import (
+ 	"context"
+ 	"fmt"
+ 	"strings"
++	"time"
+ 
+ 	"google.golang.org/grpc/codes"
+ 	"google.golang.org/grpc/status"
+@@ -62,6 +63,16 @@ func NewBucketListener(driverName string, client cosi.ProvisionerClient) *Bucket
+ 	return bl
+ }
+ 
++// isRetryableError determines if a gRPC error should trigger a retry.
++// Only codes.Internal errors are considered retryable as they represent
++// transient failures (network issues, temporary backend problems).
++// All other error codes represent permanent failures that won't be resolved by retrying.
++func isRetryableError(err error) bool {
++	code := status.Code(err)
++	// Only internal errors should retry - all others are permanent failures
++	return code == codes.Internal
++}
++
+ // Add attempts to create a bucket for a given bucket. This function must be idempotent
+ //
+ // Return values
+@@ -130,9 +141,15 @@ func (b *BucketListener) Add(ctx context.Context, inputBucket *v1alpha1.Bucket)
+ 
+ 	rsp, err := b.provisionerClient.DriverCreateBucket(ctx, req)
+ 	if err != nil {
+-		if status.Code(err) != codes.AlreadyExists {
++		if !isRetryableError(err) {
++			// Non-retryable error: fail immediately with clear error message
++			klog.V(3).ErrorS(err, "Non-retryable error from driver", 
++				"bucket", bucket.ObjectMeta.Name, "errorCode", status.Code(err))
+ 			return b.recordError(inputBucket, v1.EventTypeWarning, v1alpha1.FailedCreateBucket, fmt.Errorf("failed to create bucket: %w", err))
+ 		}
++		// Retryable error (codes.Internal): return error to trigger controller retry
++		klog.V(3).ErrorS(err, "Retryable error from driver - will retry with backoff",
++			"bucket", bucket.ObjectMeta.Name, "errorCode", status.Code(err))
++		return fmt.Errorf("failed to create bucket (retryable): %w", err)
+ 	}
+ 
+ 	bucket.Spec.Parameters = rsp.BucketContext
+@@ -276,9 +293,15 @@ func (b *BucketListener) deleteBucketOp(ctx context.Context, bucket *v1alpha1.B
+ 
+ 	_, err := b.provisionerClient.DriverDeleteBucket(ctx, req)
+ 	if err != nil {
+-		if status.Code(err) != codes.NotFound {
++		if !isRetryableError(err) && status.Code(err) != codes.NotFound {
++			// Non-retryable error (except NotFound which is success for delete): fail immediately
++			klog.V(3).ErrorS(err, "Non-retryable error from driver during delete", 
++				"bucket", bucket.ObjectMeta.Name, "errorCode", status.Code(err))
+ 			return fmt.Errorf("failed to delete bucket: %w", err)
+ 		}
++		if isRetryableError(err) {
++			// Retryable error: return error to trigger controller retry
++			klog.V(3).ErrorS(err, "Retryable error from driver during delete - will retry with backoff",
++				"bucket", bucket.ObjectMeta.Name, "errorCode", status.Code(err))
++			return fmt.Errorf("failed to delete bucket (retryable): %w", err)
++		}
+ 	}
+ 
+ 	klog.V(3).InfoS("Delete bucket completed successfully",
+</rewritten_file> 
