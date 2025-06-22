@@ -10,3 +10,12 @@ const (
 	LvlDebug              // 4 - Debug-level logs, tricky logic areas
 	LvlTrace              // 5 - Trace-level logs, detailed troubleshooting context
 )
+
+// Action constants for error translation context
+// These align with the driver operations and underlying API calls
+const (
+	ActionCreateBucket       = "CreateBucket"
+	ActionDeleteBucket       = "DeleteBucket"
+	ActionGrantBucketAccess  = "GrantBucketAccess"
+	ActionRevokeBucketAccess = "RevokeBucketAccess"
+)

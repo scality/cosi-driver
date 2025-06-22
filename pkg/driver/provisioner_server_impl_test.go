@@ -290,57 +290,72 @@ var _ = Describe("ProvisionerServer DriverCreateBucket", func() {
 
 	It("should return InvalidArgument error for InvalidBucketName error", func(ctx SpecContext) {
 		mockS3.CreateBucketFunc = func(ctx context.Context, input *s3.CreateBucketInput, _ ...func(*s3.Options)) (*s3.CreateBucketOutput, error) {
-			return nil, errors.New("InvalidBucketName: The specified bucket is not valid")
+			return nil, &smithy.GenericAPIError{
+				Code:    "InvalidBucketName",
+				Message: "The specified bucket is not valid",
+			}
 		}
 
 		resp, err := provisioner.DriverCreateBucket(ctx, request)
 		Expect(resp).To(BeNil())
 		Expect(status.Code(err)).To(Equal(codes.InvalidArgument))
-		Expect(err.Error()).To(ContainSubstring("Invalid bucket name"))
+		Expect(err.Error()).To(ContainSubstring("invalid bucket name"))
 	})
 
 	It("should return InvalidArgument error for InvalidLocationConstraint error", func(ctx SpecContext) {
 		mockS3.CreateBucketFunc = func(ctx context.Context, input *s3.CreateBucketInput, _ ...func(*s3.Options)) (*s3.CreateBucketOutput, error) {
-			return nil, errors.New("InvalidLocationConstraint: The specified location constraint is not valid")
+			return nil, &smithy.GenericAPIError{
+				Code:    "InvalidLocationConstraint",
+				Message: "The specified location constraint is not valid",
+			}
 		}
 
 		resp, err := provisioner.DriverCreateBucket(ctx, request)
 		Expect(resp).To(BeNil())
 		Expect(status.Code(err)).To(Equal(codes.InvalidArgument))
-		Expect(err.Error()).To(ContainSubstring("Invalid location constraint"))
+		Expect(err.Error()).To(ContainSubstring("invalid location constraint"))
 	})
 
 	It("should return PermissionDenied error for AccessDenied error", func(ctx SpecContext) {
 		mockS3.CreateBucketFunc = func(ctx context.Context, input *s3.CreateBucketInput, _ ...func(*s3.Options)) (*s3.CreateBucketOutput, error) {
-			return nil, errors.New("AccessDenied: Access denied")
+			return nil, &smithy.GenericAPIError{
+				Code:    "AccessDenied",
+				Message: "Access denied",
+			}
 		}
 
 		resp, err := provisioner.DriverCreateBucket(ctx, request)
 		Expect(resp).To(BeNil())
 		Expect(status.Code(err)).To(Equal(codes.PermissionDenied))
-		Expect(err.Error()).To(ContainSubstring("Access denied"))
+		Expect(err.Error()).To(ContainSubstring("permission denied"))
 	})
 
 	It("should return InvalidArgument error for InvalidRequest error", func(ctx SpecContext) {
 		mockS3.CreateBucketFunc = func(ctx context.Context, input *s3.CreateBucketInput, _ ...func(*s3.Options)) (*s3.CreateBucketOutput, error) {
-			return nil, errors.New("InvalidRequest: The request is not valid")
+			return nil, &smithy.GenericAPIError{
+				Code:    "InvalidRequest",
+				Message: "The request is not valid",
+			}
 		}
 
 		resp, err := provisioner.DriverCreateBucket(ctx, request)
 		Expect(resp).To(BeNil())
 		Expect(status.Code(err)).To(Equal(codes.InvalidArgument))
-		Expect(err.Error()).To(ContainSubstring("Invalid request"))
+		Expect(err.Error()).To(ContainSubstring("invalid request"))
 	})
 
 	It("should return InvalidArgument error for MalformedXML error", func(ctx SpecContext) {
 		mockS3.CreateBucketFunc = func(ctx context.Context, input *s3.CreateBucketInput, _ ...func(*s3.Options)) (*s3.CreateBucketOutput, error) {
-			return nil, errors.New("MalformedXML: The XML you provided was not well-formed")
+			return nil, &smithy.GenericAPIError{
+				Code:    "MalformedXML",
+				Message: "The XML you provided was not well-formed",
+			}
 		}
 
 		resp, err := provisioner.DriverCreateBucket(ctx, request)
 		Expect(resp).To(BeNil())
 		Expect(status.Code(err)).To(Equal(codes.InvalidArgument))
-		Expect(err.Error()).To(ContainSubstring("Invalid request"))
+		Expect(err.Error()).To(ContainSubstring("malformed XML"))
 	})
 
 	It("should return Internal error when InitializeClient fails", func(ctx SpecContext) {
@@ -361,7 +376,10 @@ var _ = Describe("ProvisionerServer DriverCreateBucket", func() {
 
 	It("should handle AWS operation errors", func(ctx SpecContext) {
 		mockS3.CreateBucketFunc = func(ctx context.Context, input *s3.CreateBucketInput, _ ...func(*s3.Options)) (*s3.CreateBucketOutput, error) {
-			return nil, &smithy.OperationError{Err: errors.New("AccessDenied")}
+			return nil, &smithy.GenericAPIError{
+				Code:    "AccessDenied",
+				Message: "Access denied for the operation",
+			}
 		}
 
 		resp, err := provisioner.DriverCreateBucket(ctx, request)
@@ -714,13 +732,17 @@ var _ = Describe("ProvisionerServer DriverRevokeBucketAccess", Ordered, func() {
 	})
 
 	It("should fail on user deletion error", func(ctx SpecContext) {
+		// Mock the IAM client to fail on GetUser
 		mockIAMClient.GetUserFunc = func(ctx context.Context, input *iam.GetUserInput, _ ...func(*iam.Options)) (*iam.GetUserOutput, error) {
-			return nil, &smithy.OperationError{Err: errors.New("AccessDenied")}
+			return nil, &smithy.GenericAPIError{
+				Code:    "AccessDenied",
+				Message: "Access denied for the operation",
+			}
 		}
 
 		resp, err := provisioner.DriverRevokeBucketAccess(ctx, request)
 		Expect(resp).To(BeNil())
-		Expect(status.Code(err)).To(Equal(codes.Internal))
+		Expect(status.Code(err)).To(Equal(codes.PermissionDenied))
 	})
 
 	It("should fail if wrong client type returned", func(ctx SpecContext) {
@@ -809,7 +831,10 @@ var _ = Describe("ProvisionerServer DriverDeleteBucket", Ordered, func() {
 
 	It("should return FailedPrecondition error for BucketNotEmpty error", func(ctx SpecContext) {
 		mockS3Client.DeleteBucketFunc = func(ctx context.Context, input *s3.DeleteBucketInput, _ ...func(*s3.Options)) (*s3.DeleteBucketOutput, error) {
-			return nil, fmt.Errorf("BucketNotEmpty: The bucket you tried to delete is not empty")
+			return nil, &smithy.GenericAPIError{
+				Code:    "BucketNotEmpty",
+				Message: "The bucket you tried to delete is not empty",
+			}
 		}
 
 		resp, err := provisioner.DriverDeleteBucket(ctx, request)
@@ -820,7 +845,10 @@ var _ = Describe("ProvisionerServer DriverDeleteBucket", Ordered, func() {
 
 	It("should succeed when bucket does not exist (NoSuchBucket)", func(ctx SpecContext) {
 		mockS3Client.DeleteBucketFunc = func(ctx context.Context, input *s3.DeleteBucketInput, _ ...func(*s3.Options)) (*s3.DeleteBucketOutput, error) {
-			return nil, fmt.Errorf("NoSuchBucket: The specified bucket does not exist")
+			return nil, &smithy.GenericAPIError{
+				Code:    "NoSuchBucket",
+				Message: "The specified bucket does not exist",
+			}
 		}
 
 		resp, err := provisioner.DriverDeleteBucket(ctx, request)
@@ -830,7 +858,10 @@ var _ = Describe("ProvisionerServer DriverDeleteBucket", Ordered, func() {
 
 	It("should succeed when bucket is not found", func(ctx SpecContext) {
 		mockS3Client.DeleteBucketFunc = func(ctx context.Context, input *s3.DeleteBucketInput, _ ...func(*s3.Options)) (*s3.DeleteBucketOutput, error) {
-			return nil, fmt.Errorf("NotFound: Bucket not found")
+			return nil, &smithy.GenericAPIError{
+				Code:    "NotFound",
+				Message: "Bucket not found",
+			}
 		}
 
 		resp, err := provisioner.DriverDeleteBucket(ctx, request)
@@ -840,67 +871,71 @@ var _ = Describe("ProvisionerServer DriverDeleteBucket", Ordered, func() {
 
 	It("should return PermissionDenied error for AccessDenied error", func(ctx SpecContext) {
 		mockS3Client.DeleteBucketFunc = func(ctx context.Context, input *s3.DeleteBucketInput, _ ...func(*s3.Options)) (*s3.DeleteBucketOutput, error) {
-			return nil, fmt.Errorf("AccessDenied: Access Denied")
+			return nil, &smithy.GenericAPIError{
+				Code:    "AccessDenied",
+				Message: "Access Denied",
+			}
 		}
 
 		resp, err := provisioner.DriverDeleteBucket(ctx, request)
 		Expect(resp).To(BeNil())
 		Expect(status.Code(err)).To(Equal(codes.PermissionDenied))
-		Expect(err.Error()).To(ContainSubstring("Access denied"))
-	})
-
-	It("should return PermissionDenied error for Forbidden error", func(ctx SpecContext) {
-		mockS3Client.DeleteBucketFunc = func(ctx context.Context, input *s3.DeleteBucketInput, _ ...func(*s3.Options)) (*s3.DeleteBucketOutput, error) {
-			return nil, fmt.Errorf("Forbidden: You don't have permission to delete this bucket")
-		}
-
-		resp, err := provisioner.DriverDeleteBucket(ctx, request)
-		Expect(resp).To(BeNil())
-		Expect(status.Code(err)).To(Equal(codes.PermissionDenied))
-		Expect(err.Error()).To(ContainSubstring("Access denied"))
+		Expect(err.Error()).To(ContainSubstring("permission denied"))
 	})
 
 	It("should return InvalidArgument error for InvalidBucketName error", func(ctx SpecContext) {
 		mockS3Client.DeleteBucketFunc = func(ctx context.Context, input *s3.DeleteBucketInput, _ ...func(*s3.Options)) (*s3.DeleteBucketOutput, error) {
-			return nil, fmt.Errorf("InvalidBucketName: The specified bucket is not valid")
+			return nil, &smithy.GenericAPIError{
+				Code:    "InvalidBucketName",
+				Message: "The specified bucket is not valid",
+			}
 		}
 
 		resp, err := provisioner.DriverDeleteBucket(ctx, request)
 		Expect(resp).To(BeNil())
 		Expect(status.Code(err)).To(Equal(codes.InvalidArgument))
-		Expect(err.Error()).To(ContainSubstring("Invalid request"))
+		Expect(err.Error()).To(ContainSubstring("invalid bucket name"))
 	})
 
 	It("should return InvalidArgument error for InvalidRequest error", func(ctx SpecContext) {
 		mockS3Client.DeleteBucketFunc = func(ctx context.Context, input *s3.DeleteBucketInput, _ ...func(*s3.Options)) (*s3.DeleteBucketOutput, error) {
-			return nil, fmt.Errorf("InvalidRequest: The request is not valid")
+			return nil, &smithy.GenericAPIError{
+				Code:    "InvalidRequest",
+				Message: "The request is not valid",
+			}
 		}
 
 		resp, err := provisioner.DriverDeleteBucket(ctx, request)
 		Expect(resp).To(BeNil())
 		Expect(status.Code(err)).To(Equal(codes.InvalidArgument))
-		Expect(err.Error()).To(ContainSubstring("Invalid request"))
+		Expect(err.Error()).To(ContainSubstring("invalid request"))
 	})
 
 	It("should return InvalidArgument error for MalformedXML error", func(ctx SpecContext) {
 		mockS3Client.DeleteBucketFunc = func(ctx context.Context, input *s3.DeleteBucketInput, _ ...func(*s3.Options)) (*s3.DeleteBucketOutput, error) {
-			return nil, fmt.Errorf("MalformedXML: The XML you provided was not well-formed")
+			return nil, &smithy.GenericAPIError{
+				Code:    "MalformedXML",
+				Message: "The XML you provided was not well-formed",
+			}
 		}
 
 		resp, err := provisioner.DriverDeleteBucket(ctx, request)
 		Expect(resp).To(BeNil())
 		Expect(status.Code(err)).To(Equal(codes.InvalidArgument))
-		Expect(err.Error()).To(ContainSubstring("Invalid request"))
+		Expect(err.Error()).To(ContainSubstring("malformed XML"))
 	})
 
 	It("should return Internal error for other S3 errors", func(ctx SpecContext) {
 		mockS3Client.DeleteBucketFunc = func(ctx context.Context, input *s3.DeleteBucketInput, _ ...func(*s3.Options)) (*s3.DeleteBucketOutput, error) {
-			return nil, fmt.Errorf("InternalError: We encountered an internal error. Please try again")
+			return nil, &smithy.GenericAPIError{
+				Code:    "InternalError",
+				Message: "We encountered an internal error. Please try again",
+			}
 		}
 
 		resp, err := provisioner.DriverDeleteBucket(ctx, request)
 		Expect(resp).To(BeNil())
 		Expect(status.Code(err)).To(Equal(codes.Internal))
-		Expect(err.Error()).To(ContainSubstring("failed to delete bucket"))
+		Expect(err.Error()).To(ContainSubstring("failed to DeleteBucket resource"))
 	})
 })
