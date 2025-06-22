@@ -52,6 +52,10 @@ component_management:
       name: 🔖 Constants Package
       paths:
         - pkg/constants/**
+    - component_id: osperrors-package
+      name: 🚨 Object Storage Provider Errors Package
+      paths:
+        - pkg/osperrors/**
 
 flag_management:
   default_rules: # the rules that will be followed for any flag added, generally
