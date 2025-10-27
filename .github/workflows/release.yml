@@ -61,7 +61,7 @@ jobs:
           helm package ./helm/scality-cosi-driver --version ${{ inputs.tag }} --app-version ${{ inputs.tag }}
 
       - name: Upload Helm Chart as Artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: helm-chart
           path: scality-cosi-driver-${{ inputs.tag }}.tgz
