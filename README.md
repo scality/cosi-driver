@@ -67,6 +67,7 @@ The following sections provide detailed documentation for deploying, configuring
 - **[Driver Parameters](docs/driver-params.md):** Configuration options for bucket classes and access credentials.
 - **[Metrics Overview](docs/metrics-overview.md):** Prometheus metrics exposed by the driver.
 - **[Feature Usage](docs/Usage.md):** Detailed guides on bucket provisioning and access control with the COSI driver.
+- **[FAQ](docs/FAQ.md):** Frequently asked questions about IAM naming, COSI specification, and more.
 - **[Development Documentation](docs/development):**
   - [Dev Container Setup](docs/development/dev-container-setup.md)
   - [Remote Debugging](docs/development/remote-debugging-golang-on-kubernetes.md)
