@@ -27,10 +27,10 @@ Use [Quickstart](#quickstart-guide) or follow the [installation guide](docs/inst
 To quickly deploy and test the Scality COSI Driver:
 
 1. Ensure your Kubernetes cluster is properly configured, and [Helm v3+ is installed](https://helm.sh/docs/intro/install/). The COSI specification was introduced in Kubernetes 1.25. We recommend using [one of the latest supported Kubernetes versions](https://kubernetes.io/releases/).
-2. Create namespace `container-object-storage-system` and install the COSI controller deployment and COSI CRDs:
+2. Create namespace `container-object-storage-system` and install the COSI controller deployment and COSI CRDs. The Scality COSI Driver supports only COSI **v1alpha1** — the command below pins upstream to tag `v0.2.2` (the last v1alpha1 release). Do not install from upstream `main`, which now ships v1alpha2 and is incompatible with this driver.
 
    ```bash
-   kubectl create -k github.com/kubernetes-sigs/container-object-storage-interface
+   kubectl create -k github.com/kubernetes-sigs/container-object-storage-interface?ref=v0.2.2
    ```
 
 3. Deploy the driver: Namespace `container-object-storage-system` will be created in step 2.

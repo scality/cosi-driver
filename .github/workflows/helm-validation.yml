@@ -77,7 +77,7 @@ jobs:
         set -e -o pipefail
         (
           echo "=== Setup COSI Controller, CRDs and Driver ==="
-          kubectl create -k github.com/kubernetes-sigs/container-object-storage-interface
+          kubectl create -k github.com/kubernetes-sigs/container-object-storage-interface?ref=v0.2.2
           make container
           kind load docker-image ghcr.io/scality/cosi-driver:latest --name helm-test-cluster
         ) &
