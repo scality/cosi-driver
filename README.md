@@ -30,7 +30,7 @@ To quickly deploy and test the Scality COSI Driver:
 2. Create namespace `container-object-storage-system` and install the COSI controller deployment and COSI CRDs. The Scality COSI Driver supports only COSI **v1alpha1** — the command below pins upstream to tag `v0.2.2` (the last v1alpha1 release). Do not install from upstream `main`, which now ships v1alpha2 and is incompatible with this driver.
 
    ```bash
-   kubectl create -k github.com/kubernetes-sigs/container-object-storage-interface?ref=v0.2.2
+   kubectl create -k "github.com/kubernetes-sigs/container-object-storage-interface//?ref=v0.2.2"
    ```
 
 3. Deploy the driver: Namespace `container-object-storage-system` will be created in step 2.

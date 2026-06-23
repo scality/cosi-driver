@@ -24,7 +24,7 @@ Its recommended to deploy COSI controller first which creates the `container-obj
 The Scality COSI Driver supports only COSI **v1alpha1**. The command below pins the upstream controller and CRDs to tag `v0.2.2` (the last v1alpha1 release) — do not install from upstream `main`, which now ships v1alpha2 and is incompatible with this driver.
 
 ```bash
-kubectl create -k github.com/kubernetes-sigs/container-object-storage-interface?ref=v0.2.2
+kubectl create -k "github.com/kubernetes-sigs/container-object-storage-interface//?ref=v0.2.2"
 ```
 
 
