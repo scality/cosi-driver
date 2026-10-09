@@ -9,3 +9,5 @@ bin
 vendor
 coverage.txt
 coverage.out
+website/node_modules/
+website/doc_build/

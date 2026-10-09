@@ -1,4 +1,5 @@
 name: Release
+run-name: Release ${{ inputs.tag }}
 
 on:
   workflow_dispatch:
@@ -24,6 +25,69 @@ jobs:
       namespace: ${{ github.repository_owner }}
       tag: ${{ inputs.tag }}
       platforms: ${{ inputs.all_platforms && 'linux/amd64,linux/arm64' || 'linux/amd64' }}
+
+  # Built at the tag's commit: links to files outside docs/ point at the tag.
+  build-docs:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    defaults:
+      run:
+        working-directory: website
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v5
+
+      - name: Set up Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: website/package-lock.json
+
+      - name: Build the documentation site
+        env:
+          DOCS_GIT_REF: ${{ inputs.tag }}
+        run: |
+          npm ci
+          npm run build
+
+      - name: Upload the documentation artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: documentation
+          path: website/doc_build
+          retention-days: 7
+
+  # Public portal (documentation.scality.com/OpenSource/cosi-driver/<major.minor>/),
+  # published by the portal repository from the artifact above. Not a
+  # dependency of the other jobs, so a portal outage does not block a release.
+  publish-portal-docs:
+    needs: [build-docs]
+    runs-on: ubuntu-latest
+    permissions: {}
+    steps:
+      - name: Generate a token to trigger the portal workflow
+        uses: actions/create-github-app-token@v2
+        id: app-token
+        with:
+          app-id: ${{ vars.ACTIONS_APP_ID }}
+          private-key: ${{ secrets.ACTIONS_APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: documentation.scality.com
+          permission-actions: write
+
+      - name: Trigger the portal publish
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          TAG: ${{ inputs.tag }}
+        run: >-
+          gh workflow run publish-oss-docs.yaml
+          --repo scality/documentation.scality.com
+          -f project=cosi-driver
+          -f site=external
+          -f "version=$TAG"
+          -f run_id=${{ github.run_id }}
 
   create-github-release:
     runs-on: ubuntu-latest

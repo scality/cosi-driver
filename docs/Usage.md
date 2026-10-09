@@ -1,9 +1,12 @@
 # Scality COSI Driver Usage Guide: Bucket Provisioning & Access Control
 
-This document provides an overview and step-by-step guidance for implementing **Bucket Provisioning** (both Greenfield and Brownfield) and **Access Control** using the Scality COSI Driver. Example YAML manifests can be found in the [cosi-examples](../cosi-examples/) folder.
+This document provides an overview and step-by-step guidance for implementing **Bucket Provisioning** (both Greenfield and Brownfield) and **Access Control** using the Scality COSI Driver. Example YAML manifests can be found in the [cosi-examples](https://github.com/scality/cosi-driver/blob/main/cosi-examples) folder.
 
-> [!NOTE]
-> The Scality COSI Driver supports standard AWS S3 and IAM compliant storage solutions like Scality RING, Scality ARTESCA and AWS S3 & IAM
+:::note
+
+The Scality COSI Driver supports standard AWS S3 and IAM compliant storage solutions like Scality RING, Scality ARTESCA and AWS S3 & IAM
+
+:::
 
 ## Prerequisites
 
@@ -13,7 +16,7 @@ Before proceeding, ensure that the following components are installed on your cl
 2. **Kubernetes Container Object Storage Interface (COSI) CRDs**
 3. **Container Object Storage Interface Controller**
 
-Refer to the quick start guide in the [README](../README.md#quickstart-guide) for installation instructions.
+Refer to the quick start guide in the [Quickstart Guide](index.md#quickstart-guide) for installation instructions.
 
 ### Common Setup Steps
 
@@ -64,10 +67,13 @@ Refer to the quick start guide in the [README](../README.md#quickstart-guide) fo
    EOF
    ```
 
-   > [!NOTE]
-   > Update `<ACCESS_KEY_ID>`, `<SECRET_ACCESS_KEY>`, `<S3_ENDPOINT>`, `<REGION>`, with valid values for your environment. If your endpoint does not require a TLS cert, you can remove it. Similarly, add IAM endpoint with `iamEndpoint` if its different from S3 endpoint otherwise remove it.
-   > If using TLS cert, include the certificate content (PEM-encoded) in the stringData section of the Secret. Use a multi-line block scalar (|-) in YAML so that the certificate (with newlines) is preserved correctly.
-   > For HTTPS endpoint if not using TLS certificate, COSI driver will use the `InsecureSkipVerify` flag.
+   :::note
+
+   Update `<ACCESS_KEY_ID>`, `<SECRET_ACCESS_KEY>`, `<S3_ENDPOINT>`, `<REGION>`, with valid values for your environment. If your endpoint does not require a TLS cert, you can remove it. Similarly, add IAM endpoint with `iamEndpoint` if its different from S3 endpoint otherwise remove it.
+   If using TLS cert, include the certificate content (PEM-encoded) in the stringData section of the Secret. Use a multi-line block scalar (|-) in YAML so that the certificate (with newlines) is preserved correctly.
+   For HTTPS endpoint if not using TLS certificate, COSI driver will use the `InsecureSkipVerify` flag.
+
+   :::
 
 ---
 
@@ -76,11 +82,11 @@ Refer to the quick start guide in the [README](../README.md#quickstart-guide) fo
 In the **Scality COSI Driver**, both **Greenfield** and **Brownfield** provisioning share similar steps, with minor differences in how resources (Bucket, BucketClaim) are created.
 
 > Note:
-> For **fully working** examples, see the YAMLs in the [cosi-examples/brownfield](../cosi-examples/brownfield/) and [cosi-examples/greenfield](../cosi-examples/greenfield/) directories.
+> For **fully working** examples, see the YAMLs in the [cosi-examples/brownfield](https://github.com/scality/cosi-driver/blob/main/cosi-examples/brownfield) and [cosi-examples/greenfield](https://github.com/scality/cosi-driver/blob/main/cosi-examples/greenfield) directories.
 
 ### 1.1 Greenfield: Creating a New Bucket
 
-Greenfield provisioning will create a brand-new S3 bucket in your object store, managed by Kubernetes. Examples can be found [here](../cosi-examples/greenfield/).
+Greenfield provisioning will create a brand-new S3 bucket in your object store, managed by Kubernetes. Examples can be found [here](https://github.com/scality/cosi-driver/blob/main/cosi-examples/greenfield).
 
 1. **Create a BucketClass**
    A `BucketClass` defines how buckets should be provisioned or deleted. The bucket class name is used as a prefix for bucket name by COSI:
@@ -154,8 +160,11 @@ Brownfield provisioning allows you to manage an **already-existing** S3 bucket i
    EOF
    ```
 
-   > [!NOTE]
-   > For Brownfield, existing buckets when imported using the steps below, do not follow the `deletionPolicy` even if it set to `Delete` . All buckets created using this bucket class for greenfield scenario will still respect the `deletionPolicy`
+   :::note
+
+   For Brownfield, existing buckets when imported using the steps below, do not follow the `deletionPolicy` even if it set to `Delete` . All buckets created using this bucket class for greenfield scenario will still respect the `deletionPolicy`
+
+   :::
 
 3. **Create the Bucket Resource/Instance**
    This is where we tell Kubernetes about the existing bucket:
@@ -248,10 +257,12 @@ parameters:
 EOF
 ```
 
-> [!NOTE]
->
-> - `authenticationType` is `Key` for basic S3 key-based credentials.
-> - `objectStorageSecretName` and `objectStorageSecretNamespace` reference the secret you created earlier in [Common Setup Steps](#common-setup-steps).
+:::note
+
+- `authenticationType` is `Key` for basic S3 key-based credentials.
+- `objectStorageSecretName` and `objectStorageSecretNamespace` reference the secret you created earlier in [Common Setup Steps](#common-setup-steps).
+
+:::
 
 ### 2.2 Request Bucket Access
 
@@ -311,4 +322,4 @@ This triggers the removal of the IAM user/access keys on the S3 side.
 
 - [Official COSI Documentation](https://github.com/kubernetes-sigs/container-object-storage-interface-api)
 - [Scality COSI Driver Parameters](./driver-params.md)
-- [cosi-examples Folder](../cosi-examples/) for fully working YAML samples.
+- [cosi-examples Folder](https://github.com/scality/cosi-driver/blob/main/cosi-examples) for fully working YAML samples.

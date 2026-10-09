@@ -1,0 +1,17 @@
+[
+  { "text": "Home", "link": "/" },
+  { "text": "Installation Guide", "link": "/installation/install-helm" },
+  { "text": "Usage Guide", "link": "/Usage" },
+  { "text": "Driver Parameters", "link": "/driver-params" },
+  { "text": "Metrics Overview", "link": "/metrics-overview" },
+  {
+    "text": "Development",
+    "collapsible": true,
+      "collapsed": true,
+    "items": [
+      { "text": "Dev Container Setup", "link": "/development/dev-container-setup" },
+      { "text": "Remote Debugging", "link": "/development/remote-debugging-golang-on-kubernetes" },
+      { "text": "Running Locally", "link": "/development/run-cosi-driver-locally" }
+    ]
+  }
+]
