@@ -1,0 +1,17 @@
+{
+  "name": "cosi-driver-docs",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "rspress dev",
+    "build": "rspress build && rspress-portable-base doc_build",
+    "preview": "rspress preview"
+  },
+  "dependencies": {
+    "@rspress/core": "^2.0.23",
+    "@scality/rspress-docs-tooling": "^0.14.0",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "styled-components": "^6.4.3"
+  }
+}

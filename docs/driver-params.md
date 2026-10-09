@@ -9,7 +9,7 @@ The table below details the configuration parameters for BucketClass, which dete
 | `objectStorageSecretName`         | The name of the Kubernetes secret containing S3 credentials and configuration. | `string`                   | Yes          |
 | `objectStorageSecretNamespace`    | The namespace in which the secret is located (e.g., `default`).                | `string` (e.g., `default`) | Yes          |
 
-[Example](../cosi-examples/greenfield/bucketclass.yaml)
+[Example](https://github.com/scality/cosi-driver/blob/main/cosi-examples/greenfield/bucketclass.yaml)
 
 ## Configuration Parameters for Kubernetes secret containing S3 credentials and configuration
 
@@ -22,7 +22,7 @@ The table below details the configuration parameters for BucketClass, which dete
 | `tlsCert`| PEM encoded TLS certificate (optional).                                                                              | `string`                                     | No           |
 | `iamEndpoint`        | The IAM endpoint URL. If not specified endpoint is used as IAMendpoint                                   | `string` (e.g., `https://iam.ring.internal`) | No           |
 
-[Example](../cosi-examples/s3-secret-for-cosi.yaml)
+[Example](https://github.com/scality/cosi-driver/blob/main/cosi-examples/s3-secret-for-cosi.yaml)
 
 ## Deployment Parameters for the Scality COSI Driver
 
@@ -39,7 +39,7 @@ Below are the deployment parameters for configuring the COSI driver, which can b
 | `driver-otel-stdout`            | Enable OpenTelemetry trace export to stdout. Disables the OTEL endpoint if set to `true`.     | `false`                              | No           |
 | `driver-otel-service-name`      | The service name reported in OpenTelemetry traces.                                            | `cosi.scality.com`                   | No           |
 
-For Helm deployments, these parameters can be set in the [values.yaml](../helm/scality-cosi-driver/values.yaml) file or passed as flags during installation.
+For Helm deployments, these parameters can be set in the [values.yaml](https://github.com/scality/cosi-driver/blob/main/helm/scality-cosi-driver/values.yaml) file or passed as flags during installation.
 
 ## Notes on OpenTelemetry Parameters
 
