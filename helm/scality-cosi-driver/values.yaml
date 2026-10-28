@@ -3,7 +3,10 @@ image:
   tag:
   pullPolicy: IfNotPresent
 
-
+  sidecar:
+    repository: gcr.io/k8s-staging-sig-storage/objectstorage-sidecar
+    tag: v20241219-v0.1.0-60-g6a5a12c
+  
 replicaCount: 1
 
 # Log levels define the verbosity of logs for various parts of the system.
